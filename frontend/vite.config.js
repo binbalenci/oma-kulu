@@ -17,4 +17,9 @@ export default defineConfig({
     outDir: "dist",
     assetsDir: "assets",
   },
+  define: {
+    "process.env.VITE_API_URL": JSON.stringify(
+      process.env.NODE_ENV === "production" ? "/api" : "http://localhost:8080"
+    ),
+  },
 });
