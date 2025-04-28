@@ -5,9 +5,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Frontend 0.1.0] - 2024-04-28
+## Frontend
 
-### Added
+### [1.1.0] - 2024-04-27
+
+#### Added
+
+- Separate contexts for transactions and categories
+- New Layout component with sidebar navigation
+- Improved UI with consistent styling
+- Transaction filtering by type
+- Category management (add, edit, delete)
+- Data summary and deletion in Settings
+
+#### Changed
+
+- Refactored Dashboard to use new contexts
+- Updated Transactions page with better visualization
+- Improved error handling and loading states
+- Enhanced UI with motion animations
+
+#### Fixed
+
+- Resolved import issues with contexts
+- Fixed linter errors
+- Improved code organization and maintainability
+
+### [1.0.0] - 2024-04-27
+
+#### Added
+
+- Initial release
+- Basic transaction tracking
+- Category management
+- Dashboard with summary
+- Settings page
+
+### [0.1.0] - 2024-04-28
+
+#### Added
 
 - Initial React frontend setup with Vite
 - Tailwind CSS v4 integration
@@ -16,7 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Recharts for data visualization
 - Heroicons for UI components
 
-### Technical
+#### Technical
 
 - React 19
 - Vite 6.3.1
@@ -24,9 +60,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - TypeScript support
 - ESLint configuration
 
-## [Backend 0.1.0] - 2024-04-28
+## Backend
 
-### Added
+### [0.1.0] - 2024-04-28
+
+#### Added
 
 - Initial backend setup with FastAPI
 - Supabase integration for database
@@ -35,7 +73,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Health check endpoint with version information
 - CORS configuration for frontend integration
 
-### Technical
+#### Technical
 
 - Python 3.11
 - FastAPI 0.109.0
