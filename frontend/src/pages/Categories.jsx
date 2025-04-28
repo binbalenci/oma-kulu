@@ -1,81 +1,137 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { useFinance } from "../context/FinanceContext";
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
-
-const COLORS = [
-  "#0ea5e9",
-  "#8b5cf6",
-  "#ec4899",
-  "#f59e0b",
-  "#10b981",
-  "#ef4444",
-  "#6366f1",
-  "#f97316",
-];
+import { useCategory } from "../context/CategoryContext";
 
 const Categories = () => {
-  const { getCategoryBreakdown, loading } = useFinance();
-  const categoryData = getCategoryBreakdown();
+  const { categories, addCategory, updateCategory, deleteCategory, loading } = useCategory();
+  const [formData, setFormData] = useState({
+    name: "",
+    color: "#10B981", // Default green color
+  });
+  const [editingId, setEditingId] = useState(null);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (editingId) {
+      await updateCategory(editingId, formData);
+      setEditingId(null);
+    } else {
+      await addCategory(formData);
+    }
+    setFormData({ name: "", color: "#10B981" });
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleEdit = (category) => {
+    setFormData({
+      name: category.name,
+      color: category.color,
+    });
+    setEditingId(category.id);
+  };
+
+  const handleDelete = async (id) => {
+    if (window.confirm("Are you sure you want to delete this category?")) {
+      await deleteCategory(id);
+    }
+  };
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
-      </div>
-    );
+    return <div>Loading...</div>;
   }
 
   return (
-    <div className="space-y-8">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="card">
-        <h2 className="text-xl font-bold mb-4">Expense Categories</h2>
-        <div className="h-96">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={categoryData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                outerRadius={150}
-                fill="#8884d8"
-                dataKey="amount"
-              >
-                {categoryData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
+    <div className="space-y-6">
+      {/* Add/Edit Category Form */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white rounded-lg shadow p-6"
+      >
+        <h2 className="text-xl font-bold mb-4">{editingId ? "Edit Category" : "Add Category"}</h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Name</label>
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Color</label>
+            <input
+              type="color"
+              name="color"
+              value={formData.color}
+              onChange={handleChange}
+              className="mt-1 block w-full h-10 rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+            />
+          </div>
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            type="submit"
+            className="w-full bg-primary-600 text-white py-2 px-4 rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+          >
+            {editingId ? "Update Category" : "Add Category"}
+          </motion.button>
+        </form>
       </motion.div>
 
+      {/* Categories List */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="card"
+        className="bg-white rounded-lg shadow"
       >
-        <h2 className="text-xl font-bold mb-4">Category Breakdown</h2>
-        <div className="space-y-4">
-          {categoryData.map((category, index) => (
+        <div className="px-6 py-5 border-b border-gray-200">
+          <h3 className="text-lg font-medium text-gray-900">Categories</h3>
+        </div>
+        <div className="divide-y divide-gray-200">
+          {categories.map((category) => (
             <motion.div
-              key={index}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+              key={category.id}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="px-6 py-4 flex items-center justify-between"
             >
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center">
                 <div
-                  className="w-4 h-4 rounded-full"
-                  style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                />
-                <span className="font-medium">{category.category}</span>
+                  className="h-10 w-10 rounded-full flex items-center justify-center"
+                  style={{ backgroundColor: category.color }}
+                >
+                  <span className="text-white font-medium">{category.name.charAt(0)}</span>
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-900">{category.name}</p>
+                </div>
               </div>
-              <span className="font-bold text-gray-700">${category.amount.toFixed(2)}</span>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => handleEdit(category)}
+                  className="text-primary-600 hover:text-primary-900"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDelete(category.id)}
+                  className="text-red-600 hover:text-red-900"
+                >
+                  Delete
+                </button>
+              </div>
             </motion.div>
           ))}
         </div>

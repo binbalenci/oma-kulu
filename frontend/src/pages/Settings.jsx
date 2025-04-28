@@ -1,103 +1,78 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { useTransaction } from "../context/TransactionContext";
+import { useCategory } from "../context/CategoryContext";
 
 const Settings = () => {
-  const [settings, setSettings] = useState({
-    currency: "USD",
-    dateFormat: "MM/DD/YYYY",
-    theme: "light",
-    notifications: true,
-  });
+  const { transactions, deleteTransaction } = useTransaction();
+  const { categories, deleteCategory } = useCategory();
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setSettings((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
+  const handleDeleteAll = async () => {
+    if (
+      !window.confirm("Are you sure you want to delete all data? This action cannot be undone.")
+    ) {
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      // Delete all transactions
+      for (const transaction of transactions) {
+        await deleteTransaction(transaction.id);
+      }
+
+      // Delete all categories
+      for (const category of categories) {
+        await deleteCategory(category.id);
+      }
+    } catch (error) {
+      console.error("Error deleting data:", error);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
-    <div className="space-y-8">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="card">
-        <h2 className="text-xl font-bold mb-6">Settings</h2>
-
-        <form className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Currency</label>
-            <select
-              name="currency"
-              value={settings.currency}
-              onChange={handleChange}
-              className="input"
-            >
-              <option value="USD">USD ($)</option>
-              <option value="EUR">EUR (€)</option>
-              <option value="GBP">GBP (£)</option>
-              <option value="JPY">JPY (¥)</option>
-            </select>
+    <div className="space-y-6">
+      {/* Data Summary */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white rounded-lg shadow p-6"
+      >
+        <h2 className="text-xl font-bold mb-4">Data Summary</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-4 bg-gray-50 rounded-lg">
+            <h3 className="text-sm font-medium text-gray-500">Total Transactions</h3>
+            <p className="text-2xl font-semibold text-gray-900">{transactions.length}</p>
           </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Date Format</label>
-            <select
-              name="dateFormat"
-              value={settings.dateFormat}
-              onChange={handleChange}
-              className="input"
-            >
-              <option value="MM/DD/YYYY">MM/DD/YYYY</option>
-              <option value="DD/MM/YYYY">DD/MM/YYYY</option>
-              <option value="YYYY-MM-DD">YYYY-MM-DD</option>
-            </select>
+          <div className="p-4 bg-gray-50 rounded-lg">
+            <h3 className="text-sm font-medium text-gray-500">Total Categories</h3>
+            <p className="text-2xl font-semibold text-gray-900">{categories.length}</p>
           </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Theme</label>
-            <select name="theme" value={settings.theme} onChange={handleChange} className="input">
-              <option value="light">Light</option>
-              <option value="dark">Dark</option>
-              <option value="system">System</option>
-            </select>
-          </div>
-
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              name="notifications"
-              checked={settings.notifications}
-              onChange={handleChange}
-              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-            />
-            <label className="ml-2 block text-sm text-gray-700">Enable Notifications</label>
-          </div>
-
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            type="submit"
-            className="btn btn-primary w-full"
-          >
-            Save Settings
-          </motion.button>
-        </form>
+        </div>
       </motion.div>
 
+      {/* Danger Zone */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="card"
+        className="bg-white rounded-lg shadow p-6 border border-red-200"
       >
-        <h2 className="text-xl font-bold mb-4">About</h2>
-        <div className="space-y-4">
-          <p className="text-gray-600">
-            Finance Tracker is a personal finance management application that helps you track your
-            income and expenses.
-          </p>
-          <p className="text-gray-600">Version: 1.0.0</p>
-          <p className="text-gray-600">Built with React, FastAPI, and Supabase</p>
-        </div>
+        <h2 className="text-xl font-bold mb-4 text-red-600">Danger Zone</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Once you delete your data, there is no going back. Please be certain.
+        </p>
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={handleDeleteAll}
+          disabled={isDeleting}
+          className="bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50"
+        >
+          {isDeleting ? "Deleting..." : "Delete All Data"}
+        </motion.button>
       </motion.div>
     </div>
   );
