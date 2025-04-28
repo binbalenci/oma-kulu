@@ -1,6 +1,11 @@
-# Personal Finance Tracker
+# Oma Kulu - Personal Finance Tracker
 
 A modern web application for tracking personal finances, built with React, FastAPI, and Supabase.
+
+## Author
+
+- **Name**: Benjamin Bui
+- **GitHub**: [binbalenci](https://github.com/binbalenci)
 
 ## Features
 
@@ -13,17 +18,47 @@ A modern web application for tracking personal finances, built with React, FastA
 
 ## Tech Stack
 
-- Frontend: React, TailwindCSS, Framer Motion, Recharts
-- Backend: FastAPI, Python
-- Database: Supabase (PostgreSQL)
-- Authentication: Supabase Auth
+### Frontend
+
+- React 19
+- TailwindCSS 4
+- Framer Motion
+- Recharts
+- Vite 6
+
+### Backend
+
+- FastAPI
+- Python 3.11
+- Supabase Python Client
+
+### Database
+
+- Supabase (PostgreSQL)
+- Row Level Security
+
+## Project Structure
+
+```
+oma-kulu/
+├── frontend/           # React frontend
+│   ├── src/           # Source code
+│   ├── public/        # Static assets
+│   └── package.json   # Frontend dependencies
+├── backend/           # FastAPI backend
+│   ├── config/        # Configuration files
+│   ├── models/        # Data models
+│   ├── routers/       # API endpoints
+│   └── main.py        # Application entry point
+└── CHANGELOG.md       # Version history
+```
 
 ## Setup Instructions
 
 ### Prerequisites
 
 - Node.js (v16 or higher)
-- Python (v3.8 or higher)
+- Python (v3.11 or higher)
 - Supabase account
 
 ### Frontend Setup
@@ -88,21 +123,49 @@ A modern web application for tracking personal finances, built with React, FastA
 ### Supabase Setup
 
 1. Create a new Supabase project
-2. Create the following table in your Supabase database:
+2. Create the following tables in your Supabase database:
 
 ```sql
+-- Categories table
+create table categories (
+  id serial primary key,
+  name text not null,
+  type text not null check (type in ('income', 'expense')),
+  color text not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- Transactions table
 create table transactions (
   id uuid default uuid_generate_v4() primary key,
   amount float not null,
-  category text not null,
+  category_id integer references categories(id),
   type text not null check (type in ('income', 'expense')),
   date date not null,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+-- Enable Row Level Security
+alter table transactions enable row level security;
+alter table categories enable row level security;
+
+-- Create policies
+create policy "Enable all operations for authenticated users" on transactions
+    for all
+    to authenticated
+    using (true)
+    with check (true);
+
+create policy "Enable all operations for authenticated users" on categories
+    for all
+    to authenticated
+    using (true)
+    with check (true);
 ```
 
-3. Enable Row Level Security (RLS) if needed
-4. Get your Supabase URL and keys from the project settings
+## Version History
+
+See [CHANGELOG.md](CHANGELOG.md) for detailed version history of both frontend and backend.
 
 ## Usage
 

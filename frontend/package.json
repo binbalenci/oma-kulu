@@ -3,6 +3,11 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "author": {
+    "name": "Binh Bui",
+    "email": "binh.aoui@gmail.com",
+    "url": "https://github.com/binbalenci"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
