@@ -28,6 +28,8 @@ const Transactions = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
+  const [page, setPage] = useState(1);
+  const transactionsPerPage = 20;
 
   if (transactionsLoading || categoriesLoading) {
     return <div>Loading...</div>;
@@ -40,11 +42,16 @@ const Transactions = () => {
     })
     .sort((a, b) => new Date(b.date) - new Date(a.date));
 
-  const recentTransactions = filteredTransactions.slice(0, 5);
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredTransactions.length / transactionsPerPage);
+  const paginatedTransactions = filteredTransactions.slice(
+    (page - 1) * transactionsPerPage,
+    page * transactionsPerPage
+  );
 
   // Prepare data for the chart
   const chartData = filteredTransactions.reduce((acc, transaction) => {
-    const date = new Date(transaction.date).toLocaleDateString();
+    const date = new Date(transaction.date).toISOString().split("T")[0]; // Use ISO format for dates
     if (!acc[date]) {
       acc[date] = { income: 0, expense: 0 };
     }
@@ -58,11 +65,11 @@ const Transactions = () => {
 
   const chartDataArray = Object.entries(chartData)
     .map(([date, amounts]) => ({
-      date,
+      date: new Date(date), // Convert to Date object
       income: amounts.income,
       expense: amounts.expense,
     }))
-    .sort((a, b) => new Date(a.date) - new Date(b.date));
+    .sort((a, b) => a.date - b.date); // Sort by date ascending
 
   // Calculate totals
   const totalIncome = filteredTransactions
@@ -164,9 +171,15 @@ const Transactions = () => {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartDataArray}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
+                <XAxis
+                  dataKey="date"
+                  scale="time"
+                  type="number"
+                  domain={["dataMin", "dataMax"]}
+                  tickFormatter={(date) => new Date(date).toLocaleDateString()}
+                />
                 <YAxis />
-                <Tooltip />
+                <Tooltip labelFormatter={(date) => new Date(date).toLocaleDateString()} />
                 <Line type="monotone" dataKey="income" stroke="#10B981" name="Income" />
                 <Line type="monotone" dataKey="expense" stroke="#EF4444" name="Expenses" />
               </LineChart>
@@ -182,10 +195,10 @@ const Transactions = () => {
           className="bg-white rounded-lg shadow"
         >
           <div className="px-6 py-5 border-b border-gray-200">
-            <h3 className="text-lg font-medium text-gray-900">Recent Transactions</h3>
+            <h3 className="text-lg font-medium text-gray-900">All Transactions</h3>
           </div>
           <div className="divide-y divide-gray-200">
-            {recentTransactions.map((transaction) => {
+            {paginatedTransactions.map((transaction) => {
               const category = categories.find((c) => c.id === transaction.category_id);
               return (
                 <motion.div
@@ -239,6 +252,29 @@ const Transactions = () => {
               );
             })}
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="px-6 py-4 flex justify-between items-center border-t border-gray-200">
+              <button
+                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                disabled={page === 1}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 disabled:opacity-50"
+              >
+                Previous
+              </button>
+              <span className="text-sm text-gray-700">
+                Page {page} of {totalPages}
+              </span>
+              <button
+                onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
+                disabled={page === totalPages}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          )}
         </motion.div>
       </div>
 
