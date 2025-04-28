@@ -7,14 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Frontend
 
-### [1.2.0] - 2024-04-28
+### [1.2.1] - 2024-03-21
+
+#### Fixed
+
+- Fixed transaction form not populating data when updating a transaction
+- Added useEffect hook to properly handle initialData changes in TransactionForm
+- Ensured form fields (amount, date, category) are properly populated when editing a transaction
+
+#### Changed
+
+- Updated version number to 1.2.1
+
+### [1.2.0] - 2024-03-20
 
 #### Added
 
-- Separate buttons for adding Income and Expenses
-- Type-specific modals with pre-selected transaction types
-- Static type display in transaction forms
-- Improved transaction filtering affecting both chart and list
+- Initial release with basic functionality
+- Transaction management
+- Category management
+- Chart visualization
+- Responsive design
 
 #### Changed
 

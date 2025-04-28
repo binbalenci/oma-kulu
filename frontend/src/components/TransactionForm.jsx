@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCategory } from "../context/CategoryContext";
 
 const TransactionForm = ({ isOpen, onClose, onSubmit, categories, initialData, mode = "add" }) => {
@@ -9,6 +9,17 @@ const TransactionForm = ({ isOpen, onClose, onSubmit, categories, initialData, m
     date: initialData?.date || new Date().toISOString().split("T")[0],
     category_id: initialData?.category_id || "",
   });
+
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        amount: initialData.amount || "",
+        type: initialData.type || "income",
+        date: initialData.date || new Date().toISOString().split("T")[0],
+        category_id: initialData.category_id || "",
+      });
+    }
+  }, [initialData]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
