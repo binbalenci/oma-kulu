@@ -4,7 +4,7 @@ from models.schemas import Category, CategoryCreate
 from config.supabase import supabase
 
 router = APIRouter(
-    prefix="/categories",
+    prefix="/api/categories",
     tags=["categories"]
 )
 

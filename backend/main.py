@@ -33,9 +33,6 @@ app.add_middleware(
     allow_headers=["*"],  # Allows all headers
 )
 
-# Mount static files
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
-
 # Include routers
 app.include_router(transactions.router)
 app.include_router(categories.router)
@@ -62,4 +59,7 @@ async def test_supabase():
             "data": response.data
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) 
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Mount static files last
+app.mount("/", StaticFiles(directory="static", html=True), name="static") 

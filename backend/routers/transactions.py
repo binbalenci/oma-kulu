@@ -5,7 +5,7 @@ from config.supabase import supabase
 from datetime import date
 
 router = APIRouter(
-    prefix="/transactions",
+    prefix="/api/transactions",
     tags=["transactions"]
 )
 
