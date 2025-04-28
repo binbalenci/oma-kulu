@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 import os
 from config.supabase import supabase
@@ -32,12 +33,15 @@ app.add_middleware(
     allow_headers=["*"],  # Allows all headers
 )
 
+# Mount static files
+app.mount("/", StaticFiles(directory="static", html=True), name="static")
+
 # Include routers
 app.include_router(transactions.router)
 app.include_router(categories.router)
 
 # Basic health check endpoint
-@app.get("/")
+@app.get("/api/")
 async def root():
     return {
         "message": "Welcome to Oma Kulu API",
@@ -46,7 +50,7 @@ async def root():
     }
 
 # Test Supabase connection
-@app.get("/test-supabase")
+@app.get("/api/test-supabase")
 async def test_supabase():
     """Test Supabase connection"""
     try:
