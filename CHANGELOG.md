@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Frontend
 
+### [1.2.2] - 2024-04-28
+
+#### Added
+
+- Set page title to "Oma Kulu | Benjamin"
+- Updated API URL configuration for production environment
+
+#### Fixed
+
+- Corrected API endpoint paths in context providers
+- Improved error handling for API requests
+
 ### [1.2.1] - 2024-03-21
 
 #### Fixed
@@ -95,6 +107,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ESLint configuration
 
 ## Backend
+
+### [0.1.1] - 2024-04-28
+
+#### Fixed
+
+- Fixed API route prefixes in routers
+- Corrected static file serving order in FastAPI app
+- Ensured proper handling of API endpoints in production
+
+#### Changed
+
+- Updated router prefixes to include `/api` path
+- Improved error handling for API endpoints
+- Enhanced deployment configuration
 
 ### [0.1.0] - 2024-04-28
 

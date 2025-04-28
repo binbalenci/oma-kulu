@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "oma-kulu-backend"
-version = "0.1.0"
+version = "0.1.1"
 description = "Backend for Oma Kulu expense tracking application"
 authors = ["Your Name <your.email@example.com>"]
 
