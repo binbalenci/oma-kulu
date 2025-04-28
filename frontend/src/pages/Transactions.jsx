@@ -51,7 +51,7 @@ const Transactions = () => {
 
   // Prepare data for the chart
   const chartData = filteredTransactions.reduce((acc, transaction) => {
-    const date = new Date(transaction.date).toISOString().split("T")[0]; // Use ISO format for dates
+    const date = new Date(transaction.date).toLocaleDateString();
     if (!acc[date]) {
       acc[date] = { income: 0, expense: 0 };
     }
@@ -65,11 +65,11 @@ const Transactions = () => {
 
   const chartDataArray = Object.entries(chartData)
     .map(([date, amounts]) => ({
-      date: new Date(date), // Convert to Date object
+      date,
       income: amounts.income,
       expense: amounts.expense,
     }))
-    .sort((a, b) => a.date - b.date); // Sort by date ascending
+    .sort((a, b) => new Date(a.date) - new Date(b.date)); // Sort by date ascending
 
   // Calculate totals
   const totalIncome = filteredTransactions
@@ -171,15 +171,9 @@ const Transactions = () => {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartDataArray}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="date"
-                  scale="time"
-                  type="number"
-                  domain={["dataMin", "dataMax"]}
-                  tickFormatter={(date) => new Date(date).toLocaleDateString()}
-                />
+                <XAxis dataKey="date" />
                 <YAxis />
-                <Tooltip labelFormatter={(date) => new Date(date).toLocaleDateString()} />
+                <Tooltip />
                 <Line type="monotone" dataKey="income" stroke="#10B981" name="Income" />
                 <Line type="monotone" dataKey="expense" stroke="#EF4444" name="Expenses" />
               </LineChart>
