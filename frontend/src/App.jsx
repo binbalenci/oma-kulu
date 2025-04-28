@@ -1,28 +1,28 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import { FinanceProvider } from './context/FinanceContext'
-import Navbar from './components/Navbar'
-import Home from './pages/Home'
-import IncomeExpense from './pages/IncomeExpense'
+import { TransactionProvider } from './context/TransactionContext'
+import { CategoryProvider } from './context/CategoryContext'
+import Layout from './components/Layout'
+import Dashboard from './pages/Dashboard'
+import Transactions from './pages/Transactions'
 import Categories from './pages/Categories'
 import Settings from './pages/Settings'
 
 function App() {
   return (
-    <FinanceProvider>
-      <Router>
-        <div className="min-h-screen bg-gray-50">
-          <Navbar />
-          <main className="container mx-auto px-4 py-8">
+    <Router>
+      <TransactionProvider>
+        <CategoryProvider>
+          <Layout>
             <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/income-expense" element={<IncomeExpense />} />
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/transactions" element={<Transactions />} />
               <Route path="/categories" element={<Categories />} />
               <Route path="/settings" element={<Settings />} />
             </Routes>
-          </main>
-        </div>
-      </Router>
-    </FinanceProvider>
+          </Layout>
+        </CategoryProvider>
+      </TransactionProvider>
+    </Router>
   )
 }
 

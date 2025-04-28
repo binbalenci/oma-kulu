@@ -7,6 +7,9 @@ const Settings = () => {
   const { categories, deleteCategory } = useCategory();
   const [isDeleting, setIsDeleting] = useState(false);
 
+  console.log("Settings - transactions:", transactions);
+  console.log("Settings - categories:", categories);
+
   const handleDeleteAll = async () => {
     if (
       !window.confirm("Are you sure you want to delete all data? This action cannot be undone.")
@@ -35,45 +38,34 @@ const Settings = () => {
   return (
     <div className="space-y-6">
       {/* Data Summary */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded-lg shadow p-6"
-      >
+      <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-xl font-bold mb-4">Data Summary</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="p-4 bg-gray-50 rounded-lg">
             <h3 className="text-sm font-medium text-gray-500">Total Transactions</h3>
-            <p className="text-2xl font-semibold text-gray-900">{transactions.length}</p>
+            <p className="text-2xl font-semibold text-gray-900">{transactions?.length || 0}</p>
           </div>
           <div className="p-4 bg-gray-50 rounded-lg">
             <h3 className="text-sm font-medium text-gray-500">Total Categories</h3>
-            <p className="text-2xl font-semibold text-gray-900">{categories.length}</p>
+            <p className="text-2xl font-semibold text-gray-900">{categories?.length || 0}</p>
           </div>
         </div>
-      </motion.div>
+      </div>
 
       {/* Danger Zone */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="bg-white rounded-lg shadow p-6 border border-red-200"
-      >
+      <div className="bg-white rounded-lg shadow p-6 border border-red-200">
         <h2 className="text-xl font-bold mb-4 text-red-600">Danger Zone</h2>
         <p className="text-sm text-gray-500 mb-4">
           Once you delete your data, there is no going back. Please be certain.
         </p>
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
+        <button
           onClick={handleDeleteAll}
           disabled={isDeleting}
           className="bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50"
         >
           {isDeleting ? "Deleting..." : "Delete All Data"}
-        </motion.button>
-      </motion.div>
+        </button>
+      </div>
     </div>
   );
 };
