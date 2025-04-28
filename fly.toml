@@ -4,7 +4,7 @@
 #
 
 app = "oma-kulu"
-primary_region = "sto"
+primary_region = "waw"
 
 [build]
   dockerfile = "Dockerfile"
