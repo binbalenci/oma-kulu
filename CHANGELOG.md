@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Frontend
 
+### [1.2.0] - 2024-04-28
+
+#### Added
+
+- Separate buttons for adding Income and Expenses
+- Type-specific modals with pre-selected transaction types
+- Static type display in transaction forms
+- Improved transaction filtering affecting both chart and list
+
+#### Changed
+
+- Enhanced modal styling with semi-transparent overlay
+- Improved button visibility and consistency
+- Updated form validation and error handling
+
+#### Fixed
+
+- Resolved transaction type selection in modals
+- Fixed form initialization issues
+- Improved chart data filtering and display
+
 ### [1.1.0] - 2024-04-27
 
 #### Added
@@ -41,7 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dashboard with summary
 - Settings page
 
-### [0.1.0] - 2024-04-28
+### [0.1.0] - 2024-04-27
 
 #### Added
 
@@ -52,7 +73,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Recharts for data visualization
 - Heroicons for UI components
 
-#### Technical
+#### Security
 
 - React 19
 - Vite 6.3.1
