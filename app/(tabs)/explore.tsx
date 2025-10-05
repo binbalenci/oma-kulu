@@ -1,112 +1,168 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { loadTransactions, saveTransactions } from "@/lib/storage";
+import type { Transaction } from "@/lib/types";
+import { format } from "date-fns";
+import React from "react";
+import { FlatList, View } from "react-native";
+import { Button, FAB, List, SegmentedButtons, Text, TextInput } from "react-native-paper";
 
-import { Collapsible } from '@/components/ui/collapsible';
-import { ExternalLink } from '@/components/external-link';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Fonts } from '@/constants/theme';
+type Filter = "all" | "upcoming" | "paid";
 
-export default function TabTwoScreen() {
+export default function TransactionsScreen() {
+  const [filter, setFilter] = React.useState<Filter>("all");
+  const [items, setItems] = React.useState<Transaction[]>([]);
+  React.useEffect(() => {
+    (async () => {
+      const loaded = await loadTransactions();
+      setItems(loaded);
+    })();
+  }, []);
+
+  React.useEffect(() => {
+    saveTransactions(items);
+  }, [items]);
+  const [showForm, setShowForm] = React.useState(false);
+  const [editing, setEditing] = React.useState<Transaction | null>(null);
+
+  const [amount, setAmount] = React.useState("");
+  const [description, setDescription] = React.useState("");
+  const [date, setDate] = React.useState(format(new Date(), "yyyy-MM-dd"));
+  const [category, setCategory] = React.useState("General");
+  const [status, setStatus] = React.useState<"upcoming" | "paid">("upcoming");
+
+  const filtered = items.filter((t) => (filter === "all" ? true : t.status === filter));
+
+  const resetForm = () => {
+    setAmount("");
+    setDescription("");
+    setDate(format(new Date(), "yyyy-MM-dd"));
+    setCategory("General");
+    setStatus("upcoming");
+    setEditing(null);
+  };
+
+  const onSubmit = () => {
+    const amt = parseFloat(amount);
+    if (Number.isNaN(amt)) return;
+    if (editing) {
+      setItems((prev) =>
+        prev.map((t) =>
+          t.id === editing.id ? { ...editing, amount: amt, description, date, category, status } : t
+        )
+      );
+    } else {
+      const newItem: Transaction = {
+        id: Math.random().toString(36).slice(2),
+        amount: amt,
+        description,
+        date,
+        category,
+        status,
+        created_at: new Date().toISOString(),
+      };
+      setItems((prev) => [newItem, ...prev]);
+    }
+    setShowForm(false);
+    resetForm();
+  };
+
+  const onEdit = (t: Transaction) => {
+    setEditing(t);
+    setAmount(String(t.amount));
+    setDescription(t.description);
+    setDate(t.date);
+    setCategory(t.category);
+    setStatus(t.status);
+    setShowForm(true);
+  };
+
+  const onDelete = (id: string) => {
+    setItems((prev) => prev.filter((t) => t.id !== id));
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
+    <View style={{ flex: 1 }}>
+      <View style={{ padding: 12 }}>
+        <SegmentedButtons
+          value={filter}
+          onValueChange={(v) => setFilter(v as Filter)}
+          buttons={[
+            { value: "all", label: "All" },
+            { value: "upcoming", label: "Upcoming" },
+            { value: "paid", label: "Paid" },
+          ]}
         />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText
-          type="title"
-          style={{
-            fontFamily: Fonts.rounded,
-          }}>
-          Explore
-        </ThemedText>
-      </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image
-          source={require('@/assets/images/react-logo.png')}
-          style={{ width: 100, height: 100, alignSelf: 'center' }}
-        />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful{' '}
-          <ThemedText type="defaultSemiBold" style={{ fontFamily: Fonts.mono }}>
-            react-native-reanimated
-          </ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
+      </View>
+
+      {showForm ? (
+        <View style={{ padding: 12, gap: 12 }}>
+          <Text variant="titleMedium">{editing ? "Edit" : "Add"} Transaction</Text>
+          <TextInput
+            label="Amount"
+            value={amount}
+            onChangeText={setAmount}
+            keyboardType="decimal-pad"
+          />
+          <TextInput label="Description" value={description} onChangeText={setDescription} />
+          <TextInput label="Date (YYYY-MM-DD)" value={date} onChangeText={setDate} />
+          <TextInput label="Category" value={category} onChangeText={setCategory} />
+          <SegmentedButtons
+            value={status}
+            onValueChange={(v) => setStatus(v as "upcoming" | "paid")}
+            buttons={[
+              { value: "upcoming", label: "Upcoming" },
+              { value: "paid", label: "Paid" },
+            ]}
+          />
+          <View style={{ flexDirection: "row", gap: 12 }}>
+            <Button mode="contained" onPress={onSubmit}>
+              {editing ? "Save" : "Add"}
+            </Button>
+            <Button
+              onPress={() => {
+                setShowForm(false);
+                resetForm();
+              }}
+            >
+              Cancel
+            </Button>
+          </View>
+        </View>
+      ) : (
+        <>
+          <FlatList
+            data={filtered}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <List.Item
+                title={`${item.description || "No description"}`}
+                description={`${item.date} • ${item.category} • ${item.status}`}
+                right={() => (
+                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    <Text style={{ marginRight: 12 }}>${item.amount.toFixed(2)}</Text>
+                    <Button compact onPress={() => onEdit(item)}>
+                      Edit
+                    </Button>
+                    <Button compact onPress={() => onDelete(item.id)}>
+                      Delete
+                    </Button>
+                  </View>
+                )}
+              />
+            )}
+            ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: "#eee" }} />}
+            ListEmptyComponent={() => (
+              <View style={{ padding: 24, alignItems: "center" }}>
+                <Text>No transactions yet</Text>
+              </View>
+            )}
+          />
+          <FAB
+            style={{ position: "absolute", right: 16, bottom: 16 }}
+            icon="plus"
+            onPress={() => setShowForm(true)}
+          />
+        </>
+      )}
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
-  },
-  titleContainer: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-});

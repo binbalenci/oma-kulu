@@ -1,98 +1,75 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { loadTransactions } from "@/lib/storage";
+import type { Transaction } from "@/lib/types";
+import { endOfMonth, format, startOfMonth } from "date-fns";
+import React from "react";
+import { View } from "react-native";
+import { Card, List, Text } from "react-native-paper";
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+export default function DashboardScreen() {
+  const [now] = React.useState(new Date());
+  const [transactions, setTransactions] = React.useState<Transaction[]>([]);
 
-export default function HomeScreen() {
+  React.useEffect(() => {
+    (async () => {
+      const loaded = await loadTransactions();
+      setTransactions(loaded);
+    })();
+  }, []);
+
+  const monthStart = startOfMonth(now);
+  const monthEnd = endOfMonth(now);
+  const thisMonth = transactions.filter((t) => {
+    const d = new Date(t.date + "T00:00:00");
+    return d >= monthStart && d <= monthEnd;
+  });
+
+  const income = thisMonth.filter((t) => t.amount > 0).reduce((s, t) => s + t.amount, 0);
+  const expenses = thisMonth
+    .filter((t) => t.amount < 0)
+    .reduce((s, t) => s + Math.abs(t.amount), 0);
+  const net = income - expenses;
+
+  const byCategory = thisMonth.reduce<Record<string, number>>((acc, t) => {
+    acc[t.category] = (acc[t.category] ?? 0) + t.amount;
+    return acc;
+  }, {});
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <View style={{ flex: 1, padding: 16, gap: 16 }}>
+      <Text variant="titleLarge">{format(now, "MMMM yyyy")}</Text>
+      <View style={{ flexDirection: "row", gap: 12 }}>
+        <Card style={{ flex: 1 }}>
+          <Card.Title title="Income" subtitle="$" />
+          <Card.Content>
+            <Text variant="headlineMedium">${income.toFixed(2)}</Text>
+          </Card.Content>
+        </Card>
+        <Card style={{ flex: 1 }}>
+          <Card.Title title="Expenses" subtitle="$" />
+          <Card.Content>
+            <Text variant="headlineMedium">${expenses.toFixed(2)}</Text>
+          </Card.Content>
+        </Card>
+        <Card style={{ flex: 1 }}>
+          <Card.Title title="Net" subtitle="$" />
+          <Card.Content>
+            <Text variant="headlineMedium">${net.toFixed(2)}</Text>
+          </Card.Content>
+        </Card>
+      </View>
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+      <Card>
+        <Card.Title title="Category Breakdown" />
+        <Card.Content>
+          {Object.keys(byCategory).length === 0 ? (
+            <Text>No data</Text>
+          ) : (
+            Object.entries(byCategory).map(([cat, sum]) => (
+              <List.Item key={cat} title={cat} right={() => <Text>${sum.toFixed(2)}</Text>} />
+            ))
+          )}
+        </Card.Content>
+      </Card>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
-});

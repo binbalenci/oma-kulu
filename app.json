@@ -40,6 +40,10 @@
         }
       ]
     ],
+    "extra": {
+      "supabaseUrl": "YOUR_SUPABASE_URL",
+      "supabaseAnonKey": "YOUR_SUPABASE_ANON_KEY"
+    },
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true

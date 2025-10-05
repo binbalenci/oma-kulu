@@ -1,29 +1,82 @@
-import { Link } from 'expo-router';
-import { StyleSheet } from 'react-native';
+import { loadCategories, saveCategories } from "@/lib/storage";
+import type { Category } from "@/lib/types";
+import React from "react";
+import { StyleSheet, View } from "react-native";
+import { Button, List, Switch, Text, TextInput } from "react-native-paper";
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
+const PRESET: Category[] = [
+  { id: "income", name: "Income", is_visible: true },
+  { id: "investing", name: "Investing", is_visible: true },
+  { id: "loan_credit", name: "Loan+Credit", is_visible: true },
+  { id: "vietnam", name: "Vietnam", is_visible: true },
+  { id: "apartment", name: "Apartment", is_visible: true },
+  { id: "insurance", name: "Insurance", is_visible: true },
+  { id: "groceries_fuel", name: "Groceries+Fuel", is_visible: true },
+  { id: "shopping", name: "Shopping", is_visible: true },
+  { id: "subscriptions", name: "Subscriptions", is_visible: true },
+  { id: "incurred", name: "Incurred", is_visible: true },
+];
 
-export default function ModalScreen() {
+export default function CategoriesModal() {
+  const [categories, setCategories] = React.useState<Category[]>(PRESET);
+  React.useEffect(() => {
+    (async () => {
+      const existing = await loadCategories();
+      if (existing.length) setCategories(existing);
+      else await saveCategories(PRESET);
+    })();
+  }, []);
+
+  React.useEffect(() => {
+    saveCategories(categories);
+  }, [categories]);
+  const [newName, setNewName] = React.useState("");
+
+  const toggle = (id: string) => {
+    setCategories((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, is_visible: !c.is_visible } : c))
+    );
+  };
+
+  const add = () => {
+    if (!newName.trim()) return;
+    setCategories((prev) => [
+      { id: newName.toLowerCase().replace(/\s+/g, "_"), name: newName.trim(), is_visible: true },
+      ...prev,
+    ]);
+    setNewName("");
+  };
+
   return (
-    <ThemedView style={styles.container}>
-      <ThemedText type="title">This is a modal</ThemedText>
-      <Link href="/" dismissTo style={styles.link}>
-        <ThemedText type="link">Go to home screen</ThemedText>
-      </Link>
-    </ThemedView>
+    <View style={styles.container}>
+      <Text variant="titleLarge" style={{ marginBottom: 12 }}>
+        Categories
+      </Text>
+      <View style={{ flexDirection: "row", gap: 8, marginBottom: 12 }}>
+        <TextInput
+          style={{ flex: 1 }}
+          placeholder="Add category"
+          value={newName}
+          onChangeText={setNewName}
+        />
+        <Button mode="contained" onPress={add}>
+          Add
+        </Button>
+      </View>
+      {categories.map((c) => (
+        <List.Item
+          key={c.id}
+          title={c.name}
+          right={() => <Switch value={c.is_visible} onValueChange={() => toggle(c.id)} />}
+        />
+      ))}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  link: {
-    marginTop: 15,
-    paddingVertical: 15,
+    padding: 16,
   },
 });
