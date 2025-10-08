@@ -3,7 +3,7 @@ import type { Transaction } from "@/lib/types";
 import { format } from "date-fns";
 import React from "react";
 import { FlatList, View } from "react-native";
-import { Button, FAB, List, SegmentedButtons, Text, TextInput } from "react-native-paper";
+import { Button, Divider, FAB, List, SegmentedButtons, Text, TextInput } from "react-native-paper";
 
 type Filter = "all" | "upcoming" | "paid";
 
@@ -30,6 +30,8 @@ export default function TransactionsScreen() {
   const [status, setStatus] = React.useState<"upcoming" | "paid">("upcoming");
 
   const filtered = items.filter((t) => (filter === "all" ? true : t.status === filter));
+  const upcoming = items.filter((t) => t.status === "upcoming");
+  const recent = items.filter((t) => t.status === "paid");
 
   const resetForm = () => {
     setAmount("");
@@ -129,33 +131,89 @@ export default function TransactionsScreen() {
         </View>
       ) : (
         <>
-          <FlatList
-            data={filtered}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <List.Item
-                title={`${item.description || "No description"}`}
-                description={`${item.date} • ${item.category} • ${item.status}`}
-                right={() => (
-                  <View style={{ flexDirection: "row", alignItems: "center" }}>
-                    <Text style={{ marginRight: 12 }}>${item.amount.toFixed(2)}</Text>
-                    <Button compact onPress={() => onEdit(item)}>
-                      Edit
-                    </Button>
-                    <Button compact onPress={() => onDelete(item.id)}>
-                      Delete
-                    </Button>
-                  </View>
-                )}
-              />
-            )}
-            ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: "#eee" }} />}
-            ListEmptyComponent={() => (
-              <View style={{ padding: 24, alignItems: "center" }}>
-                <Text>No transactions yet</Text>
-              </View>
-            )}
-          />
+          {filter === "all" ? (
+            <>
+              <List.Subheader>Upcoming</List.Subheader>
+              {upcoming.length === 0 ? (
+                <View style={{ paddingHorizontal: 16, paddingBottom: 8 }}>
+                  <Text>No upcoming items</Text>
+                </View>
+              ) : (
+                upcoming.map((item) => (
+                  <List.Item
+                    key={item.id}
+                    title={`${item.description || "No description"}`}
+                    description={`${item.date} • ${item.category}`}
+                    right={() => (
+                      <View style={{ flexDirection: "row", alignItems: "center" }}>
+                        <Text style={{ marginRight: 12 }}>${item.amount.toFixed(2)}</Text>
+                        <Button compact onPress={() => onEdit(item)}>
+                          Edit
+                        </Button>
+                        <Button compact onPress={() => onDelete(item.id)}>
+                          Delete
+                        </Button>
+                      </View>
+                    )}
+                  />
+                ))
+              )}
+              <Divider style={{ marginVertical: 8 }} />
+              <List.Subheader>Recent</List.Subheader>
+              {recent.length === 0 ? (
+                <View style={{ paddingHorizontal: 16, paddingBottom: 8 }}>
+                  <Text>No recent transactions</Text>
+                </View>
+              ) : (
+                recent.map((item) => (
+                  <List.Item
+                    key={item.id}
+                    title={`${item.description || "No description"}`}
+                    description={`${item.date} • ${item.category}`}
+                    right={() => (
+                      <View style={{ flexDirection: "row", alignItems: "center" }}>
+                        <Text style={{ marginRight: 12 }}>${item.amount.toFixed(2)}</Text>
+                        <Button compact onPress={() => onEdit(item)}>
+                          Edit
+                        </Button>
+                        <Button compact onPress={() => onDelete(item.id)}>
+                          Delete
+                        </Button>
+                      </View>
+                    )}
+                  />
+                ))
+              )}
+            </>
+          ) : (
+            <FlatList
+              data={filtered}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <List.Item
+                  title={`${item.description || "No description"}`}
+                  description={`${item.date} • ${item.category} • ${item.status}`}
+                  right={() => (
+                    <View style={{ flexDirection: "row", alignItems: "center" }}>
+                      <Text style={{ marginRight: 12 }}>${item.amount.toFixed(2)}</Text>
+                      <Button compact onPress={() => onEdit(item)}>
+                        Edit
+                      </Button>
+                      <Button compact onPress={() => onDelete(item.id)}>
+                        Delete
+                      </Button>
+                    </View>
+                  )}
+                />
+              )}
+              ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: "#eee" }} />}
+              ListEmptyComponent={() => (
+                <View style={{ padding: 24, alignItems: "center" }}>
+                  <Text>No transactions yet</Text>
+                </View>
+              )}
+            />
+          )}
           <FAB
             style={{ position: "absolute", right: 16, bottom: 16 }}
             icon="plus"

@@ -22,6 +22,7 @@ export interface Category {
 
 export interface AppSettings {
   passcode_hash?: string;
+  starting_balance?: number;
 }
 
 export interface Budget {
@@ -31,5 +32,14 @@ export interface Budget {
   spent_amount: number;
   month: string; // YYYY-MM
   is_active: boolean;
+}
+
+export interface RecurringTemplate {
+  id: string;
+  name: string;
+  type: 'income' | 'expense';
+  category: string;
+  typical_amount: number;
+  enabled?: boolean;
 }
 
