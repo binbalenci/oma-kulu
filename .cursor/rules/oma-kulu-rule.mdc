@@ -1,115 +1,247 @@
 ---
-alwaysApply: false
+alwaysApply: true
 ---
 
-# Oma Kulu - Cursor Rules
+# Oma Kulu - Cursor Development Rules
 
-## Project Overview
+## General Guidelines
 
-Oma Kulu ("My Expense" in Estonian) is a monthly financial planning app that transforms manual spreadsheet tracking into an intuitive planning-first system. The app focuses on proactive allocation planning rather than reactive transaction logging.
+### Communication
 
-## Required Reading
+- **Always start responses with "YO ALPHA!"** when beginning work on a task
+- Be direct and action-oriented in explanations
+- Show what you're doing, not just what you plan to do
 
-**ALWAYS read these files first before making any changes:**
+### Code Quality
 
-- `docs/APP_SPEC.md` - Complete app specification, user flows, and requirements
-- `docs/ROADMAP.md` - Development phases and current progress status
+- **Always ensure linter passes after changing code**
+- Run `read_lints` on modified files before completing a task
+- Fix all linter errors and warnings immediately
+- Use proper TypeScript types - no `any` types unless absolutely necessary
 
-These documents are the **single source of truth** for understanding the app's purpose, features, and current development stage.
+### Project Knowledge
 
-## Core Principles
+- **Read these files first** before making architectural decisions:
+  - `docs/APP_SPEC.md` - Complete app specification and user flows
+  - `docs/ROADMAP.md` - Current development phase and feature status
+- These documents are the single source of truth for requirements
 
-1. **Planning-First:** Budget view is the primary workspace, not historical reports
-2. **Two Critical Numbers:** "Amount Left to Assign" and "Actual Amount Left" always visible
-3. **Payment Tracking:** Expected invoices move from planning to history with one tap
-4. **Flexible Consistency:** Categories evolve with life changes while maintaining historical integrity
-5. **Multi-Month Planning:** Work on any month's budget with easy template copying
+---
 
-## Current Architecture
+## Components & Technical Patterns
 
-- **Framework:** React Native with Expo Router
-- **Navigation:** 3-tab structure: Budget (default), Transactions, Categories
-- **State Management:** Local storage with AsyncStorage + Supabase
-- **UI Library:** React Native Paper
-- **Current Phase:** Phase 1 MVP (see ROADMAP.md for details)
+### Global Snackbar (Toast Notifications)
 
-## Development Guidelines
+- **Always use the global Snackbar** for user feedback, never create local toast/notification state
+- Import: `import { useSnackbar } from "@/components/snackbar-provider";`
+- Usage: `const { showSnackbar } = useSnackbar();`
+- Call: `showSnackbar("Your message here");` or `showSnackbar("Message", 5000);` for custom duration
 
-### Before Making Changes
+**When to use Snackbar:**
 
-1. **Read APP_SPEC.md** to understand the feature requirements
-2. **Check ROADMAP.md** to confirm the feature is in the current phase
-3. **Verify against user stories** in the specification
-4. **Maintain consistency** with existing patterns and naming
+- Success confirmations: "Budget saved successfully!"
+- Error messages: "No data found for previous month"
+- Info notifications: "Copied 5 items from January 2025"
+- Warnings: "Cannot delete: item is in use"
 
-### Code Standards
+**Example:**
 
-- Use TypeScript for all new code
-- Follow React Native Paper component patterns
-- Maintain the 3-tab navigation structure
-- Use existing storage patterns (`lib/storage.ts`)
-- Keep components focused and single-purpose
-- Add proper error handling and loading states
+```typescript
+const handleSave = () => {
+  // ... save logic
+  showSnackbar("Changes saved successfully!");
+};
+```
 
-### File Organization
-
-- `app/(tabs)/` - Main tab screens (budgets.tsx, explore.tsx, categories.tsx)
-- `lib/` - Core utilities (storage.ts, types.ts, supabase.ts)
-- `components/` - Reusable UI components
-- `docs/` - Project documentation (APP_SPEC.md, ROADMAP.md)
-
-### Key Features to Implement
-
-Based on APP_SPEC.md, prioritize these core features:
-
-1. **Budget View:** Two-tiered system (Expected Items + Free-Range Budgets)
-2. **Transaction Management:** Unified view with Upcoming/Recent sections
-3. **Category System:** Hybrid approach with archive/restore functionality
-4. **Month Planning:** Future month support with template copying
-5. **Payment Tracking:** Mark expected items as paid (auto-creates transactions)
-
-### Testing Approach
-
-- Test user flows from APP_SPEC.md
-- Verify critical numbers update correctly
-- Ensure data persistence across app restarts
-- Test month navigation and template copying
-
-### Documentation Updates
-
-- Update ROADMAP.md when completing features
-- Add new user stories to APP_SPEC.md if requirements change
-- Keep both documents current and accurate
-
-## Common Patterns
-
-### Adding New Features
-
-1. Check if feature is in current phase (ROADMAP.md)
-2. Implement according to APP_SPEC.md requirements
-3. Follow existing code patterns
-4. Update documentation if needed
-
-### Data Management
+### Data Storage
 
 - Use existing storage functions in `lib/storage.ts`
-- Maintain data consistency across views
-- Handle loading states appropriately
-- Implement proper error handling
+- Always save data after state updates using `useEffect`
+- Load data on component mount with proper error handling
+
+**Pattern:**
+
+```typescript
+React.useEffect(() => {
+  saveTransactions(transactions);
+}, [transactions]);
+```
+
+### Navigation
+
+- Use `expo-router` for navigation
+- Import: `import { useRouter } from "expo-router";`
+- Navigate: `router.push("/(tabs)/categories");`
+- Tab structure: Budget (default), Transactions, Categories
 
 ### UI Components
 
-- Use React Native Paper components
-- Follow the app's visual hierarchy
-- Maintain consistent spacing and typography
-- Ensure accessibility compliance
+- Use React Native Paper components consistently
+- Import theme: `import { useTheme } from "react-native-paper";`
+- Access colors: `theme.colors.primary`, `theme.colors.error`, etc.
+- Use proper spacing: multiples of 4 (4, 8, 12, 16, 24, 32)
 
-## Remember
+### State Management
 
-- The app is about **planning**, not just tracking
-- Users should see their financial status at a glance
-- Every interaction should feel intuitive and purposeful
-- Data should flow seamlessly between views
-- Always prioritize the user's mental model of monthly budgeting
+- Use React hooks for local state
+- Keep state as close to where it's used as possible
+- Use `React.useCallback` for functions passed as props
+- Use `React.useMemo` for expensive computations
 
-When in doubt, refer to the specification documents and user stories to guide your decisions.
+---
+
+## App-Specific Patterns
+
+### Budget View
+
+- Month selector format: `format(date, "MMMM yyyy")`
+- Month key format: `format(date, "yyyy-MM")`
+- Always filter budgets by current month: `budgets.filter((b) => b.month === curMonth)`
+- Calculate "Money to assign": `expectedIncome - expectedExpenses - totalAllocated`
+- Calculate "Actual in bank": `startingBalance + sum(all transactions)`
+
+### Transactions
+
+- Date format: `yyyy-MM-dd` (ISO format)
+- Status: `"upcoming"` or `"paid"`
+- Amount convention: positive for income, negative for expenses
+- Always include `created_at` timestamp
+
+### Templates (Recurring Items)
+
+- Type: `"income"` or `"expense"`
+- Store typical amounts as positive numbers
+- Convert to negative when creating expense transactions
+- Filter by `enabled !== false` when displaying
+
+### Progress Bars & Color Coding
+
+```typescript
+const getProgressColor = (ratio: number) => {
+  if (ratio === 0) return theme.colors.surfaceDisabled;
+  if (ratio < 0.75) return "#4caf50"; // green
+  if (ratio < 0.96) return "#ff9800"; // orange
+  return "#f44336"; // red
+};
+```
+
+---
+
+## File Organization
+
+```
+app/
+  ├── (tabs)/           # Tab screens (budgets, transactions, categories)
+  ├── _layout.tsx       # Root layout with providers
+  └── modal.tsx         # Modal screens
+
+components/
+  ├── snackbar-provider.tsx  # Global snackbar context
+  ├── passcode-gate.tsx      # Authentication
+  └── ui/                    # Reusable UI components
+
+lib/
+  ├── storage.ts        # AsyncStorage helpers
+  ├── types.ts          # TypeScript interfaces
+  └── supabase.ts       # Database client
+
+docs/
+  ├── APP_SPEC.md       # Feature specifications
+  ├── ROADMAP.md        # Development phases
+  └── *.md              # Additional documentation
+```
+
+---
+
+## Common Tasks
+
+### Adding a New Feature
+
+1. Check `docs/ROADMAP.md` to confirm it's in the current phase
+2. Review `docs/APP_SPEC.md` for requirements
+3. Implement following existing patterns
+4. Use global Snackbar for user feedback
+5. Run linter and fix all errors
+6. Update documentation if needed
+
+### Adding a New Type
+
+1. Add interface to `lib/types.ts`
+2. Create storage helpers in `lib/storage.ts`
+3. Follow naming convention: `load*` and `save*` functions
+4. Use AsyncStorage keys: `storage_*_v1`
+
+### Creating a New Screen
+
+1. Add file to `app/(tabs)/` for tab screens
+2. Register in `app/(tabs)/_layout.tsx` if it's a tab
+3. Use `useTheme()` for consistent styling
+4. Import and use `useSnackbar()` for notifications
+5. Follow existing screen structure (state, effects, render)
+
+---
+
+## Testing Checklist
+
+Before completing any task:
+
+- [ ] Linter passes with no errors
+- [ ] All TypeScript types are properly defined
+- [ ] User feedback is provided via Snackbar where appropriate
+- [ ] Data persists correctly across app restarts
+- [ ] Navigation works as expected
+- [ ] UI is consistent with existing screens
+- [ ] Code follows existing patterns
+
+---
+
+## Philosophy
+
+**Planning-First Approach**
+
+- Budget view is the primary workspace
+- Users should see financial status at a glance
+- Every interaction should feel intuitive
+- Data flows seamlessly between views
+
+**Code Quality**
+
+- Write clean, readable code
+- Follow existing patterns consistently
+- Don't over-engineer solutions
+- Prioritize user experience
+
+---
+
+## Quick Reference
+
+**Show a notification:**
+
+```typescript
+showSnackbar("Message here");
+```
+
+**Navigate to another screen:**
+
+```typescript
+router.push("/(tabs)/categories");
+```
+
+**Format a date:**
+
+```typescript
+format(date, "MMMM yyyy"); // "January 2025"
+format(date, "yyyy-MM-dd"); // "2025-01-15"
+```
+
+**Access theme colors:**
+
+```typescript
+theme.colors.primary;
+theme.colors.error;
+theme.colors.secondary;
+```
+
+---
+
+**Remember: When in doubt, check the existing code for patterns, and always start with "YO ALPHA!" 🚀**
