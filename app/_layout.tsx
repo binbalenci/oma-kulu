@@ -6,6 +6,7 @@ import { Provider as PaperProvider } from "react-native-paper";
 import "react-native-reanimated";
 
 import PasscodeGate from "@/components/passcode-gate";
+import { SnackbarProvider } from "@/components/snackbar-provider";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 
 export const unstable_settings = {
@@ -19,17 +20,19 @@ export default function RootLayout() {
   return (
     <PaperProvider>
       <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-        {unlocked ? (
-          <>
-            <Stack>
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="modal" options={{ presentation: "modal", title: "Modal" }} />
-            </Stack>
-            <StatusBar style="auto" />
-          </>
-        ) : (
-          <PasscodeGate onUnlocked={() => setUnlocked(true)} />
-        )}
+        <SnackbarProvider>
+          {unlocked ? (
+            <>
+              <Stack>
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="modal" options={{ presentation: "modal", title: "Modal" }} />
+              </Stack>
+              <StatusBar style="auto" />
+            </>
+          ) : (
+            <PasscodeGate onUnlocked={() => setUnlocked(true)} />
+          )}
+        </SnackbarProvider>
       </ThemeProvider>
     </PaperProvider>
   );
