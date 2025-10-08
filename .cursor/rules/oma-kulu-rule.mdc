@@ -1,0 +1,115 @@
+---
+alwaysApply: false
+---
+
+# Oma Kulu - Cursor Rules
+
+## Project Overview
+
+Oma Kulu ("My Expense" in Estonian) is a monthly financial planning app that transforms manual spreadsheet tracking into an intuitive planning-first system. The app focuses on proactive allocation planning rather than reactive transaction logging.
+
+## Required Reading
+
+**ALWAYS read these files first before making any changes:**
+
+- `docs/APP_SPEC.md` - Complete app specification, user flows, and requirements
+- `docs/ROADMAP.md` - Development phases and current progress status
+
+These documents are the **single source of truth** for understanding the app's purpose, features, and current development stage.
+
+## Core Principles
+
+1. **Planning-First:** Budget view is the primary workspace, not historical reports
+2. **Two Critical Numbers:** "Amount Left to Assign" and "Actual Amount Left" always visible
+3. **Payment Tracking:** Expected invoices move from planning to history with one tap
+4. **Flexible Consistency:** Categories evolve with life changes while maintaining historical integrity
+5. **Multi-Month Planning:** Work on any month's budget with easy template copying
+
+## Current Architecture
+
+- **Framework:** React Native with Expo Router
+- **Navigation:** 3-tab structure: Budget (default), Transactions, Categories
+- **State Management:** Local storage with AsyncStorage + Supabase
+- **UI Library:** React Native Paper
+- **Current Phase:** Phase 1 MVP (see ROADMAP.md for details)
+
+## Development Guidelines
+
+### Before Making Changes
+
+1. **Read APP_SPEC.md** to understand the feature requirements
+2. **Check ROADMAP.md** to confirm the feature is in the current phase
+3. **Verify against user stories** in the specification
+4. **Maintain consistency** with existing patterns and naming
+
+### Code Standards
+
+- Use TypeScript for all new code
+- Follow React Native Paper component patterns
+- Maintain the 3-tab navigation structure
+- Use existing storage patterns (`lib/storage.ts`)
+- Keep components focused and single-purpose
+- Add proper error handling and loading states
+
+### File Organization
+
+- `app/(tabs)/` - Main tab screens (budgets.tsx, explore.tsx, categories.tsx)
+- `lib/` - Core utilities (storage.ts, types.ts, supabase.ts)
+- `components/` - Reusable UI components
+- `docs/` - Project documentation (APP_SPEC.md, ROADMAP.md)
+
+### Key Features to Implement
+
+Based on APP_SPEC.md, prioritize these core features:
+
+1. **Budget View:** Two-tiered system (Expected Items + Free-Range Budgets)
+2. **Transaction Management:** Unified view with Upcoming/Recent sections
+3. **Category System:** Hybrid approach with archive/restore functionality
+4. **Month Planning:** Future month support with template copying
+5. **Payment Tracking:** Mark expected items as paid (auto-creates transactions)
+
+### Testing Approach
+
+- Test user flows from APP_SPEC.md
+- Verify critical numbers update correctly
+- Ensure data persistence across app restarts
+- Test month navigation and template copying
+
+### Documentation Updates
+
+- Update ROADMAP.md when completing features
+- Add new user stories to APP_SPEC.md if requirements change
+- Keep both documents current and accurate
+
+## Common Patterns
+
+### Adding New Features
+
+1. Check if feature is in current phase (ROADMAP.md)
+2. Implement according to APP_SPEC.md requirements
+3. Follow existing code patterns
+4. Update documentation if needed
+
+### Data Management
+
+- Use existing storage functions in `lib/storage.ts`
+- Maintain data consistency across views
+- Handle loading states appropriately
+- Implement proper error handling
+
+### UI Components
+
+- Use React Native Paper components
+- Follow the app's visual hierarchy
+- Maintain consistent spacing and typography
+- Ensure accessibility compliance
+
+## Remember
+
+- The app is about **planning**, not just tracking
+- Users should see their financial status at a glance
+- Every interaction should feel intuitive and purposeful
+- Data should flow seamlessly between views
+- Always prioritize the user's mental model of monthly budgeting
+
+When in doubt, refer to the specification documents and user stories to guide your decisions.
