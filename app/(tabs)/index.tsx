@@ -160,7 +160,7 @@ export default function BudgetsScreen() {
         created_at: editingItem?.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
-      
+
       const success = await saveIncome(income);
       if (success) {
         setIncomes((prev) => {
@@ -182,7 +182,7 @@ export default function BudgetsScreen() {
         created_at: editingItem?.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
-      
+
       const success = await saveInvoice(invoice);
       if (success) {
         setInvoices((prev) => {
@@ -202,7 +202,7 @@ export default function BudgetsScreen() {
         created_at: editingItem?.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
-      
+
       const success = await saveBudget(budget);
       if (success) {
         setBudgets((prev) => {
@@ -218,25 +218,40 @@ export default function BudgetsScreen() {
     setDialogVisible(false);
   };
 
-  const handleDeleteItem = (type: "income" | "invoice" | "budget", id: string) => {
+  const handleDeleteItem = async (type: "income" | "invoice" | "budget", id: string) => {
     if (type === "income") {
-      setIncomes((prev) => prev.filter((i) => i.id !== id));
-      showSnackbar("Income deleted");
+      const success = await deleteIncome(id);
+      if (success) {
+        setIncomes((prev) => prev.filter((i) => i.id !== id));
+        showSnackbar("Income deleted");
+      } else {
+        showSnackbar("Failed to delete income");
+      }
     } else if (type === "invoice") {
-      setInvoices((prev) => prev.filter((i) => i.id !== id));
-      showSnackbar("Invoice deleted");
+      const success = await deleteInvoice(id);
+      if (success) {
+        setInvoices((prev) => prev.filter((i) => i.id !== id));
+        showSnackbar("Invoice deleted");
+      } else {
+        showSnackbar("Failed to delete invoice");
+      }
     } else {
-      setBudgets((prev) => prev.filter((b) => b.id !== id));
-      showSnackbar("Budget deleted");
+      const success = await deleteBudget(id);
+      if (success) {
+        setBudgets((prev) => prev.filter((b) => b.id !== id));
+        showSnackbar("Budget deleted");
+      } else {
+        showSnackbar("Failed to delete budget");
+      }
     }
   };
 
-  const togglePaid = (type: "income" | "invoice", item: ExpectedIncome | ExpectedInvoice) => {
+  const togglePaid = async (type: "income" | "invoice", item: ExpectedIncome | ExpectedInvoice) => {
     if (item.is_paid) return; // Already paid, don't toggle back
 
     // Create transaction
     const tx: Transaction = {
-      id: Math.random().toString(36).slice(2),
+      id: crypto.randomUUID(),
       amount: type === "income" ? item.amount : -item.amount,
       description: item.name,
       date: format(new Date(), "yyyy-MM-dd"),
@@ -244,18 +259,38 @@ export default function BudgetsScreen() {
       status: "paid",
       created_at: new Date().toISOString(),
     };
+
+    const txSuccess = await saveTransaction(tx);
+    if (!txSuccess) {
+      showSnackbar("Failed to create transaction");
+      return;
+    }
+
     setTransactions((prev) => [tx, ...prev]);
 
     // Mark as paid
+    const updatedItem = { ...item, is_paid: true, updated_at: new Date().toISOString() };
+
     if (type === "income") {
-      setIncomes((prev) => prev.map((i) => (i.id === item.id ? { ...i, is_paid: true } : i)));
+      const success = await saveIncome(updatedItem as ExpectedIncome);
+      if (success) {
+        setIncomes((prev) => prev.map((i) => (i.id === item.id ? { ...i, is_paid: true } : i)));
+        showSnackbar("Marked as paid!");
+      } else {
+        showSnackbar("Failed to update income");
+      }
     } else {
-      setInvoices((prev) => prev.map((i) => (i.id === item.id ? { ...i, is_paid: true } : i)));
+      const success = await saveInvoice(updatedItem as ExpectedInvoice);
+      if (success) {
+        setInvoices((prev) => prev.map((i) => (i.id === item.id ? { ...i, is_paid: true } : i)));
+        showSnackbar("Marked as paid!");
+      } else {
+        showSnackbar("Failed to update invoice");
+      }
     }
-    showSnackbar("Marked as paid!");
   };
 
-  const copyFromPreviousMonth = () => {
+  const copyFromPreviousMonth = async () => {
     const prevMonth = monthKey(addMonths(now, -1));
     const prevIncomes = incomes.filter((i) => i.month === prevMonth);
     const prevInvoices = invoices.filter((i) => i.month === prevMonth);
@@ -268,26 +303,36 @@ export default function BudgetsScreen() {
 
     const newIncomes = prevIncomes.map((i) => ({
       ...i,
-      id: Math.random().toString(36).slice(2),
+      id: crypto.randomUUID(),
       month: curMonth,
       is_paid: false,
       created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     }));
 
     const newInvoices = prevInvoices.map((i) => ({
       ...i,
-      id: Math.random().toString(36).slice(2),
+      id: crypto.randomUUID(),
       month: curMonth,
       is_paid: false,
       created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     }));
 
     const newBudgets = prevBudgets.map((b) => ({
       ...b,
-      id: Math.random().toString(36).slice(2),
+      id: crypto.randomUUID(),
       month: curMonth,
       created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     }));
+
+    // Save to database
+    await Promise.all([
+      ...newIncomes.map((i) => saveIncome(i)),
+      ...newInvoices.map((i) => saveInvoice(i)),
+      ...newBudgets.map((b) => saveBudget(b)),
+    ]);
 
     setIncomes((prev) => [...prev, ...newIncomes]);
     setInvoices((prev) => [...prev, ...newInvoices]);
