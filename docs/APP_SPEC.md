@@ -23,47 +23,44 @@ Oma Kulu ("My Expense" in Estonian) transforms manual spreadsheet tracking into 
 **Layout:**
 
 ```
-[March 2025 ◀ ▶] [Copy Previous Month]
+[◀ March 2025 ▶]
 
-CASH FLOW
-Planned to Assign: €453
-Actual in Bank: €1,247
+CASH OVERVIEW
+Total expected income: €3,344
+Total expected expenses: €450
+Money to assign: €453
+Money left in bank: €1,247
 
---- EXPECTED ITEMS ---
+[💡 No budget set? Copy Previous Month]  (appears only when all sections are empty)
 
-[▶] INCOME (Planned: €3,344)
-[ ] Salary €2,944
-[ ] Wife Contribution €400
+--- EXPECTED INCOMES ---                          [+ Add Income]
+[ ] Salary (Income) €2,944
+[ ] Wife Contribution (Income) €400
+(Empty state: "No expected incomes yet. Tap + to add one.")
 
-[▶] INSURANCE (Planned: €423)
-[ ] Car Insurance (P&C) €138
-[ ] Home Insurance (If) €285
+--- EXPECTED INVOICES ---                         [+ Add Invoice]
+[ ] Netflix (Subscriptions) €15
+[ ] Car Insurance (Insurance) €138
+(Empty state: "No expected invoices yet. Tap + to add one.")
 
-[▼] SUBSCRIPTIONS (Planned: €27)
-[✅] Netflix €15
-[ ] Spotify €12
-[+] (Add item)
-
---- FREE-RANGE BUDGETS ---
-
-CATEGORY ALLOCATED SPENT REMAINING
-Groceries €500 €220 €280 [Edit]
-Fuel €180 €150 €30 [Edit]
-Shopping €200 €450 -€250 [Edit]
-[+ Add Budget Category]
-
-[FAB: Add Expected Income/Invoice]
+--- BUDGETS ---                                   [+ Add Budget]
+Groceries €500 | Spent: €220 (44%) | Left: €280
+Fuel €180 | Spent: €150 (83%) | Left: €30
+Shopping €200 | Spent: €450 (225%) | Left: -€250
+(Empty state: "No budgets yet. Tap + to add one.")
 ```
 
 **Interactions:**
 
-- **Month Selector:** Tap to work on any month (past or future)
-- **Copy Previous Month:** One-tap template copying for quick setup
-- **Expand/Collapse:** Tap `[▶]/[▼]` to show/hide category items
-- **Mark Paid:** Tap `[ ]` to mark expected items as paid (auto-creates transaction with today's date)
-- **Edit Amounts:** Tap any amount to modify
-- **Add Items:** `[+]` adds new expected items to specific categories
-- **Edit Budgets:** Tap `[Edit]` to modify free-range allocations
+- **Month Selector:** Tap arrows to navigate between months (past or future)
+- **Copy Previous Month:** Button appears only when all sections are empty; copies all items from previous month
+- **Mark Paid (Incomes/Invoices):** Tap `[ ]` checkbox to mark as paid (auto-creates transaction with today's date)
+- **Add Income:** Opens dialog with fields: Name, Category (dropdown from categories), Amount
+- **Add Invoice:** Opens dialog with fields: Name, Category (dropdown from categories), Amount
+- **Add Budget:** Opens dialog with fields: Category (dropdown from categories), Amount
+- **Edit Items:** Tap any income/invoice/budget item to edit (same dialog as add)
+- **Delete Items:** Swipe or long-press to delete any item
+- **Empty States:** Each section shows helpful prompt when no items exist
 
 ---
 
@@ -108,7 +105,7 @@ Feb 25 - Gas Station Neste -€70
 **Layout:**
 
 ```
-[Categories] [Templates] [Settings]
+[Categories] [Settings]
 
 --- Categories Tab ---
 ACTIVE CATEGORIES
@@ -120,15 +117,6 @@ ARCHIVED CATEGORIES
 [ ] Car Loan [Restore] [Delete]
 
 [+ Create Category]
-
---- Templates Tab ---
-Salary
-Type: Expected Income
-Category: Income
-Typical Amount: €2,944
-[Edit] [Disable]
-
-[+ Create Template]
 
 --- Settings Tab ---
 
@@ -145,25 +133,28 @@ Typical Amount: €2,944
 
 ### Monthly Budget Setup
 
-1.  Tap month selector -> choose next month
-2.  Tap "**Copy Previous Month**" -> confirm template copy
-3.  Review and adjust expected incomes/invoices
-4.  Allocate "**Amount Left to Assign**" to free-range budgets
-5.  Budget is ready for the month
+1.  Navigate to next month using month selector arrows
+2.  Tap "**Copy Previous Month**" button (if sections are empty)
+3.  Add expected incomes (Salary, etc.) - tap "+ Add Income"
+4.  Add expected invoices (Netflix, Insurance, etc.) - tap "+ Add Invoice"
+5.  Add budgets for variable expenses (Groceries, Fuel, etc.) - tap "+ Add Budget"
+6.  Monitor "**Money to assign**" to ensure all income is allocated
 
-### Daily Invoice Management
+### Daily Income/Invoice Management
 
-1.  Receive bill -> appears in Budget View "**Expected Items**"
-2.  Tap checkbox `[ ]` to mark as paid
-3.  Item moves to Transactions "**Recent**" with today's date
-4.  "**Actual Amount Left**" updates automatically
+1.  Expected income or invoice appears in Budget View
+2.  Tap checkbox `[ ]` next to item to mark as paid
+3.  Transaction automatically created with today's date
+4.  "**Money left in bank**" updates automatically
+5.  Item remains visible but checked off for the month
 
 ### Spending Tracking
 
 1.  Make purchase -> go to Transactions View
 2.  Tap `[+]` -> enter amount, category, description
-3.  Free-range budget "**Spent**" column updates in real-time
-4.  Monitor "**Remaining**" amounts throughout month
+3.  Return to Budget View to see budget "**Spent**" and percentage
+4.  Monitor "**Left**" amounts and progress bars throughout month
+5.  Budget items show visual indicators (green/yellow/red) based on % used
 
 ### Category Evolution
 
@@ -182,3 +173,128 @@ Typical Amount: €2,944
 - As a user, I want to **work on future months' budgets** to plan for irregular income and expenses
 - As a user, I want to **archive categories** I no longer use while keeping their historical data
 - As a user, I want to see both my **planned financial status and actual bank balance** at a glance
+
+---
+
+## Data Architecture
+
+### Storage System
+
+**Database:** Supabase (PostgreSQL)
+**Authentication:** None (single-user app with passcode protection)
+**Access Control:** Open RLS policies (all operations allowed)
+
+### Data Models
+
+#### 1. Expected Incomes
+
+```typescript
+{
+  id: UUID (primary key)
+  name: TEXT (e.g., "Salary", "Freelance Project")
+  category: TEXT (references categories.name)
+  amount: NUMERIC (positive number)
+  month: TEXT (YYYY-MM format)
+  is_paid: BOOLEAN (default: false)
+  created_at: TIMESTAMPTZ
+  updated_at: TIMESTAMPTZ
+}
+```
+
+#### 2. Expected Invoices
+
+```typescript
+{
+  id: UUID (primary key)
+  name: TEXT (e.g., "Netflix", "Car Insurance")
+  category: TEXT (references categories.name)
+  amount: NUMERIC (positive number)
+  month: TEXT (YYYY-MM format)
+  is_paid: BOOLEAN (default: false)
+  created_at: TIMESTAMPTZ
+  updated_at: TIMESTAMPTZ
+}
+```
+
+#### 3. Budgets
+
+```typescript
+{
+  id: UUID (primary key)
+  category: TEXT (references categories.name)
+  allocated_amount: NUMERIC
+  month: TEXT (YYYY-MM format)
+  created_at: TIMESTAMPTZ
+  updated_at: TIMESTAMPTZ
+}
+```
+
+**Note:** `spent_amount` is calculated in real-time from transactions, not stored in the database.
+
+#### 4. Transactions
+
+```typescript
+{
+  id: UUID (primary key)
+  amount: NUMERIC (positive for income, negative for expenses)
+  description: TEXT
+  date: DATE (ISO format: YYYY-MM-DD)
+  category: TEXT
+  status: TEXT ('upcoming' | 'paid')
+  created_at: TIMESTAMPTZ
+}
+```
+
+#### 5. Categories
+
+```typescript
+{
+  id: UUID (primary key)
+  name: TEXT
+  type: TEXT ('income' | 'expense')
+  icon: TEXT (optional, emoji or icon name)
+  color: TEXT (optional, hex color)
+  is_visible: BOOLEAN (default: true)
+  order_index: INT (optional, for sorting)
+  created_at: TIMESTAMPTZ
+}
+```
+
+#### 6. App Settings
+
+```typescript
+{
+  id: INT2 (primary key)
+  passcode_hash: TEXT (optional)
+  starting_balance: NUMERIC (default: 0)
+  updated_at: TIMESTAMPTZ
+}
+```
+
+### Data Access Layer
+
+**Module:** `lib/database.ts`
+**Pattern:** Async functions using Supabase client
+**Error Handling:** Try-catch with console logging, returns empty arrays/defaults on error
+
+**Key Functions:**
+
+- `loadIncomes(month)` - Fetch expected incomes for a month
+- `saveIncome(income)` - Insert or update income
+- `deleteIncome(id)` - Delete income by ID
+- `loadInvoices(month)` - Fetch expected invoices for a month
+- `saveInvoice(invoice)` - Insert or update invoice
+- `deleteInvoice(id)` - Delete invoice by ID
+- `loadBudgets(month)` - Fetch budgets for a month
+- `saveBudget(budget)` - Insert or update budget
+- `deleteBudget(id)` - Delete budget by ID
+- `loadTransactions()` - Fetch all transactions ordered by date
+- `saveTransaction(tx)` - Insert or update transaction
+- `deleteTransaction(id)` - Delete transaction by ID
+- `loadCategories()` - Fetch visible categories ordered by index
+- `saveCategory(cat)` - Insert or update category
+- `deleteCategory(id)` - Delete category by ID
+- `loadSettings()` - Fetch app settings (single row)
+- `saveSettings(settings)` - Update app settings
+
+**Compatibility Layer:** `lib/storage.ts` re-exports database functions to maintain backward compatibility with existing components.

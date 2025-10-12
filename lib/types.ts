@@ -1,3 +1,34 @@
+export interface ExpectedIncome {
+  id: string;
+  name: string;
+  category: string;
+  amount: number;
+  month: string; // YYYY-MM
+  is_paid: boolean;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface ExpectedInvoice {
+  id: string;
+  name: string;
+  category: string;
+  amount: number;
+  month: string; // YYYY-MM
+  is_paid: boolean;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface Budget {
+  id: string;
+  category: string;
+  allocated_amount: number;
+  month: string; // YYYY-MM
+  created_at: string;
+  updated_at?: string;
+}
+
 export interface Transaction {
   id: string;
   amount: number;
@@ -11,35 +42,18 @@ export interface Transaction {
 export interface Category {
   id: string;
   name: string;
-  is_visible: boolean;
-  color?: string;
-  order_index?: number;
-  // Enhanced fields for Categories tab
-  type?: 'income' | 'expense';
+  type: 'income' | 'expense';
   icon?: string;
-  budget_enabled?: boolean;
+  color?: string;
+  is_visible: boolean;
+  order_index?: number;
+  created_at?: string;
 }
 
 export interface AppSettings {
+  id?: number;
   passcode_hash?: string;
   starting_balance?: number;
-}
-
-export interface Budget {
-  id: string;
-  category: string; // category name for now (can migrate to category_id later)
-  allocated_amount: number;
-  spent_amount: number;
-  month: string; // YYYY-MM
-  is_active: boolean;
-}
-
-export interface RecurringTemplate {
-  id: string;
-  name: string;
-  type: 'income' | 'expense';
-  category: string;
-  typical_amount: number;
-  enabled?: boolean;
+  updated_at?: string;
 }
 

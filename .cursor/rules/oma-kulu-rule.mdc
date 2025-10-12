@@ -155,6 +155,26 @@ docs/
 
 ## Common Tasks
 
+### Documentation Maintenance
+
+**Always keep documentation in sync with implementation:**
+
+**Update `docs/APP_SPEC.md` when:**
+
+- Adding, removing, or modifying features
+- Changing app requirements or user flows
+- Making architectural changes (e.g., storage → database migration)
+- Updating data models or business logic
+- Review the conversation history to identify what changed
+- Update relevant sections to reflect current implementation
+
+**Update `docs/ROADMAP.md` only when:**
+
+- User explicitly asks about roadmap items
+- User wants to change app vision or direction
+- Completing a significant milestone or phase
+- Marking items as done/in-progress
+
 ### Adding a New Feature
 
 1. Check `docs/ROADMAP.md` to confirm it's in the current phase
@@ -162,7 +182,7 @@ docs/
 3. Implement following existing patterns
 4. Use global Snackbar for user feedback
 5. Run linter and fix all errors
-6. Update documentation if needed
+6. **Update `docs/APP_SPEC.md`** to reflect the new feature
 
 ### Adding a New Type
 
