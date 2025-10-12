@@ -54,10 +54,10 @@ Shopping €200 | Spent: €450 (225%) | Left: -€250
 
 - **Month Selector:** Tap arrows to navigate between months (past or future)
 - **Copy Previous Month:** Button appears only when all sections are empty; copies all items from previous month
-- **Mark Paid (Incomes/Invoices):** Tap `[ ]` checkbox to mark as paid (auto-creates transaction with today's date)
-- **Add Income:** Opens dialog with fields: Name, Category (dropdown from categories), Amount
-- **Add Invoice:** Opens dialog with fields: Name, Category (dropdown from categories), Amount
-- **Add Budget:** Opens dialog with fields: Category (dropdown from categories), Amount
+- **Mark/Unmark Paid (Incomes/Invoices):** Tap checkbox to toggle paid status; marking creates transaction, unmarking deletes it
+- **Add Income:** Opens dialog with fields: Name (optional, uses category if empty), Category (dropdown from categories), Amount, Notes (optional)
+- **Add Invoice:** Opens dialog with fields: Name (optional, uses category if empty), Category (dropdown from categories), Amount, Notes (optional)
+- **Add Budget:** Opens dialog with fields: Category (dropdown from categories), Amount, Notes (optional)
 - **Edit Items:** Tap any income/invoice/budget item to edit (same dialog as add)
 - **Delete Items:** Swipe or long-press to delete any item
 - **Empty States:** Each section shows helpful prompt when no items exist
@@ -71,30 +71,29 @@ Shopping €200 | Spent: €450 (225%) | Left: -€250
 **Layout:**
 
 ```
-Transactions
-[Search Bar]
-[Filter: All | Upcoming | Income | Expense]
+[◀ January 2025 ▶]
 
---- UPCOMING ---
-Feb 28 - Car Insurance (P&C) -€138
-Feb 25 - Spotify Subscription -€12
-Feb 20 - Salary €2,944
+--- UPCOMING (tap to collapse/expand) ---
+Salary (Income) +€2,944
+Netflix (Subscriptions) -€15
+Car Insurance (Insurance) -€138
 
 --- RECENT ---
-Today - MARKED PAID: Netflix -€15
-Feb 27 - S-Market Groceries -€85
-Feb 25 - Gas Station Neste -€70
+Jan 15 - Grocery Shopping (Groceries) -€85.0
+Jan 14 - Gas Station (Fuel) -€70.0
+Jan 10 - Salary Payment (Income) +€2,944.0
 
-[+] Add Transaction
+[FAB: + Add Transaction]
 ```
 
 **Interactions:**
 
-- **Manual Entry:** Add transactions with category assignment
-- **Status Filter:** View only upcoming, only income, etc.
-- **Search:** Find transactions by description
-- **Swipe Actions:** Edit or delete transactions
-- **Upcoming Items:** Mirror of unpaid expected items from Budget View
+- **Month Selector:** Navigate between months using arrows
+- **Upcoming Section:** Tap header to collapse/expand; shows unpaid incomes, invoices, and upcoming transactions
+- **Manual Entry:** Add transactions with category, amount, date, and status
+- **Edit/Delete:** Tap pencil or trash icons on each transaction
+- **Color Coding:** Green (+) for income, Red (-) for expenses
+- **Amount Format:** Single decimal (e.g., €50.0), with + or - prefix
 
 ---
 
@@ -191,30 +190,36 @@ ARCHIVED CATEGORIES
 ```typescript
 {
   id: UUID (primary key)
-  name: TEXT (e.g., "Salary", "Freelance Project")
+  name: TEXT (optional - defaults to category name if empty)
   category: TEXT (references categories.name)
   amount: NUMERIC (positive number)
   month: TEXT (YYYY-MM format)
   is_paid: BOOLEAN (default: false)
+  notes: TEXT (optional, for additional context)
   created_at: TIMESTAMPTZ
   updated_at: TIMESTAMPTZ
 }
 ```
+
+**Note:** If `name` is empty, the app uses the `category` value for display.
 
 #### 2. Expected Invoices
 
 ```typescript
 {
   id: UUID (primary key)
-  name: TEXT (e.g., "Netflix", "Car Insurance")
+  name: TEXT (optional - defaults to category name if empty)
   category: TEXT (references categories.name)
   amount: NUMERIC (positive number)
   month: TEXT (YYYY-MM format)
   is_paid: BOOLEAN (default: false)
+  notes: TEXT (optional, for additional context)
   created_at: TIMESTAMPTZ
   updated_at: TIMESTAMPTZ
 }
 ```
+
+**Note:** If `name` is empty, the app uses the `category` value for display.
 
 #### 3. Budgets
 
@@ -224,6 +229,7 @@ ARCHIVED CATEGORIES
   category: TEXT (references categories.name)
   allocated_amount: NUMERIC
   month: TEXT (YYYY-MM format)
+  notes: TEXT (optional, for additional context)
   created_at: TIMESTAMPTZ
   updated_at: TIMESTAMPTZ
 }

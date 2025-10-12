@@ -5,6 +5,7 @@ export interface ExpectedIncome {
   amount: number;
   month: string; // YYYY-MM
   is_paid: boolean;
+  notes?: string;
   created_at: string;
   updated_at?: string;
 }
@@ -16,6 +17,7 @@ export interface ExpectedInvoice {
   amount: number;
   month: string; // YYYY-MM
   is_paid: boolean;
+  notes?: string;
   created_at: string;
   updated_at?: string;
 }
@@ -25,6 +27,7 @@ export interface Budget {
   category: string;
   allocated_amount: number;
   month: string; // YYYY-MM
+  notes?: string;
   created_at: string;
   updated_at?: string;
 }

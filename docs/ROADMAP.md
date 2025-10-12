@@ -91,6 +91,7 @@ Focus: Polish, performance, and ecosystem integration
 ### User Experience
 
 - [ ] Biometric authentication (Face ID/Touch ID)
+- [ ] Currency symbol customization (€, $, £, etc.)
 - [ ] iPad layout optimization
 - [ ] Home screen widgets
 - [ ] Advanced haptic feedback

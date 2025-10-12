@@ -3,6 +3,7 @@ import {
   deleteBudget,
   deleteIncome,
   deleteInvoice,
+  deleteTransaction,
   loadBudgets,
   loadCategories,
   loadIncomes,
@@ -16,6 +17,7 @@ import {
 } from "@/lib/storage";
 import type { Budget, Category, ExpectedIncome, ExpectedInvoice, Transaction } from "@/lib/types";
 import { addMonths, endOfMonth, format, startOfMonth } from "date-fns";
+import { useFocusEffect } from "expo-router";
 import React from "react";
 import { ScrollView, View } from "react-native";
 import {
@@ -56,6 +58,7 @@ export default function BudgetsScreen() {
   const [itemName, setItemName] = React.useState("");
   const [itemCategory, setItemCategory] = React.useState("");
   const [itemAmount, setItemAmount] = React.useState("");
+  const [itemNotes, setItemNotes] = React.useState("");
 
   // Load data on mount and when month changes
   React.useEffect(() => {
@@ -76,6 +79,16 @@ export default function BudgetsScreen() {
       setBudgets(bdgts);
     })();
   }, []);
+
+  // Refetch categories when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      (async () => {
+        const cats = await loadCategories();
+        setCategories(cats);
+      })();
+    }, [])
+  );
 
   const curMonth = monthKey(now);
   const monthStart = startOfMonth(now);
@@ -120,15 +133,18 @@ export default function BudgetsScreen() {
     setItemName("");
     setItemCategory("");
     setItemAmount("");
+    setItemNotes("");
     setDialogVisible(true);
   };
 
   const openEditDialog = (type: "income" | "invoice" | "budget", item: any) => {
     setDialogType(type);
     setEditingItem(item);
-    setItemName(type === "budget" ? "" : item.name);
+    // If name matches category, show as empty (user left it blank)
+    setItemName(type === "budget" ? "" : item.name === item.category ? "" : item.name);
     setItemCategory(item.category);
     setItemAmount(String(type === "budget" ? item.allocated_amount : item.amount));
+    setItemNotes(item.notes || "");
     setDialogVisible(true);
   };
 
@@ -142,21 +158,19 @@ export default function BudgetsScreen() {
       showSnackbar("Please select a category");
       return;
     }
-    if (dialogType !== "budget" && !itemName) {
-      showSnackbar("Please enter a name");
-      return;
-    }
+    // Name is optional for incomes/invoices - will use category name if empty
 
     const id = editingItem?.id || crypto.randomUUID();
 
     if (dialogType === "income") {
       const income: ExpectedIncome = {
         id,
-        name: itemName,
+        name: itemName || itemCategory, // Use category name if name is empty
         category: itemCategory,
         amount,
         month: curMonth,
         is_paid: editingItem?.is_paid || false,
+        notes: itemNotes || undefined,
         created_at: editingItem?.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -174,11 +188,12 @@ export default function BudgetsScreen() {
     } else if (dialogType === "invoice") {
       const invoice: ExpectedInvoice = {
         id,
-        name: itemName,
+        name: itemName || itemCategory, // Use category name if name is empty
         category: itemCategory,
         amount,
         month: curMonth,
         is_paid: editingItem?.is_paid || false,
+        notes: itemNotes || undefined,
         created_at: editingItem?.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -199,6 +214,7 @@ export default function BudgetsScreen() {
         category: itemCategory,
         allocated_amount: amount,
         month: curMonth,
+        notes: itemNotes || undefined,
         created_at: editingItem?.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -247,7 +263,41 @@ export default function BudgetsScreen() {
   };
 
   const togglePaid = async (type: "income" | "invoice", item: ExpectedIncome | ExpectedInvoice) => {
-    if (item.is_paid) return; // Already paid, don't toggle back
+    if (item.is_paid) {
+      // Unmark as paid - delete the associated transaction
+      const relatedTx = transactions.find(
+        (t) =>
+          t.description === item.name &&
+          t.category === item.category &&
+          Math.abs(t.amount) === item.amount &&
+          t.status === "paid"
+      );
+
+      if (relatedTx) {
+        const success = await deleteTransaction(relatedTx.id);
+        if (success) {
+          setTransactions((prev) => prev.filter((t) => t.id !== relatedTx.id));
+        }
+      }
+
+      // Mark as unpaid
+      const updatedItem = { ...item, is_paid: false, updated_at: new Date().toISOString() };
+
+      if (type === "income") {
+        const success = await saveIncome(updatedItem as ExpectedIncome);
+        if (success) {
+          setIncomes((prev) => prev.map((i) => (i.id === item.id ? { ...i, is_paid: false } : i)));
+          showSnackbar("Unmarked as paid!");
+        }
+      } else {
+        const success = await saveInvoice(updatedItem as ExpectedInvoice);
+        if (success) {
+          setInvoices((prev) => prev.map((i) => (i.id === item.id ? { ...i, is_paid: false } : i)));
+          showSnackbar("Unmarked as paid!");
+        }
+      }
+      return;
+    }
 
     // Create transaction
     const tx: Transaction = {
@@ -302,27 +352,35 @@ export default function BudgetsScreen() {
     }
 
     const newIncomes = prevIncomes.map((i) => ({
-      ...i,
       id: crypto.randomUUID(),
+      name: i.name,
+      category: i.category,
+      amount: i.amount,
       month: curMonth,
       is_paid: false,
+      notes: i.notes,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }));
 
     const newInvoices = prevInvoices.map((i) => ({
-      ...i,
       id: crypto.randomUUID(),
+      name: i.name,
+      category: i.category,
+      amount: i.amount,
       month: curMonth,
       is_paid: false,
+      notes: i.notes,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }));
 
     const newBudgets = prevBudgets.map((b) => ({
-      ...b,
       id: crypto.randomUUID(),
+      category: b.category,
+      allocated_amount: b.allocated_amount,
       month: curMonth,
+      notes: b.notes,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }));
@@ -380,13 +438,13 @@ export default function BudgetsScreen() {
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                 <Text variant="bodyMedium">Total expected income:</Text>
                 <Text variant="bodyMedium" style={{ fontWeight: "600" }}>
-                  €{expectedIncome.toFixed(2)}
+                  €{expectedIncome.toFixed(1)}
                 </Text>
               </View>
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                 <Text variant="bodyMedium">Total expected expenses:</Text>
                 <Text variant="bodyMedium" style={{ fontWeight: "600" }}>
-                  €{expectedExpenses.toFixed(2)}
+                  €{expectedExpenses.toFixed(1)}
                 </Text>
               </View>
               <Divider />
@@ -401,7 +459,7 @@ export default function BudgetsScreen() {
                     color: moneyToAssign < 0 ? theme.colors.error : theme.colors.primary,
                   }}
                 >
-                  €{moneyToAssign.toFixed(2)}
+                  €{moneyToAssign.toFixed(1)}
                 </Text>
               </View>
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
@@ -409,7 +467,7 @@ export default function BudgetsScreen() {
                   Money left in bank:
                 </Text>
                 <Text variant="bodyLarge" style={{ fontWeight: "bold" }}>
-                  €{actualInBank.toFixed(2)}
+                  €{actualInBank.toFixed(1)}
                 </Text>
               </View>
             </View>
@@ -473,7 +531,7 @@ export default function BudgetsScreen() {
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
                       <Checkbox
                         status={income.is_paid ? "checked" : "unchecked"}
-                        onPress={() => !income.is_paid && togglePaid("income", income)}
+                        onPress={() => togglePaid("income", income)}
                       />
                       <View style={{ flex: 1 }}>
                         <Text variant="bodyLarge">{income.name}</Text>
@@ -482,7 +540,7 @@ export default function BudgetsScreen() {
                         </Text>
                       </View>
                       <Text variant="bodyLarge" style={{ fontWeight: "600" }}>
-                        €{income.amount.toFixed(2)}
+                        €{income.amount.toFixed(1)}
                       </Text>
                       <IconButton
                         icon="pencil"
@@ -540,7 +598,7 @@ export default function BudgetsScreen() {
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
                       <Checkbox
                         status={invoice.is_paid ? "checked" : "unchecked"}
-                        onPress={() => !invoice.is_paid && togglePaid("invoice", invoice)}
+                        onPress={() => togglePaid("invoice", invoice)}
                       />
                       <View style={{ flex: 1 }}>
                         <Text variant="bodyLarge">{invoice.name}</Text>
@@ -549,7 +607,7 @@ export default function BudgetsScreen() {
                         </Text>
                       </View>
                       <Text variant="bodyLarge" style={{ fontWeight: "600" }}>
-                        €{invoice.amount.toFixed(2)}
+                        €{invoice.amount.toFixed(1)}
                       </Text>
                       <IconButton
                         icon="pencil"
@@ -635,16 +693,16 @@ export default function BudgetsScreen() {
                       <View style={{ gap: 4, marginBottom: 8 }}>
                         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                           <Text variant="bodySmall">
-                            Allocated: €{budget.allocated_amount.toFixed(2)}
+                            Allocated: €{budget.allocated_amount.toFixed(1)}
                           </Text>
-                          <Text variant="bodySmall">Spent: €{spent.toFixed(2)}</Text>
+                          <Text variant="bodySmall">Spent: €{spent.toFixed(1)}</Text>
                           <Text
                             variant="bodySmall"
                             style={{
                               color: remaining < 0 ? theme.colors.error : undefined,
                             }}
                           >
-                            Left: €{remaining.toFixed(2)}
+                            Left: €{remaining.toFixed(1)}
                           </Text>
                         </View>
                       </View>
@@ -681,10 +739,14 @@ export default function BudgetsScreen() {
           <Dialog.Content style={{ gap: 12 }}>
             {dialogType !== "budget" && (
               <TextInput
-                label="Name"
+                label="Name (optional)"
                 value={itemName}
                 onChangeText={setItemName}
-                placeholder={dialogType === "income" ? "e.g., Salary" : "e.g., Netflix"}
+                placeholder={
+                  dialogType === "income"
+                    ? "Leave empty to use category name"
+                    : "Leave empty to use category name"
+                }
               />
             )}
             <TextInput
@@ -710,7 +772,15 @@ export default function BudgetsScreen() {
               value={itemAmount}
               onChangeText={setItemAmount}
               keyboardType="decimal-pad"
-              placeholder="0.00"
+              placeholder="0.0"
+            />
+            <TextInput
+              label="Notes (optional)"
+              value={itemNotes}
+              onChangeText={setItemNotes}
+              placeholder="Add any notes..."
+              multiline
+              numberOfLines={3}
             />
           </Dialog.Content>
           <Dialog.Actions>

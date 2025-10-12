@@ -1,6 +1,7 @@
 import { ColorPicker } from "@/components/color-picker";
 import { IconPicker } from "@/components/icon-picker";
-import { loadCategories, saveCategories } from "@/lib/storage";
+import { useSnackbar } from "@/components/snackbar-provider";
+import { loadCategories, saveCategory } from "@/lib/storage";
 import type { Category } from "@/lib/types";
 import React from "react";
 import { FlatList, ScrollView, View } from "react-native";
@@ -16,6 +17,7 @@ import {
 } from "react-native-paper";
 
 export default function CategoriesScreen() {
+  const { showSnackbar } = useSnackbar();
   const [items, setItems] = React.useState<Category[]>([]);
   const [query, setQuery] = React.useState("");
   const [editing, setEditing] = React.useState<Category | null>(null);
@@ -28,10 +30,6 @@ export default function CategoriesScreen() {
     })();
   }, []);
 
-  React.useEffect(() => {
-    saveCategories(items);
-  }, [items]);
-
   const filtered = items
     .filter((c) => c.name.toLowerCase().includes(query.toLowerCase()))
     .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
@@ -39,7 +37,7 @@ export default function CategoriesScreen() {
   const openEdit = (cat?: Category) => {
     setEditing(
       cat ?? {
-        id: Math.random().toString(36).slice(2),
+        id: crypto.randomUUID(),
         name: "",
         is_visible: true,
         color: "#666666",
@@ -47,19 +45,27 @@ export default function CategoriesScreen() {
         icon: "📁",
         order_index: (items[items.length - 1]?.order_index ?? 0) + 1,
         budget_enabled: true,
+        created_at: new Date().toISOString(),
       }
     );
     setVisible(true);
   };
 
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (!editing) return;
-    setItems((prev) => {
-      const next = prev.filter((c) => c.id !== editing.id);
-      next.push(editing);
-      return next;
-    });
-    setVisible(false);
+
+    const success = await saveCategory(editing);
+    if (success) {
+      setItems((prev) => {
+        const next = prev.filter((c) => c.id !== editing.id);
+        next.push(editing);
+        return next;
+      });
+      showSnackbar(editing.created_at ? "Category updated!" : "Category added!");
+      setVisible(false);
+    } else {
+      showSnackbar("Failed to save category");
+    }
   };
 
   return (
@@ -91,20 +97,24 @@ export default function CategoriesScreen() {
                 <Text>Visible</Text>
                 <Switch
                   value={item.is_visible}
-                  onValueChange={(v) =>
-                    setItems((prev) =>
-                      prev.map((c) => (c.id === item.id ? { ...c, is_visible: v } : c))
-                    )
-                  }
+                  onValueChange={async (v) => {
+                    const updated = { ...item, is_visible: v };
+                    const success = await saveCategory(updated);
+                    if (success) {
+                      setItems((prev) => prev.map((c) => (c.id === item.id ? updated : c)));
+                    }
+                  }}
                 />
                 <Text>Budget</Text>
                 <Switch
                   value={item.budget_enabled ?? true}
-                  onValueChange={(v) =>
-                    setItems((prev) =>
-                      prev.map((c) => (c.id === item.id ? { ...c, budget_enabled: v } : c))
-                    )
-                  }
+                  onValueChange={async (v) => {
+                    const updated = { ...item, budget_enabled: v };
+                    const success = await saveCategory(updated);
+                    if (success) {
+                      setItems((prev) => prev.map((c) => (c.id === item.id ? updated : c)));
+                    }
+                  }}
                 />
               </View>
             </Card.Content>

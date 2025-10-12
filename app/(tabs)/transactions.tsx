@@ -1,226 +1,382 @@
-import { loadTransactions, saveTransactions } from "@/lib/storage";
-import type { Transaction } from "@/lib/types";
+import { useSnackbar } from "@/components/snackbar-provider";
+import {
+  deleteTransaction,
+  loadIncomes,
+  loadInvoices,
+  loadTransactions,
+  saveTransaction,
+} from "@/lib/storage";
+import type { ExpectedIncome, ExpectedInvoice, Transaction } from "@/lib/types";
 import { format } from "date-fns";
+import { useFocusEffect } from "expo-router";
 import React from "react";
-import { FlatList, View } from "react-native";
-import { Button, Divider, FAB, List, SegmentedButtons, Text, TextInput } from "react-native-paper";
-
-type Filter = "all" | "upcoming" | "paid";
+import { FlatList, TouchableOpacity, View } from "react-native";
+import {
+  Button,
+  Card,
+  Dialog,
+  Divider,
+  FAB,
+  IconButton,
+  Portal,
+  SegmentedButtons,
+  Text,
+  TextInput,
+  useTheme,
+} from "react-native-paper";
 
 export default function TransactionsScreen() {
-  const [filter, setFilter] = React.useState<Filter>("all");
-  const [items, setItems] = React.useState<Transaction[]>([]);
-  React.useEffect(() => {
-    (async () => {
-      const loaded = await loadTransactions();
-      setItems(loaded);
-    })();
-  }, []);
+  const theme = useTheme();
+  const { showSnackbar } = useSnackbar();
+  const [currentMonth, setCurrentMonth] = React.useState(new Date());
+  const [transactions, setTransactions] = React.useState<Transaction[]>([]);
+  const [incomes, setIncomes] = React.useState<ExpectedIncome[]>([]);
+  const [invoices, setInvoices] = React.useState<ExpectedInvoice[]>([]);
+  const [upcomingExpanded, setUpcomingExpanded] = React.useState(true);
 
-  React.useEffect(() => {
-    saveTransactions(items);
-  }, [items]);
-  const [showForm, setShowForm] = React.useState(false);
+  // Form states
+  const [dialogVisible, setDialogVisible] = React.useState(false);
   const [editing, setEditing] = React.useState<Transaction | null>(null);
-
   const [amount, setAmount] = React.useState("");
   const [description, setDescription] = React.useState("");
   const [date, setDate] = React.useState(format(new Date(), "yyyy-MM-dd"));
   const [category, setCategory] = React.useState("General");
-  const [status, setStatus] = React.useState<"upcoming" | "paid">("upcoming");
+  const [status, setStatus] = React.useState<"upcoming" | "paid">("paid");
 
-  const filtered = items.filter((t) => (filter === "all" ? true : t.status === filter));
-  const upcoming = items.filter((t) => t.status === "upcoming");
-  const recent = items.filter((t) => t.status === "paid");
+  // Load data when screen gains focus
+  useFocusEffect(
+    React.useCallback(() => {
+      (async () => {
+        const [txs, incms, invcs] = await Promise.all([
+          loadTransactions(),
+          loadIncomes(),
+          loadInvoices(),
+        ]);
+        setTransactions(txs);
+        setIncomes(incms);
+        setInvoices(invcs);
+      })();
+    }, [])
+  );
+
+  // Upcoming items: unpaid incomes/invoices + upcoming transactions
+  const upcomingFromIncomes = incomes.filter((i) => !i.is_paid);
+  const upcomingFromInvoices = invoices.filter((i) => !i.is_paid);
+  const upcomingTransactions = transactions.filter((t) => t.status === "upcoming");
+
+  // Recent: paid transactions only
+  const recentTransactions = transactions
+    .filter((t) => t.status === "paid")
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const resetForm = () => {
     setAmount("");
     setDescription("");
     setDate(format(new Date(), "yyyy-MM-dd"));
     setCategory("General");
-    setStatus("upcoming");
+    setStatus("paid");
     setEditing(null);
   };
 
-  const onSubmit = () => {
+  const handleSave = async () => {
     const amt = parseFloat(amount);
-    if (Number.isNaN(amt)) return;
-    if (editing) {
-      setItems((prev) =>
-        prev.map((t) =>
-          t.id === editing.id ? { ...editing, amount: amt, description, date, category, status } : t
-        )
-      );
-    } else {
-      const newItem: Transaction = {
-        id: Math.random().toString(36).slice(2),
-        amount: amt,
-        description,
-        date,
-        category,
-        status,
-        created_at: new Date().toISOString(),
-      };
-      setItems((prev) => [newItem, ...prev]);
+    if (Number.isNaN(amt)) {
+      showSnackbar("Please enter a valid amount");
+      return;
     }
-    setShowForm(false);
-    resetForm();
+
+    const tx: Transaction = {
+      id: editing?.id || crypto.randomUUID(),
+      amount: amt,
+      description,
+      date,
+      category,
+      status,
+      created_at: editing?.created_at || new Date().toISOString(),
+    };
+
+    const success = await saveTransaction(tx);
+    if (success) {
+      if (editing) {
+        setTransactions((prev) => prev.map((t) => (t.id === tx.id ? tx : t)));
+        showSnackbar("Transaction updated!");
+      } else {
+        setTransactions((prev) => [tx, ...prev]);
+        showSnackbar("Transaction added!");
+      }
+      setDialogVisible(false);
+      resetForm();
+    } else {
+      showSnackbar("Failed to save transaction");
+    }
   };
 
-  const onEdit = (t: Transaction) => {
+  const handleEdit = (t: Transaction) => {
     setEditing(t);
     setAmount(String(t.amount));
     setDescription(t.description);
     setDate(t.date);
     setCategory(t.category);
     setStatus(t.status);
-    setShowForm(true);
+    setDialogVisible(true);
   };
 
-  const onDelete = (id: string) => {
-    setItems((prev) => prev.filter((t) => t.id !== id));
+  const handleDelete = async (id: string) => {
+    const success = await deleteTransaction(id);
+    if (success) {
+      setTransactions((prev) => prev.filter((t) => t.id !== id));
+      showSnackbar("Transaction deleted");
+    } else {
+      showSnackbar("Failed to delete transaction");
+    }
+  };
+
+  const formatAmount = (amount: number) => {
+    const sign = amount >= 0 ? "+" : "-";
+    const color = amount >= 0 ? "#4caf50" : "#f44336";
+    return (
+      <Text style={{ fontWeight: "600", color }}>
+        {sign}€{Math.abs(amount).toFixed(1)}
+      </Text>
+    );
   };
 
   return (
     <View style={{ flex: 1 }}>
-      <View style={{ padding: 12 }}>
-        <SegmentedButtons
-          value={filter}
-          onValueChange={(v) => setFilter(v as Filter)}
-          buttons={[
-            { value: "all", label: "All" },
-            { value: "upcoming", label: "Upcoming" },
-            { value: "paid", label: "Paid" },
-          ]}
+      {/* Month Selector Header */}
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          paddingHorizontal: 16,
+          paddingVertical: 12,
+          backgroundColor: theme.colors.elevation.level2,
+        }}
+      >
+        <IconButton
+          icon="chevron-left"
+          size={24}
+          onPress={() => setCurrentMonth((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
+        />
+        <Text variant="titleMedium">{format(currentMonth, "MMMM yyyy")}</Text>
+        <IconButton
+          icon="chevron-right"
+          size={24}
+          onPress={() => setCurrentMonth((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1))}
         />
       </View>
 
-      {showForm ? (
-        <View style={{ padding: 12, gap: 12 }}>
-          <Text variant="titleMedium">{editing ? "Edit" : "Add"} Transaction</Text>
-          <TextInput
-            label="Amount"
-            value={amount}
-            onChangeText={setAmount}
-            keyboardType="decimal-pad"
-          />
-          <TextInput label="Description" value={description} onChangeText={setDescription} />
-          <TextInput label="Date (YYYY-MM-DD)" value={date} onChangeText={setDate} />
-          <TextInput label="Category" value={category} onChangeText={setCategory} />
-          <SegmentedButtons
-            value={status}
-            onValueChange={(v) => setStatus(v as "upcoming" | "paid")}
-            buttons={[
-              { value: "upcoming", label: "Upcoming" },
-              { value: "paid", label: "Paid" },
-            ]}
-          />
-          <View style={{ flexDirection: "row", gap: 12 }}>
-            <Button mode="contained" onPress={onSubmit}>
-              {editing ? "Save" : "Add"}
-            </Button>
-            <Button
-              onPress={() => {
-                setShowForm(false);
-                resetForm();
-              }}
-            >
-              Cancel
-            </Button>
+      <View style={{ flex: 1, padding: 16 }}>
+        {/* Upcoming Section */}
+        <TouchableOpacity
+          onPress={() => setUpcomingExpanded(!upcomingExpanded)}
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 8,
+          }}
+        >
+          <Text variant="titleMedium" style={{ color: theme.colors.secondary }}>
+            UPCOMING
+          </Text>
+          <IconButton icon={upcomingExpanded ? "chevron-up" : "chevron-down"} size={24} />
+        </TouchableOpacity>
+
+        {upcomingExpanded && (
+          <View style={{ marginBottom: 16 }}>
+            {upcomingFromIncomes.length === 0 &&
+            upcomingFromInvoices.length === 0 &&
+            upcomingTransactions.length === 0 ? (
+              <Text
+                style={{
+                  textAlign: "center",
+                  color: theme.colors.secondary,
+                  paddingVertical: 16,
+                }}
+              >
+                No upcoming items
+              </Text>
+            ) : (
+              <>
+                {upcomingFromIncomes.map((income) => (
+                  <Card key={`income-${income.id}`} style={{ marginBottom: 8 }}>
+                    <Card.Content style={{ paddingVertical: 12 }}>
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
+                        <View style={{ flex: 1 }}>
+                          <Text variant="bodyLarge">{income.name}</Text>
+                          <Text variant="bodySmall" style={{ color: theme.colors.secondary }}>
+                            {income.category} • Expected Income
+                          </Text>
+                        </View>
+                        <Text style={{ fontWeight: "600", color: "#4caf50" }}>
+                          +€{income.amount.toFixed(1)}
+                        </Text>
+                      </View>
+                    </Card.Content>
+                  </Card>
+                ))}
+
+                {upcomingFromInvoices.map((invoice) => (
+                  <Card key={`invoice-${invoice.id}`} style={{ marginBottom: 8 }}>
+                    <Card.Content style={{ paddingVertical: 12 }}>
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
+                        <View style={{ flex: 1 }}>
+                          <Text variant="bodyLarge">{invoice.name}</Text>
+                          <Text variant="bodySmall" style={{ color: theme.colors.secondary }}>
+                            {invoice.category} • Expected Invoice
+                          </Text>
+                        </View>
+                        <Text style={{ fontWeight: "600", color: "#f44336" }}>
+                          -€{invoice.amount.toFixed(1)}
+                        </Text>
+                      </View>
+                    </Card.Content>
+                  </Card>
+                ))}
+
+                {upcomingTransactions.map((tx) => (
+                  <Card key={tx.id} style={{ marginBottom: 8 }}>
+                    <Card.Content style={{ paddingVertical: 12 }}>
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
+                        <View style={{ flex: 1 }}>
+                          <Text variant="bodyLarge">{tx.description}</Text>
+                          <Text variant="bodySmall" style={{ color: theme.colors.secondary }}>
+                            {tx.date} • {tx.category}
+                          </Text>
+                        </View>
+                        {formatAmount(tx.amount)}
+                        <View style={{ flexDirection: "row", marginLeft: 8 }}>
+                          <IconButton icon="pencil" size={20} onPress={() => handleEdit(tx)} />
+                          <IconButton icon="delete" size={20} onPress={() => handleDelete(tx.id)} />
+                        </View>
+                      </View>
+                    </Card.Content>
+                  </Card>
+                ))}
+              </>
+            )}
           </View>
-        </View>
-      ) : (
-        <>
-          {filter === "all" ? (
-            <>
-              <List.Subheader>Upcoming</List.Subheader>
-              {upcoming.length === 0 ? (
-                <View style={{ paddingHorizontal: 16, paddingBottom: 8 }}>
-                  <Text>No upcoming items</Text>
+        )}
+
+        <Divider style={{ marginVertical: 8 }} />
+
+        {/* Recent Section */}
+        <Text variant="titleMedium" style={{ color: theme.colors.secondary, marginBottom: 12 }}>
+          RECENT
+        </Text>
+
+        <FlatList
+          data={recentTransactions}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <Card style={{ marginBottom: 8 }}>
+              <Card.Content style={{ paddingVertical: 12 }}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text variant="bodyLarge">{item.description}</Text>
+                    <Text variant="bodySmall" style={{ color: theme.colors.secondary }}>
+                      {item.date} • {item.category}
+                    </Text>
+                  </View>
+                  {formatAmount(item.amount)}
+                  <View style={{ flexDirection: "row", marginLeft: 8 }}>
+                    <IconButton icon="pencil" size={20} onPress={() => handleEdit(item)} />
+                    <IconButton icon="delete" size={20} onPress={() => handleDelete(item.id)} />
+                  </View>
                 </View>
-              ) : (
-                upcoming.map((item) => (
-                  <List.Item
-                    key={item.id}
-                    title={`${item.description || "No description"}`}
-                    description={`${item.date} • ${item.category}`}
-                    right={() => (
-                      <View style={{ flexDirection: "row", alignItems: "center" }}>
-                        <Text style={{ marginRight: 12 }}>${item.amount.toFixed(2)}</Text>
-                        <Button compact onPress={() => onEdit(item)}>
-                          Edit
-                        </Button>
-                        <Button compact onPress={() => onDelete(item.id)}>
-                          Delete
-                        </Button>
-                      </View>
-                    )}
-                  />
-                ))
-              )}
-              <Divider style={{ marginVertical: 8 }} />
-              <List.Subheader>Recent</List.Subheader>
-              {recent.length === 0 ? (
-                <View style={{ paddingHorizontal: 16, paddingBottom: 8 }}>
-                  <Text>No recent transactions</Text>
-                </View>
-              ) : (
-                recent.map((item) => (
-                  <List.Item
-                    key={item.id}
-                    title={`${item.description || "No description"}`}
-                    description={`${item.date} • ${item.category}`}
-                    right={() => (
-                      <View style={{ flexDirection: "row", alignItems: "center" }}>
-                        <Text style={{ marginRight: 12 }}>${item.amount.toFixed(2)}</Text>
-                        <Button compact onPress={() => onEdit(item)}>
-                          Edit
-                        </Button>
-                        <Button compact onPress={() => onDelete(item.id)}>
-                          Delete
-                        </Button>
-                      </View>
-                    )}
-                  />
-                ))
-              )}
-            </>
-          ) : (
-            <FlatList
-              data={filtered}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
-                <List.Item
-                  title={`${item.description || "No description"}`}
-                  description={`${item.date} • ${item.category} • ${item.status}`}
-                  right={() => (
-                    <View style={{ flexDirection: "row", alignItems: "center" }}>
-                      <Text style={{ marginRight: 12 }}>${item.amount.toFixed(2)}</Text>
-                      <Button compact onPress={() => onEdit(item)}>
-                        Edit
-                      </Button>
-                      <Button compact onPress={() => onDelete(item.id)}>
-                        Delete
-                      </Button>
-                    </View>
-                  )}
-                />
-              )}
-              ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: "#eee" }} />}
-              ListEmptyComponent={() => (
-                <View style={{ padding: 24, alignItems: "center" }}>
-                  <Text>No transactions yet</Text>
-                </View>
-              )}
-            />
+              </Card.Content>
+            </Card>
           )}
-          <FAB
-            style={{ position: "absolute", right: 16, bottom: 16 }}
-            icon="plus"
-            onPress={() => setShowForm(true)}
-          />
-        </>
-      )}
+          ListEmptyComponent={() => (
+            <View style={{ padding: 24, alignItems: "center" }}>
+              <Text style={{ color: theme.colors.secondary }}>No recent transactions yet</Text>
+            </View>
+          )}
+        />
+      </View>
+
+      <FAB
+        style={{ position: "absolute", right: 16, bottom: 16 }}
+        icon="plus"
+        onPress={() => {
+          resetForm();
+          setDialogVisible(true);
+        }}
+      />
+
+      {/* Add/Edit Dialog */}
+      <Portal>
+        <Dialog visible={dialogVisible} onDismiss={() => setDialogVisible(false)}>
+          <Dialog.Title>{editing ? "Edit" : "Add"} Transaction</Dialog.Title>
+          <Dialog.Content style={{ gap: 12 }}>
+            <TextInput
+              label="Amount"
+              value={amount}
+              onChangeText={setAmount}
+              keyboardType="decimal-pad"
+              placeholder="0.0"
+            />
+            <TextInput
+              label="Description"
+              value={description}
+              onChangeText={setDescription}
+              placeholder="e.g., Grocery shopping"
+            />
+            <TextInput
+              label="Date (YYYY-MM-DD)"
+              value={date}
+              onChangeText={setDate}
+              placeholder="2025-01-15"
+            />
+            <TextInput
+              label="Category"
+              value={category}
+              onChangeText={setCategory}
+              placeholder="e.g., Groceries"
+            />
+            <SegmentedButtons
+              value={status}
+              onValueChange={(v) => setStatus(v as "upcoming" | "paid")}
+              buttons={[
+                { value: "paid", label: "Paid" },
+                { value: "upcoming", label: "Upcoming" },
+              ]}
+            />
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setDialogVisible(false)}>Cancel</Button>
+            <Button mode="contained" onPress={handleSave}>
+              {editing ? "Update" : "Add"}
+            </Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
     </View>
   );
 }
