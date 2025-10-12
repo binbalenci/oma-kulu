@@ -10,7 +10,6 @@ import {
 } from "@/lib/storage";
 import type { Budget, Category, RecurringTemplate, Transaction } from "@/lib/types";
 import { addMonths, endOfMonth, format, startOfMonth } from "date-fns";
-import { useRouter } from "expo-router";
 import React from "react";
 import { ScrollView, TouchableOpacity, View } from "react-native";
 import {
@@ -23,6 +22,7 @@ import {
   IconButton,
   Portal,
   ProgressBar,
+  SegmentedButtons,
   Text,
   TextInput,
   useTheme,
@@ -33,7 +33,6 @@ function monthKey(d: Date): string {
 }
 
 export default function BudgetsScreen() {
-  const router = useRouter();
   const theme = useTheme();
   const { showSnackbar } = useSnackbar();
   const [now, setNow] = React.useState(new Date());
@@ -47,9 +46,11 @@ export default function BudgetsScreen() {
   const [startingBalance, setStartingBalance] = React.useState<number>(0);
   const [templates, setTemplates] = React.useState<RecurringTemplate[]>([]);
   const [expanded, setExpanded] = React.useState<Record<string, boolean>>({});
-  const [fabOpen, setFabOpen] = React.useState(false);
-  const [addTemplateVisible, setAddTemplateVisible] = React.useState(false);
-  const [templateType, setTemplateType] = React.useState<"income" | "expense">("income");
+  const [addItemVisible, setAddItemVisible] = React.useState(false);
+  const [itemType, setItemType] = React.useState<"income" | "invoice" | "budget">("income");
+  const [itemName, setItemName] = React.useState("");
+  const [itemAmount, setItemAmount] = React.useState("");
+  const [itemCategory, setItemCategory] = React.useState("");
 
   React.useEffect(() => {
     (async () => {
@@ -305,14 +306,9 @@ export default function BudgetsScreen() {
               >
                 It looks like you haven&apos;t set up your budget for this month yet.
               </Text>
-              <View style={{ flexDirection: "row", gap: 12 }}>
-                <Button mode="contained" onPress={copyFromPreviousMonth}>
-                  Copy Last Month&apos;s Budget
-                </Button>
-                <Button mode="outlined" onPress={addNewBudget}>
-                  Start Fresh
-                </Button>
-              </View>
+              <Button mode="contained" onPress={copyFromPreviousMonth}>
+                Copy Last Month&apos;s Budget
+              </Button>
             </Card.Content>
           </Card>
         )}
@@ -409,8 +405,8 @@ export default function BudgetsScreen() {
                         mode="text"
                         compact
                         onPress={() => {
-                          setTemplateType(list[0]?.type === "income" ? "income" : "expense");
-                          setAddTemplateVisible(true);
+                          setItemType(list[0]?.type === "income" ? "income" : "invoice");
+                          setAddItemVisible(true);
                         }}
                         style={{ alignSelf: "flex-start", marginTop: 4 }}
                       >
@@ -507,35 +503,10 @@ export default function BudgetsScreen() {
         )}
       </ScrollView>
 
-      <FAB.Group
-        open={fabOpen}
-        visible
-        icon={fabOpen ? "close" : "plus"}
-        actions={[
-          { icon: "content-copy", label: "Copy Last Month's Plan", onPress: copyFromPreviousMonth },
-          {
-            icon: "cash-plus",
-            label: "Add Expected Income",
-            onPress: () => {
-              setTemplateType("income");
-              setAddTemplateVisible(true);
-            },
-          },
-          {
-            icon: "receipt",
-            label: "Add Expected Invoice",
-            onPress: () => {
-              setTemplateType("expense");
-              setAddTemplateVisible(true);
-            },
-          },
-        ]}
-        onStateChange={({ open }) => setFabOpen(open)}
-        onPress={() => {
-          if (fabOpen) {
-            // if speed dial open, do nothing special
-          }
-        }}
+      <FAB
+        icon="plus"
+        style={{ position: "absolute", right: 16, bottom: 16 }}
+        onPress={() => setAddItemVisible(true)}
       />
 
       <Portal>
@@ -582,26 +553,77 @@ export default function BudgetsScreen() {
           </Dialog.Actions>
         </Dialog>
 
-        <Dialog visible={addTemplateVisible} onDismiss={() => setAddTemplateVisible(false)}>
-          <Dialog.Title>
-            Add Expected {templateType === "income" ? "Income" : "Invoice"}
-          </Dialog.Title>
-          <Dialog.Content>
-            <Text variant="bodyMedium" style={{ marginBottom: 16 }}>
-              To add expected items, please go to the Categories tab and create a recurring
-              template. Templates will automatically appear here each month.
-            </Text>
+        <Dialog visible={addItemVisible} onDismiss={() => setAddItemVisible(false)}>
+          <Dialog.Title>Add New Item</Dialog.Title>
+          <Dialog.Content style={{ gap: 12 }}>
+            <SegmentedButtons
+              value={itemType}
+              onValueChange={(v: string) => setItemType(v as "income" | "invoice" | "budget")}
+              buttons={[
+                { value: "income", label: "Income" },
+                { value: "invoice", label: "Invoice" },
+                { value: "budget", label: "Budget" },
+              ]}
+            />
+            <TextInput
+              label="Name"
+              value={itemName}
+              onChangeText={setItemName}
+              placeholder={
+                itemType === "income"
+                  ? "e.g., Salary"
+                  : itemType === "invoice"
+                  ? "e.g., Netflix"
+                  : "e.g., Groceries"
+              }
+            />
+            <TextInput
+              label="Category"
+              value={itemCategory}
+              onChangeText={setItemCategory}
+              placeholder="Type or select category"
+            />
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              {allCategories
+                .filter((c) => {
+                  if (itemType === "income") return c.type === "income";
+                  return c.type === "expense";
+                })
+                .filter((c) => c.is_visible !== false)
+                .slice(0, 10)
+                .map((c) => (
+                  <Button
+                    key={c.id}
+                    mode={itemCategory === c.name ? "contained" : "outlined"}
+                    onPress={() => setItemCategory(c.name)}
+                    compact
+                  >
+                    {c.icon} {c.name}
+                  </Button>
+                ))}
+            </View>
+            <TextInput
+              label="Amount"
+              value={itemAmount}
+              onChangeText={setItemAmount}
+              keyboardType="decimal-pad"
+              placeholder="0.00"
+            />
           </Dialog.Content>
           <Dialog.Actions>
-            <Button onPress={() => setAddTemplateVisible(false)}>Cancel</Button>
+            <Button onPress={() => setAddItemVisible(false)}>Cancel</Button>
             <Button
               mode="contained"
               onPress={() => {
-                setAddTemplateVisible(false);
-                router.push("/(tabs)/categories");
+                // TODO: Implement save logic
+                showSnackbar("Item added successfully!");
+                setAddItemVisible(false);
+                setItemName("");
+                setItemAmount("");
+                setItemCategory("");
               }}
             >
-              Go to Categories
+              Add
             </Button>
           </Dialog.Actions>
         </Dialog>

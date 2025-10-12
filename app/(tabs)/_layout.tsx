@@ -9,16 +9,14 @@ export default function TabLayout() {
   const colorScheme = useColorScheme();
 
   return (
-    // We set the initial route to budgets here
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
         headerShown: false,
       }}
-      initialRouteName="budgets"
     >
       <Tabs.Screen
-        name="budgets"
+        name="index"
         options={{
           title: "Budget",
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="chart.bar.fill" color={color} />,
