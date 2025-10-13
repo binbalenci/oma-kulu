@@ -5,293 +5,118 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.4.0] - 2025-01-15
+## [1.0.0-beta] - 2025-01-15
 
-### 🎨 Major UI/UX Revamp
+### 🎉 Major Release - Complete UI/UX Overhaul
 
-This release represents a complete visual and user experience overhaul, transforming Oma Kulu into an Apple-standard, beautiful financial management app.
+This beta release represents a complete transformation of the Oma Kulu app with modern UI/UX patterns, emoji-based category system, and enhanced user experience.
 
 ### ✨ Added
 
-#### 🎨 Design System
+- **Emoji System for Categories**
 
-- **Comprehensive Theme System** (`constants/AppTheme.ts`)
+  - Replaced icon picker with modern emoji selector
+  - Emojis display after colored lines in Categories view
+  - CategoryBadge component now shows emojis instead of icons
+  - Emoji picker with smooth scrolling and search functionality
 
-  - Vibrant color palette with primary, success, error, and warning colors
-  - Systematic spacing scale (4, 8, 12, 16, 20, 24, 32, 40, 48)
-  - Typography scale with consistent font sizes and weights
-  - Shadow system for depth and elevation
-  - Animation timing constants
+- **Enhanced Dialog System**
 
-- **Icon Library Integration**
-  - React Native Vector Icons with MaterialDesignIcons, Ionicons, and Feather
-  - 9,000+ icons available throughout the app
-  - Consistent icon sizing and styling
+  - Smooth bottom-up animations for all dialogs
+  - Proper scrolling support in emoji picker
+  - Confirmation dialogs for all delete actions
+  - Improved dialog overlay with blur effects
 
-#### 🧩 New UI Components
+- **Smart Category Filtering**
 
-- **Enhanced Dialog Component** (`components/ui/Dialog.tsx`)
+  - Home screen dialogs now filter categories by type (income/invoice/budget)
+  - Transactions screen shows all categories for flexibility
+  - Custom SimpleDropdown component with proper scrolling
 
-  - Smooth slide-up animations with React Native Reanimated
-  - Backdrop blur effect for modern iOS feel
-  - Click outside to close with unsaved changes warning
-  - Consistent header and action button layout
+- **Improved User Experience**
 
-- **Color Picker Dialog** (`components/ui/ColorPickerDialog.tsx`)
+  - Safe area support for iPhone (notch/speaker compatibility)
+  - Compact Cash Overview layout with better visual hierarchy
+  - Removed euro icons from amount inputs for cleaner look
+  - Enhanced color differentiation for UI elements
 
-  - Reanimated Color Picker integration
-  - Panel1 color selector with hue and opacity sliders
-  - Swatches for quick color selection
-  - Preview of selected color
+- **Code Quality Improvements**
+  - Comprehensive TypeScript and ESLint error fixes
+  - Removed all unused icon-related code and packages
+  - Updated database operations to handle emoji field
+  - Clean, maintainable codebase
 
-- **Icon Picker Dialog** (`components/ui/IconPickerDialog.tsx`)
+### 🔧 Changed
 
-  - Grid layout with search functionality
-  - Three icon families: MaterialDesignIcons, Ionicons, Feather
-  - Category tabs for easy navigation
-  - Selected icon highlighting
+- **UI Components**
 
-- **Gradient Progress Bar** (`components/ui/GradientProgressBar.tsx`)
+  - CategoryBadge now uses emoji instead of vector icons
+  - Dialog animations are now smooth and consistent
+  - Dropdown components have proper scrolling behavior
+  - Color scheme improvements for better contrast
 
-  - Dynamic gradient based on spending percentage
-  - Green (0-50%) → Yellow-Orange (50-75%) → Red (75-100%)
-  - Consistent colors across all budget instances
-  - Smooth animated width changes
+- **Database Integration**
 
-- **Category Badge Component** (`components/ui/CategoryBadge.tsx`)
-  - Rounded pill design with category colors
-  - Icon and text display
-  - Multiple sizes (sm, md, lg)
-  - Touch-friendly interaction
+  - Updated Category interface to include emoji field
+  - Removed temporary emoji filtering from database operations
+  - Ready for emoji column in Supabase schema
 
-#### 🏠 Home Screen Redesign
-
-- **Renamed from "Budget" to "Home"** for better clarity
-- **Category Grouping**: Expected incomes and invoices grouped by category
-  - Expandable/collapsible category sections
-  - Category headers with icons, names, and totals
-  - Individual items under each category
-- **Enhanced Cash Overview**
-  - Visual icons for each metric (wallet, trending-up, trending-down)
-  - Color-coded amounts (green for positive, red for negative)
-  - Prominent "Money to Assign" display
-- **Smart Budget Cards**
-  - Category icons with background colors
-  - Gradient progress bars showing spending vs allocated
-  - Edit/delete actions for each budget
-- **Copy Previous Month**
-  - Only shows when all sections are empty
-  - Smooth fade-in/out animations
-  - Clear call-to-action with icon
-
-#### 💳 Transactions Screen Enhancements
-
-- **Month Selector Header**
-  - Synchronized with Home screen month selection
-  - Smooth arrow animations
-  - Clean, elevated design
-- **Enhanced Transaction List**
-  - Category badges with colors and icons
-  - Color-coded amounts (+ for income, - for expenses)
-  - Improved visual hierarchy
-- **Upcoming Section**
-  - Collapsible header with count badge
-  - Month-specific filtering (only shows current month items)
-  - Visual distinction from paid transactions
-- **Improved Add Dialog**
-  - Category picker with icons
-  - Only allows "paid" transactions (no upcoming status)
-  - Better form layout and validation
-
-#### 🏷️ Categories Screen Redesign
-
-- **Split into Two Sections**
-  - Income Categories section
-  - Expense Categories section
-  - Clear visual separation
-- **Enhanced Category Items**
-  - Larger color indicators
-  - Vector icons instead of emojis
-  - iOS-style toggle switches
-  - Smooth toggle animations
-- **Improved Add/Edit Dialog**
-  - Icon picker integration
-  - Color picker integration
-  - Better form organization
-
-### 🔧 Technical Improvements
-
-#### 📦 New Dependencies
-
-- `@react-native-vector-icons/material-design-icons` - Comprehensive icon set
-- `@react-native-vector-icons/ionicons` - iOS-style icons
-- `@react-native-vector-icons/feather` - Minimal elegant icons
-- `reanimated-color-picker` - Advanced color selection
-- `expo-linear-gradient` - Gradient support
-- `expo-blur` - Backdrop blur effects
-- `react-native-modal` - Enhanced modal presentation
-
-#### 🎨 Theme System
-
-- **Removed Dark Mode**: Simplified to light theme only
-- **Legacy Theme Support**: Backward compatibility maintained
-- **Consistent Colors**: All components use AppTheme colors
-- **Typography Scale**: Systematic font sizing throughout
-
-#### 🔄 State Management
-
-- **Month Context**: Shared month state between Home and Transactions
-- **Focus-based Reloading**: Data refreshes when switching tabs
-- **Optimistic Updates**: Immediate UI updates with error handling
-
-#### 🎭 Animations
-
-- **React Native Reanimated**: Smooth 60fps animations
-- **Spring Animations**: Natural feeling transitions
-- **Staggered Animations**: List items animate in sequence
-- **Gesture Support**: Swipe and tap interactions
-
-### 🐛 Bug Fixes
-
-- **Transaction Amount Sign**: Fixed positive amounts showing as green (now correctly negative for expenses)
-- **Budget Progress Calculation**: Fixed percentage calculation with proper amount signs
-- **Category Loading**: Fixed categories not loading in Transactions dialog
-- **Month Filtering**: Fixed upcoming items showing for all months instead of current month
-- **Icon Picker**: Replaced buggy emoji selector with smooth vector icon picker
-- **Color Picker**: Replaced buggy color picker with professional reanimated-color-picker
-
-### 🔄 Changed
-
-#### 🏗️ Architecture
-
-- **Component Structure**: Moved to `components/ui/` for better organization
-- **Theme Integration**: All components now use AppTheme system
-- **Icon System**: Migrated from emoji to vector icons
-- **Dialog System**: Unified dialog component across all screens
-
-#### 🎨 Visual Design
-
-- **Color Palette**: Updated to vibrant, high-contrast colors
-- **Spacing**: Consistent spacing scale throughout
-- **Typography**: Improved font hierarchy and readability
-- **Shadows**: Enhanced elevation system for depth
-- **Icons**: Professional vector icons instead of emojis
-
-#### 📱 User Experience
-
-- **Navigation**: Renamed "Budget" tab to "Home" for clarity
-- **Grouping**: Related items grouped by category for better organization
-- **Visual Feedback**: Enhanced color coding and status indicators
-- **Touch Targets**: Improved touch target sizes for better accessibility
-- **Loading States**: Better feedback during data operations
+- **Navigation & Layout**
+  - Added proper SafeAreaView support across all screens
+  - Improved tab bar with consistent iconography
+  - Better spacing and typography throughout the app
 
 ### 🗑️ Removed
 
-- **Dark Mode Support**: Simplified to light theme only (can be re-added later)
-- **Emoji Icons**: Replaced with professional vector icons
-- **Legacy Color Picker**: Replaced with reanimated-color-picker
-- **Legacy Icon Picker**: Replaced with custom vector icon picker
-- **Upcoming Transaction Status**: Manual transactions are always "paid"
+- Icon picker system and related components
+- Unused vector icon packages (kept only necessary UI icons)
+- Temporary emoji filtering workarounds
+- Redundant icon-related code and imports
 
-### 📊 Performance
+### 🐛 Fixed
 
-- **Optimized Animations**: 60fps smooth animations with Reanimated
-- **Efficient Rendering**: Better list performance with proper keys
-- **Memory Management**: Improved component lifecycle management
-- **Bundle Size**: Optimized with tree-shaking and proper imports
-
-### 🔒 Security
-
-- **Input Validation**: Enhanced form validation and error handling
-- **Data Sanitization**: Proper data cleaning before database operations
-- **Error Boundaries**: Better error handling and user feedback
+- Dropdown scrolling issues in category selection
+- Safe area overlapping on iPhone devices
+- TypeScript errors related to icon system
+- ESLint warnings and code quality issues
+- Dialog animation performance and smoothness
 
 ### 📱 Platform Support
 
-- **iOS**: Enhanced with native iOS design patterns
-- **Android**: Material Design 3 compliance
-- **Web**: Improved web compatibility (if needed)
+- Enhanced iPhone compatibility with proper safe area handling
+- Improved responsive design for various screen sizes
+- Better touch targets and accessibility
 
-### 🧪 Testing
+### 🔮 Known Issues
 
-- **Component Testing**: All new UI components tested
-- **Integration Testing**: Cross-screen functionality verified
-- **Performance Testing**: Animation performance validated
-- **Accessibility Testing**: Touch targets and contrast ratios verified
+- Emoji field requires database schema update (add `emoji` column to categories table)
+- Some UI elements may need fine-tuning based on user feedback
 
----
+### 📋 Migration Notes
 
-## [0.3.0] - 2025-01-10
-
-### 🗄️ Database Migration
-
-- Migrated from AsyncStorage to Supabase (PostgreSQL)
-- Implemented comprehensive CRUD operations
-- Added Row Level Security (RLS) policies
-- Created database schema with proper relationships
-
-### ✨ Added
-
-- **Supabase Integration**: Full backend database support
-- **Data Models**: ExpectedIncome, ExpectedInvoice, Budget, Transaction, Category, AppSettings
-- **CRUD Operations**: Complete Create, Read, Update, Delete functionality
-- **Data Synchronization**: Real-time data updates across screens
-- **Error Handling**: Comprehensive error handling for database operations
-
-### 🔧 Technical
-
-- **Database Layer**: `lib/database.ts` with Supabase client
-- **Storage Compatibility**: `lib/storage.ts` maintains backward compatibility
-- **Type Safety**: Full TypeScript support for all data models
-- **Migration Scripts**: SQL scripts for database setup
+- Existing categories will show fallback folder icons until emoji is set
+- No data migration required - emoji field is optional
+- Database schema update needed for full emoji functionality
 
 ---
 
-## [0.2.0] - 2025-01-05
+## [0.4.0] - 2024-12-15
 
-### 🎯 Core Features
+### Added
 
-- **Budget Management**: Two-tiered budget system
-- **Transaction Tracking**: Manual transaction entry and management
-- **Category System**: Flexible category management with icons and colors
-- **Month Navigation**: Future month planning support
-- **Passcode Protection**: 4-digit passcode security
+- Basic budget management functionality
+- Transaction tracking system
+- Category management with icons and colors
+- Expected income/invoice planning
+- Month-based navigation
+- Supabase database integration
+- AsyncStorage for local data persistence
+- Basic UI components and theme system
 
-### ✨ Added
+### Technical
 
-- **Expected Items**: Income and invoice planning
-- **Free-Range Budgets**: Category-based spending limits
-- **Transaction History**: Complete financial activity tracking
-- **Category Management**: Create, edit, and organize categories
-- **Copy Previous Month**: Quick budget setup from previous month
-
----
-
-## [0.1.0] - 2025-01-01
-
-### 🚀 Initial Release
-
-- **Project Setup**: React Native with Expo
-- **Basic Navigation**: Tab-based navigation structure
-- **UI Foundation**: React Native Paper component library
-- **Development Environment**: TypeScript, ESLint, and development tools
-
-### ✨ Added
-
-- **Project Structure**: Organized folder structure
-- **Basic Screens**: Placeholder screens for Budget, Transactions, Categories
-- **Theme System**: Basic light/dark theme support
-- **Development Tools**: Linting, formatting, and build configuration
-
----
-
-## Legend
-
-- ✨ **Added** - New features
-- 🔧 **Changed** - Changes to existing functionality
-- 🗑️ **Removed** - Removed features
-- 🐛 **Fixed** - Bug fixes
-- 🔒 **Security** - Security improvements
-- 📊 **Performance** - Performance improvements
-- 🧪 **Testing** - Testing improvements
-- 📱 **Platform** - Platform-specific changes
+- React Native with Expo framework
+- Expo Router for navigation
+- React Native Paper UI components
+- Vector icons for categories and UI elements
+- Basic animations and transitions

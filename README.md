@@ -2,6 +2,24 @@
 
 A beautiful, Apple-standard personal finance management app built with React Native and Expo.
 
+> **Version 1.0.0-beta** - Complete UI/UX overhaul with emoji system and enhanced user experience
+
+## 🆕 What's New in 1.0.0-beta
+
+### 🎨 Complete UI/UX Overhaul
+- **Emoji System**: Modern emoji selector replaces icon picker for categories
+- **Smooth Animations**: Enhanced dialog animations with proper scrolling
+- **Smart Filtering**: Category filtering by type in Home/Transactions dialogs
+- **Confirmation Dialogs**: Added for all delete actions
+- **Safe Area Support**: Fixed iPhone compatibility issues
+- **Enhanced UX**: Improved color differentiation and visual hierarchy
+
+### 🔧 Technical Improvements
+- **Custom Components**: SimpleDropdown with proper scrolling
+- **Code Quality**: Zero TypeScript/ESLint errors
+- **Database Ready**: Emoji field support (requires schema update)
+- **Performance**: Optimized animations and rendering
+
 ## ✨ Features
 
 ### 🏠 Home Dashboard
@@ -22,8 +40,9 @@ A beautiful, Apple-standard personal finance management app built with React Nat
 
 ### 🏷️ Categories
 
+- **Emoji System**: Modern emoji selector for category representation
 - **Dual Management**: Separate sections for Income and Expense categories
-- **Visual Design**: Custom colors and icons for each category
+- **Visual Design**: Custom colors and emojis for each category
 - **Smart Controls**: Toggle visibility and budget eligibility
 - **Drag & Drop**: Reorder categories for personal preference
 
@@ -32,7 +51,7 @@ A beautiful, Apple-standard personal finance management app built with React Nat
 - **Apple-Standard Quality**: Clean, minimal, functional design
 - **Vibrant Colors**: High-contrast, accessible color palette
 - **Smooth Animations**: 60fps transitions with React Native Reanimated
-- **Icon-Rich**: Visual cues throughout for better UX
+- **Emoji-Rich**: Modern emoji system for categories and visual cues
 - **Touch-Friendly**: Minimum 44pt touch targets
 - **Consistent Spacing**: Systematic spacing scale for visual harmony
 
@@ -41,7 +60,7 @@ A beautiful, Apple-standard personal finance management app built with React Nat
 - **Framework**: React Native with Expo
 - **Navigation**: Expo Router
 - **UI Library**: React Native Paper
-- **Icons**: React Native Vector Icons (MaterialDesignIcons, Ionicons, Feather)
+- **Icons**: React Native Vector Icons (MaterialDesignIcons, Ionicons) + Emoji System
 - **Animations**: React Native Reanimated
 - **Database**: Supabase (PostgreSQL)
 - **State Management**: React Hooks + Context
@@ -104,7 +123,11 @@ _Screenshots coming soon..._
 
 1. Create a new Supabase project
 2. Run the SQL migration script in `docs/database-setup.sql`
-3. Update your environment variables with Supabase credentials
+3. **Add emoji column** (for 1.0.0-beta):
+   ```sql
+   ALTER TABLE categories ADD COLUMN emoji TEXT;
+   ```
+4. Update your environment variables with Supabase credentials
 
 ### Tables
 
@@ -112,7 +135,7 @@ _Screenshots coming soon..._
 - `expected_invoices` - Expected bills and expenses
 - `budgets` - Category-based spending limits
 - `transactions` - Actual financial activity
-- `categories` - Income/expense categories with icons and colors
+- `categories` - Income/expense categories with emojis and colors
 - `app_settings` - App configuration and user preferences
 
 ## 🎯 Key Features
@@ -161,7 +184,7 @@ oma-kulu/
 │   ├── ui/               # UI component library
 │   │   ├── Dialog.tsx
 │   │   ├── ColorPickerDialog.tsx
-│   │   ├── IconPickerDialog.tsx
+│   │   ├── EmojiPickerDialog.tsx
 │   │   ├── GradientProgressBar.tsx
 │   │   └── CategoryBadge.tsx
 │   └── snackbar-provider.tsx
@@ -192,7 +215,7 @@ oma-kulu/
 
 - Use the custom `Dialog` component for all modals
 - Apply theme colors from `AppTheme` consistently
-- Use vector icons from the configured families
+- Use emojis for categories and vector icons for UI elements
 - Implement smooth animations with Reanimated
 - Follow the spacing scale for consistent layouts
 
