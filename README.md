@@ -1,50 +1,264 @@
-# Welcome to your Expo app 👋
+# Oma Kulu 💰
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A beautiful, Apple-standard personal finance management app built with React Native and Expo.
 
-## Get started
+## ✨ Features
 
-1. Install dependencies
+### 🏠 Home Dashboard
+
+- **Month Navigation**: Smooth month selector with synchronized views
+- **Cash Overview**: Real-time financial status with visual indicators
+- **Expected Incomes & Invoices**: Grouped by category with expandable sections
+- **Smart Budgets**: Gradient progress bars showing spending vs allocated amounts
+- **Quick Copy**: Copy previous month's setup for easy planning
+
+### 💳 Transactions
+
+- **Unified View**: All financial activity in one place
+- **Category Grouping**: Organized by spending categories
+- **Visual Indicators**: Color-coded amounts (green for income, red for expenses)
+- **Smart Filtering**: Month-specific upcoming items
+- **Easy Entry**: Streamlined transaction creation
+
+### 🏷️ Categories
+
+- **Dual Management**: Separate sections for Income and Expense categories
+- **Visual Design**: Custom colors and icons for each category
+- **Smart Controls**: Toggle visibility and budget eligibility
+- **Drag & Drop**: Reorder categories for personal preference
+
+## 🎨 Design Philosophy
+
+- **Apple-Standard Quality**: Clean, minimal, functional design
+- **Vibrant Colors**: High-contrast, accessible color palette
+- **Smooth Animations**: 60fps transitions with React Native Reanimated
+- **Icon-Rich**: Visual cues throughout for better UX
+- **Touch-Friendly**: Minimum 44pt touch targets
+- **Consistent Spacing**: Systematic spacing scale for visual harmony
+
+## 🛠️ Tech Stack
+
+- **Framework**: React Native with Expo
+- **Navigation**: Expo Router
+- **UI Library**: React Native Paper
+- **Icons**: React Native Vector Icons (MaterialDesignIcons, Ionicons, Feather)
+- **Animations**: React Native Reanimated
+- **Database**: Supabase (PostgreSQL)
+- **State Management**: React Hooks + Context
+- **Styling**: StyleSheet with custom theme system
+
+## 📱 Screenshots
+
+_Screenshots coming soon..._
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js 18+
+- Expo CLI
+- iOS Simulator or Android Emulator (or physical device)
+
+### Installation
+
+1. **Clone the repository**
+
+   ```bash
+   git clone https://github.com/yourusername/oma-kulu.git
+   cd oma-kulu
+   ```
+
+2. **Install dependencies**
 
    ```bash
    npm install
    ```
 
-2. Start the app
+3. **Set up environment variables**
 
    ```bash
-   npx expo start
+   cp .env.example .env.local
    ```
 
-In the output, you'll find options to open the app in a
+   Add your Supabase credentials:
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+   ```
+   EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
+   EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+4. **Start the development server**
 
-## Get a fresh project
+   ```bash
+   npm start
+   ```
 
-When you're ready, run:
+5. **Run on device/simulator**
+   - Press `i` for iOS simulator
+   - Press `a` for Android emulator
+   - Scan QR code with Expo Go app
 
-```bash
-npm run reset-project
+## 🗄️ Database Setup
+
+### Supabase Configuration
+
+1. Create a new Supabase project
+2. Run the SQL migration script in `docs/database-setup.sql`
+3. Update your environment variables with Supabase credentials
+
+### Tables
+
+- `expected_incomes` - Planned income sources
+- `expected_invoices` - Expected bills and expenses
+- `budgets` - Category-based spending limits
+- `transactions` - Actual financial activity
+- `categories` - Income/expense categories with icons and colors
+- `app_settings` - App configuration and user preferences
+
+## 🎯 Key Features
+
+### Smart Budgeting
+
+- **Visual Progress**: Gradient progress bars show spending vs budget
+- **Category Grouping**: Related items grouped for clarity
+- **Month Planning**: Work on future months' budgets
+- **Quick Setup**: Copy previous month's structure
+
+### Transaction Management
+
+- **Automatic Creation**: Marking expected items as paid creates transactions
+- **Manual Entry**: Add one-off transactions easily
+- **Category Assignment**: Smart category suggestions
+- **Visual Feedback**: Color-coded amounts and status
+
+### Data Synchronization
+
+- **Real-time Updates**: Changes sync across all screens
+- **Month Navigation**: Consistent month selection across tabs
+- **Focus Refresh**: Data reloads when switching tabs
+
+## 🎨 Theme System
+
+The app uses a comprehensive theme system defined in `constants/AppTheme.ts`:
+
+- **Colors**: Primary, success, error, warning, and neutral palettes
+- **Typography**: Consistent font sizes and weights
+- **Spacing**: Systematic spacing scale (4, 8, 12, 16, 20, 24, 32, 40, 48)
+- **Shadows**: Elevation system for depth
+- **Animations**: Consistent timing and easing
+
+## 📁 Project Structure
+
+```
+oma-kulu/
+├── app/                    # Expo Router pages
+│   ├── (tabs)/            # Tab navigation screens
+│   │   ├── index.tsx      # Home (Budget) screen
+│   │   ├── transactions.tsx
+│   │   └── categories.tsx
+│   └── _layout.tsx        # Root layout
+├── components/            # Reusable components
+│   ├── ui/               # UI component library
+│   │   ├── Dialog.tsx
+│   │   ├── ColorPickerDialog.tsx
+│   │   ├── IconPickerDialog.tsx
+│   │   ├── GradientProgressBar.tsx
+│   │   └── CategoryBadge.tsx
+│   └── snackbar-provider.tsx
+├── constants/            # App configuration
+│   ├── AppTheme.ts       # Theme system
+│   └── theme.ts          # Legacy theme (backward compatibility)
+├── lib/                  # Business logic
+│   ├── database.ts       # Supabase operations
+│   ├── storage.ts        # Data access layer
+│   ├── types.ts          # TypeScript definitions
+│   └── month-context.tsx # Shared month state
+├── docs/                 # Documentation
+│   ├── APP_SPEC.md       # Feature specifications
+│   └── ROADMAP.md        # Development roadmap
+└── assets/               # Images and fonts
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## 🔧 Development
 
-## Learn more
+### Code Style
 
-To learn more about developing your project with Expo, look at the following resources:
+- **TypeScript**: Strict type checking enabled
+- **ESLint**: Configured with Expo rules
+- **Prettier**: Code formatting (recommended)
+- **Naming**: PascalCase for components, camelCase for functions
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+### Component Guidelines
 
-## Join the community
+- Use the custom `Dialog` component for all modals
+- Apply theme colors from `AppTheme` consistently
+- Use vector icons from the configured families
+- Implement smooth animations with Reanimated
+- Follow the spacing scale for consistent layouts
 
-Join our community of developers creating universal apps.
+### State Management
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- Use React Context for shared state (month selection)
+- Local state with `useState` for component-specific data
+- `useFocusEffect` for data reloading on screen focus
+- Async operations with proper error handling
+
+## 🚀 Deployment
+
+### Building for Production
+
+1. **Configure app.json**
+
+   ```bash
+   expo build:configure
+   ```
+
+2. **Build for iOS**
+
+   ```bash
+   expo build:ios
+   ```
+
+3. **Build for Android**
+   ```bash
+   expo build:android
+   ```
+
+### App Store Submission
+
+- Update version in `app.json`
+- Test on physical devices
+- Prepare screenshots and metadata
+- Submit through Expo Application Services (EAS)
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- **React Native Paper** for the beautiful component library
+- **Expo** for the amazing development platform
+- **Supabase** for the backend-as-a-service
+- **React Native Vector Icons** for the comprehensive icon sets
+- **React Native Reanimated** for smooth animations
+
+## 📞 Support
+
+If you encounter any issues or have questions:
+
+1. Check the [Issues](https://github.com/yourusername/oma-kulu/issues) page
+2. Create a new issue with detailed information
+3. Join our community discussions
+
+---
+
+**Made with ❤️ for better personal finance management**
