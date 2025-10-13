@@ -1,38 +1,37 @@
 import { useSnackbar } from "@/components/snackbar-provider";
+import { CategoryBadge } from "@/components/ui/CategoryBadge";
+import { Dialog as CustomDialog } from "@/components/ui/Dialog";
+import { AppTheme } from "@/constants/AppTheme";
+import { useMonth } from "@/lib/month-context";
 import {
   deleteTransaction,
+  loadCategories,
   loadIncomes,
   loadInvoices,
   loadTransactions,
   saveTransaction,
 } from "@/lib/storage";
-import type { ExpectedIncome, ExpectedInvoice, Transaction } from "@/lib/types";
+import type { Category, ExpectedIncome, ExpectedInvoice, Transaction } from "@/lib/types";
+import Ionicons from "@react-native-vector-icons/ionicons";
 import { format } from "date-fns";
 import { useFocusEffect } from "expo-router";
 import React from "react";
-import { FlatList, TouchableOpacity, View } from "react-native";
-import {
-  Button,
-  Card,
-  Dialog,
-  Divider,
-  FAB,
-  IconButton,
-  Portal,
-  SegmentedButtons,
-  Text,
-  TextInput,
-  useTheme,
-} from "react-native-paper";
+import { FlatList, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
+import { Card, Chip, FAB, IconButton, Menu, Searchbar, Text, TextInput } from "react-native-paper";
 
 export default function TransactionsScreen() {
-  const theme = useTheme();
   const { showSnackbar } = useSnackbar();
-  const [currentMonth, setCurrentMonth] = React.useState(new Date());
+  const { currentMonth, setCurrentMonth } = useMonth();
   const [transactions, setTransactions] = React.useState<Transaction[]>([]);
   const [incomes, setIncomes] = React.useState<ExpectedIncome[]>([]);
   const [invoices, setInvoices] = React.useState<ExpectedInvoice[]>([]);
+  const [categories, setCategories] = React.useState<Category[]>([]);
   const [upcomingExpanded, setUpcomingExpanded] = React.useState(true);
+
+  // Search and filter states
+  const [searchQuery, setSearchQuery] = React.useState("");
+  const [selectedCategory, setSelectedCategory] = React.useState<string | null>(null);
+  const [menuVisible, setMenuVisible] = React.useState(false);
 
   // Form states
   const [dialogVisible, setDialogVisible] = React.useState(false);
@@ -41,27 +40,31 @@ export default function TransactionsScreen() {
   const [description, setDescription] = React.useState("");
   const [date, setDate] = React.useState(format(new Date(), "yyyy-MM-dd"));
   const [category, setCategory] = React.useState("General");
-  const [status, setStatus] = React.useState<"upcoming" | "paid">("paid");
 
   // Load data when screen gains focus
   useFocusEffect(
     React.useCallback(() => {
       (async () => {
-        const [txs, incms, invcs] = await Promise.all([
+        const [txs, incms, invcs, cats] = await Promise.all([
           loadTransactions(),
           loadIncomes(),
           loadInvoices(),
+          loadCategories(),
         ]);
         setTransactions(txs);
         setIncomes(incms);
         setInvoices(invcs);
+        setCategories(cats);
       })();
     }, [])
   );
 
-  // Upcoming items: unpaid incomes/invoices + upcoming transactions
-  const upcomingFromIncomes = incomes.filter((i) => !i.is_paid);
-  const upcomingFromInvoices = invoices.filter((i) => !i.is_paid);
+  // Filter by current month
+  const currentMonthKey = format(currentMonth, "yyyy-MM");
+
+  // Upcoming items: unpaid incomes/invoices for current month + upcoming transactions
+  const upcomingFromIncomes = incomes.filter((i) => !i.is_paid && i.month === currentMonthKey);
+  const upcomingFromInvoices = invoices.filter((i) => !i.is_paid && i.month === currentMonthKey);
   const upcomingTransactions = transactions.filter((t) => t.status === "upcoming");
 
   // Recent: paid transactions only
@@ -69,12 +72,23 @@ export default function TransactionsScreen() {
     .filter((t) => t.status === "paid")
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
+  // Filter transactions based on search and filters
+  const filteredTransactions = recentTransactions.filter((tx) => {
+    const matchesSearch =
+      searchQuery === "" ||
+      tx.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      tx.category.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesCategory = selectedCategory === null || tx.category === selectedCategory;
+
+    return matchesSearch && matchesCategory;
+  });
+
   const resetForm = () => {
     setAmount("");
     setDescription("");
     setDate(format(new Date(), "yyyy-MM-dd"));
     setCategory("General");
-    setStatus("paid");
     setEditing(null);
   };
 
@@ -87,11 +101,11 @@ export default function TransactionsScreen() {
 
     const tx: Transaction = {
       id: editing?.id || crypto.randomUUID(),
-      amount: amt,
+      amount: -Math.abs(amt), // Always negative for expenses
       description,
       date,
       category,
-      status,
+      status: "paid", // Only allow paid transactions
       created_at: editing?.created_at || new Date().toISOString(),
     };
 
@@ -113,11 +127,10 @@ export default function TransactionsScreen() {
 
   const handleEdit = (t: Transaction) => {
     setEditing(t);
-    setAmount(String(t.amount));
+    setAmount(String(Math.abs(t.amount)));
     setDescription(t.description);
     setDate(t.date);
     setCategory(t.category);
-    setStatus(t.status);
     setDialogVisible(true);
   };
 
@@ -131,198 +144,275 @@ export default function TransactionsScreen() {
     }
   };
 
+  const getCategoryInfo = (categoryName: string) => {
+    return categories.find((c) => c.name === categoryName);
+  };
+
   const formatAmount = (amount: number) => {
     const sign = amount >= 0 ? "+" : "-";
-    const color = amount >= 0 ? "#4caf50" : "#f44336";
+    const color = amount >= 0 ? AppTheme.colors.success : AppTheme.colors.error;
     return (
-      <Text style={{ fontWeight: "600", color }}>
+      <Text style={[styles.amountText, { color }]}>
         {sign}€{Math.abs(amount).toFixed(1)}
       </Text>
     );
   };
 
+  const renderTransactionItem = ({ item }: { item: Transaction }) => {
+    const categoryInfo = getCategoryInfo(item.category);
+
+    return (
+      <Card style={styles.transactionCard}>
+        <Card.Content style={styles.transactionContent}>
+          <View style={styles.transactionLeft}>
+            <CategoryBadge
+              category={item.category}
+              icon={categoryInfo?.icon}
+              iconFamily="MaterialIcons"
+              color={categoryInfo?.color || AppTheme.colors.primary}
+              size="sm"
+            />
+            <View style={styles.transactionInfo}>
+              <Text variant="bodyLarge" style={styles.transactionDescription}>
+                {item.description}
+              </Text>
+              <Text variant="bodySmall" style={styles.transactionMeta}>
+                {format(new Date(item.date), "MMM dd")} • {item.category}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.transactionRight}>
+            {formatAmount(item.amount)}
+            <Menu
+              visible={menuVisible}
+              onDismiss={() => setMenuVisible(false)}
+              anchor={
+                <IconButton icon="dots-vertical" size={20} onPress={() => setMenuVisible(true)} />
+              }
+            >
+              <Menu.Item
+                onPress={() => {
+                  setMenuVisible(false);
+                  handleEdit(item);
+                }}
+                title="Edit"
+                leadingIcon="pencil"
+              />
+              <Menu.Item
+                onPress={() => {
+                  setMenuVisible(false);
+                  handleDelete(item.id);
+                }}
+                title="Delete"
+                leadingIcon="delete"
+              />
+            </Menu>
+          </View>
+        </Card.Content>
+      </Card>
+    );
+  };
+
+  const renderUpcomingItem = (
+    item: ExpectedIncome | ExpectedInvoice | Transaction,
+    type: "income" | "invoice" | "transaction"
+  ) => {
+    const categoryInfo = getCategoryInfo(item.category);
+    const isIncome = type === "income" || (type === "transaction" && item.amount > 0);
+    const amount = "amount" in item ? item.amount : (item as Transaction).amount;
+
+    return (
+      <Card key={`${type}-${item.id}`} style={styles.upcomingCard}>
+        <Card.Content style={styles.upcomingContent}>
+          <View style={styles.upcomingLeft}>
+            <CategoryBadge
+              category={item.category}
+              icon={categoryInfo?.icon}
+              iconFamily="MaterialIcons"
+              color={categoryInfo?.color || AppTheme.colors.primary}
+              size="sm"
+            />
+            <View style={styles.upcomingInfo}>
+              <Text variant="bodyLarge" style={styles.upcomingDescription}>
+                {"name" in item ? item.name : item.description}
+              </Text>
+              <Text variant="bodySmall" style={styles.upcomingMeta}>
+                {item.category} •{" "}
+                {type === "income"
+                  ? "Expected Income"
+                  : type === "invoice"
+                  ? "Expected Invoice"
+                  : "Upcoming"}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.upcomingRight}>
+            {formatAmount(isIncome ? amount : -amount)}
+            <Chip
+              mode="outlined"
+              compact
+              style={styles.statusChip}
+              textStyle={styles.statusChipText}
+            >
+              Pending
+            </Chip>
+          </View>
+        </Card.Content>
+      </Card>
+    );
+  };
+
+  const totalUpcoming =
+    upcomingFromIncomes.length + upcomingFromInvoices.length + upcomingTransactions.length;
+
   return (
-    <View style={{ flex: 1 }}>
-      {/* Month Selector Header */}
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-          paddingHorizontal: 16,
-          paddingVertical: 12,
-          backgroundColor: theme.colors.elevation.level2,
-        }}
-      >
-        <IconButton
-          icon="chevron-left"
-          size={24}
-          onPress={() => setCurrentMonth((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
-        />
-        <Text variant="titleMedium">{format(currentMonth, "MMMM yyyy")}</Text>
-        <IconButton
-          icon="chevron-right"
-          size={24}
-          onPress={() => setCurrentMonth((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1))}
-        />
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.monthSelector}>
+          <IconButton
+            icon="chevron-left"
+            size={24}
+            onPress={() =>
+              setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))
+            }
+          />
+          <Text variant="headlineSmall" style={styles.monthText}>
+            {format(currentMonth, "MMMM yyyy")}
+          </Text>
+          <IconButton
+            icon="chevron-right"
+            size={24}
+            onPress={() =>
+              setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))
+            }
+          />
+        </View>
+        <View style={styles.headerActions}>
+          <IconButton icon="bell-outline" size={24} />
+          <IconButton icon="account-circle-outline" size={24} />
+        </View>
       </View>
 
-      <View style={{ flex: 1, padding: 16 }}>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Search and Filters */}
+        <View style={styles.searchSection}>
+          <Searchbar
+            placeholder="Search transactions..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            style={styles.searchBar}
+            icon="magnify"
+          />
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.filterChips}
+            contentContainerStyle={styles.filterChipsContent}
+          >
+            <Chip
+              mode={selectedCategory === null ? "flat" : "outlined"}
+              onPress={() => setSelectedCategory(null)}
+              style={styles.filterChip}
+            >
+              All Categories
+            </Chip>
+            {categories
+              .filter((c) => c.is_visible)
+              .map((cat) => (
+                <Chip
+                  key={cat.id}
+                  mode={selectedCategory === cat.name ? "flat" : "outlined"}
+                  onPress={() => setSelectedCategory(cat.name)}
+                  style={styles.filterChip}
+                >
+                  {cat.name}
+                </Chip>
+              ))}
+          </ScrollView>
+        </View>
+
         {/* Upcoming Section */}
         <TouchableOpacity
           onPress={() => setUpcomingExpanded(!upcomingExpanded)}
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: 8,
-          }}
+          style={styles.sectionHeader}
         >
-          <Text variant="titleMedium" style={{ color: theme.colors.secondary }}>
-            UPCOMING
-          </Text>
-          <IconButton icon={upcomingExpanded ? "chevron-up" : "chevron-down"} size={24} />
+          <View style={styles.sectionTitle}>
+            <Ionicons name="time-outline" size={24} color={AppTheme.colors.warning} />
+            <Text variant="headlineSmall" style={styles.sectionTitleText}>
+              Upcoming
+            </Text>
+            {totalUpcoming > 0 && (
+              <Chip mode="flat" compact style={styles.countChip}>
+                {totalUpcoming}
+              </Chip>
+            )}
+          </View>
+          <Ionicons
+            name={upcomingExpanded ? "chevron-up" : "chevron-down"}
+            size={20}
+            color={AppTheme.colors.textSecondary}
+          />
         </TouchableOpacity>
 
         {upcomingExpanded && (
-          <View style={{ marginBottom: 16 }}>
-            {upcomingFromIncomes.length === 0 &&
-            upcomingFromInvoices.length === 0 &&
-            upcomingTransactions.length === 0 ? (
-              <Text
-                style={{
-                  textAlign: "center",
-                  color: theme.colors.secondary,
-                  paddingVertical: 16,
-                }}
-              >
-                No upcoming items
-              </Text>
+          <View style={styles.upcomingSection}>
+            {totalUpcoming === 0 ? (
+              <Card style={styles.emptyCard}>
+                <Card.Content style={styles.emptyContent}>
+                  <Ionicons name="time-outline" size={48} color={AppTheme.colors.textMuted} />
+                  <Text variant="bodyLarge" style={styles.emptyText}>
+                    No upcoming items
+                  </Text>
+                </Card.Content>
+              </Card>
             ) : (
-              <>
-                {upcomingFromIncomes.map((income) => (
-                  <Card key={`income-${income.id}`} style={{ marginBottom: 8 }}>
-                    <Card.Content style={{ paddingVertical: 12 }}>
-                      <View
-                        style={{
-                          flexDirection: "row",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                        }}
-                      >
-                        <View style={{ flex: 1 }}>
-                          <Text variant="bodyLarge">{income.name}</Text>
-                          <Text variant="bodySmall" style={{ color: theme.colors.secondary }}>
-                            {income.category} • Expected Income
-                          </Text>
-                        </View>
-                        <Text style={{ fontWeight: "600", color: "#4caf50" }}>
-                          +€{income.amount.toFixed(1)}
-                        </Text>
-                      </View>
-                    </Card.Content>
-                  </Card>
-                ))}
-
-                {upcomingFromInvoices.map((invoice) => (
-                  <Card key={`invoice-${invoice.id}`} style={{ marginBottom: 8 }}>
-                    <Card.Content style={{ paddingVertical: 12 }}>
-                      <View
-                        style={{
-                          flexDirection: "row",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                        }}
-                      >
-                        <View style={{ flex: 1 }}>
-                          <Text variant="bodyLarge">{invoice.name}</Text>
-                          <Text variant="bodySmall" style={{ color: theme.colors.secondary }}>
-                            {invoice.category} • Expected Invoice
-                          </Text>
-                        </View>
-                        <Text style={{ fontWeight: "600", color: "#f44336" }}>
-                          -€{invoice.amount.toFixed(1)}
-                        </Text>
-                      </View>
-                    </Card.Content>
-                  </Card>
-                ))}
-
-                {upcomingTransactions.map((tx) => (
-                  <Card key={tx.id} style={{ marginBottom: 8 }}>
-                    <Card.Content style={{ paddingVertical: 12 }}>
-                      <View
-                        style={{
-                          flexDirection: "row",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                        }}
-                      >
-                        <View style={{ flex: 1 }}>
-                          <Text variant="bodyLarge">{tx.description}</Text>
-                          <Text variant="bodySmall" style={{ color: theme.colors.secondary }}>
-                            {tx.date} • {tx.category}
-                          </Text>
-                        </View>
-                        {formatAmount(tx.amount)}
-                        <View style={{ flexDirection: "row", marginLeft: 8 }}>
-                          <IconButton icon="pencil" size={20} onPress={() => handleEdit(tx)} />
-                          <IconButton icon="delete" size={20} onPress={() => handleDelete(tx.id)} />
-                        </View>
-                      </View>
-                    </Card.Content>
-                  </Card>
-                ))}
-              </>
+              <View style={styles.upcomingList}>
+                {upcomingFromIncomes.map((income) => renderUpcomingItem(income, "income"))}
+                {upcomingFromInvoices.map((invoice) => renderUpcomingItem(invoice, "invoice"))}
+                {upcomingTransactions.map((tx) => renderUpcomingItem(tx, "transaction"))}
+              </View>
             )}
           </View>
         )}
 
-        <Divider style={{ marginVertical: 8 }} />
+        {/* Recent Transactions */}
+        <View style={styles.section}>
+          <View style={styles.sectionTitle}>
+            <Ionicons name="list" size={24} color={AppTheme.colors.primary} />
+            <Text variant="headlineSmall" style={styles.sectionTitleText}>
+              Recent Transactions
+            </Text>
+          </View>
 
-        {/* Recent Section */}
-        <Text variant="titleMedium" style={{ color: theme.colors.secondary, marginBottom: 12 }}>
-          RECENT
-        </Text>
-
-        <FlatList
-          data={recentTransactions}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <Card style={{ marginBottom: 8 }}>
-              <Card.Content style={{ paddingVertical: 12 }}>
-                <View
-                  style={{
-                    flexDirection: "row",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text variant="bodyLarge">{item.description}</Text>
-                    <Text variant="bodySmall" style={{ color: theme.colors.secondary }}>
-                      {item.date} • {item.category}
-                    </Text>
-                  </View>
-                  {formatAmount(item.amount)}
-                  <View style={{ flexDirection: "row", marginLeft: 8 }}>
-                    <IconButton icon="pencil" size={20} onPress={() => handleEdit(item)} />
-                    <IconButton icon="delete" size={20} onPress={() => handleDelete(item.id)} />
-                  </View>
-                </View>
+          {filteredTransactions.length === 0 ? (
+            <Card style={styles.emptyCard}>
+              <Card.Content style={styles.emptyContent}>
+                <Ionicons name="receipt-outline" size={48} color={AppTheme.colors.textMuted} />
+                <Text variant="bodyLarge" style={styles.emptyText}>
+                  {searchQuery || selectedCategory
+                    ? "No transactions match your filters"
+                    : "No recent transactions yet"}
+                </Text>
               </Card.Content>
             </Card>
+          ) : (
+            <FlatList
+              data={filteredTransactions}
+              keyExtractor={(item) => item.id}
+              renderItem={renderTransactionItem}
+              scrollEnabled={false}
+              style={styles.transactionList}
+            />
           )}
-          ListEmptyComponent={() => (
-            <View style={{ padding: 24, alignItems: "center" }}>
-              <Text style={{ color: theme.colors.secondary }}>No recent transactions yet</Text>
-            </View>
-          )}
-        />
-      </View>
+        </View>
+      </ScrollView>
 
       <FAB
-        style={{ position: "absolute", right: 16, bottom: 16 }}
+        style={styles.fab}
         icon="plus"
         onPress={() => {
           resetForm();
@@ -331,52 +421,261 @@ export default function TransactionsScreen() {
       />
 
       {/* Add/Edit Dialog */}
-      <Portal>
-        <Dialog visible={dialogVisible} onDismiss={() => setDialogVisible(false)}>
-          <Dialog.Title>{editing ? "Edit" : "Add"} Transaction</Dialog.Title>
-          <Dialog.Content style={{ gap: 12 }}>
-            <TextInput
-              label="Amount"
-              value={amount}
-              onChangeText={setAmount}
-              keyboardType="decimal-pad"
-              placeholder="0.0"
-            />
-            <TextInput
-              label="Description"
-              value={description}
-              onChangeText={setDescription}
-              placeholder="e.g., Grocery shopping"
-            />
-            <TextInput
-              label="Date (YYYY-MM-DD)"
-              value={date}
-              onChangeText={setDate}
-              placeholder="2025-01-15"
-            />
-            <TextInput
-              label="Category"
-              value={category}
-              onChangeText={setCategory}
-              placeholder="e.g., Groceries"
-            />
-            <SegmentedButtons
-              value={status}
-              onValueChange={(v) => setStatus(v as "upcoming" | "paid")}
-              buttons={[
-                { value: "paid", label: "Paid" },
-                { value: "upcoming", label: "Upcoming" },
-              ]}
-            />
-          </Dialog.Content>
-          <Dialog.Actions>
-            <Button onPress={() => setDialogVisible(false)}>Cancel</Button>
-            <Button mode="contained" onPress={handleSave}>
-              {editing ? "Update" : "Add"}
-            </Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
+      <CustomDialog
+        visible={dialogVisible}
+        onDismiss={() => setDialogVisible(false)}
+        title={`${editing ? "Edit" : "Add"} Transaction`}
+        onSave={handleSave}
+        hasUnsavedChanges={!!(amount || description || category)}
+      >
+        <View style={styles.dialogContent}>
+          <TextInput
+            label="Amount"
+            value={amount}
+            onChangeText={setAmount}
+            keyboardType="decimal-pad"
+            placeholder="0.0"
+            style={styles.input}
+            left={<TextInput.Icon icon="currency-eur" />}
+          />
+          <TextInput
+            label="Description"
+            value={description}
+            onChangeText={setDescription}
+            placeholder="e.g., Grocery shopping"
+            style={styles.input}
+          />
+          <TextInput
+            label="Date (YYYY-MM-DD)"
+            value={date}
+            onChangeText={setDate}
+            placeholder="2025-01-15"
+            style={styles.input}
+          />
+          <TextInput
+            label="Category"
+            value={category}
+            onChangeText={setCategory}
+            placeholder="e.g., Groceries"
+            style={styles.input}
+          />
+
+          {categories.length > 0 && (
+            <View style={styles.categorySelector}>
+              <Text variant="labelMedium" style={styles.categoryLabel}>
+                Quick Select Category:
+              </Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.categoryChips}
+              >
+                {categories
+                  .filter((c) => c.is_visible)
+                  .map((cat) => (
+                    <Chip
+                      key={cat.id}
+                      mode={category === cat.name ? "flat" : "outlined"}
+                      onPress={() => setCategory(cat.name)}
+                      style={styles.categoryChip}
+                      icon={cat.icon}
+                    >
+                      {cat.name}
+                    </Chip>
+                  ))}
+              </ScrollView>
+            </View>
+          )}
+        </View>
+      </CustomDialog>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: AppTheme.colors.background,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: AppTheme.spacing.lg,
+    paddingVertical: AppTheme.spacing.lg,
+    backgroundColor: AppTheme.colors.card,
+    ...AppTheme.shadows.sm,
+  },
+  monthSelector: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: AppTheme.spacing.sm,
+  },
+  monthText: {
+    fontWeight: AppTheme.typography.fontWeight.semibold,
+    color: AppTheme.colors.textPrimary,
+  },
+  headerActions: {
+    flexDirection: "row",
+    gap: AppTheme.spacing.xs,
+  },
+  content: {
+    flex: 1,
+    padding: AppTheme.spacing.lg,
+  },
+  searchSection: {
+    marginBottom: AppTheme.spacing.xl,
+  },
+  searchBar: {
+    marginBottom: AppTheme.spacing.md,
+  },
+  filterChips: {
+    marginBottom: AppTheme.spacing.sm,
+  },
+  filterChipsContent: {
+    gap: AppTheme.spacing.sm,
+  },
+  filterChip: {
+    marginRight: AppTheme.spacing.sm,
+  },
+  section: {
+    marginBottom: AppTheme.spacing.xl,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: AppTheme.spacing.lg,
+  },
+  sectionTitle: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: AppTheme.spacing.sm,
+  },
+  sectionTitleText: {
+    fontWeight: AppTheme.typography.fontWeight.semibold,
+    color: AppTheme.colors.textPrimary,
+  },
+  countChip: {
+    marginLeft: AppTheme.spacing.sm,
+    backgroundColor: AppTheme.colors.primary,
+  },
+  upcomingSection: {
+    marginBottom: AppTheme.spacing.xl,
+  },
+  upcomingList: {
+    gap: AppTheme.spacing.sm,
+  },
+  upcomingCard: {
+    ...AppTheme.shadows.sm,
+  },
+  upcomingContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: AppTheme.spacing.sm,
+  },
+  upcomingLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  upcomingInfo: {
+    flex: 1,
+    marginLeft: AppTheme.spacing.md,
+  },
+  upcomingDescription: {
+    fontWeight: AppTheme.typography.fontWeight.medium,
+    color: AppTheme.colors.textPrimary,
+  },
+  upcomingMeta: {
+    color: AppTheme.colors.textSecondary,
+    marginTop: 2,
+  },
+  upcomingRight: {
+    alignItems: "flex-end",
+    gap: AppTheme.spacing.xs,
+  },
+  statusChip: {
+    borderColor: AppTheme.colors.warning,
+  },
+  statusChipText: {
+    color: AppTheme.colors.warning,
+    fontSize: 12,
+  },
+  transactionList: {
+    gap: AppTheme.spacing.sm,
+  },
+  transactionCard: {
+    ...AppTheme.shadows.sm,
+  },
+  transactionContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: AppTheme.spacing.sm,
+  },
+  transactionLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  transactionInfo: {
+    flex: 1,
+    marginLeft: AppTheme.spacing.md,
+  },
+  transactionDescription: {
+    fontWeight: AppTheme.typography.fontWeight.medium,
+    color: AppTheme.colors.textPrimary,
+  },
+  transactionMeta: {
+    color: AppTheme.colors.textSecondary,
+    marginTop: 2,
+  },
+  transactionRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: AppTheme.spacing.sm,
+  },
+  amountText: {
+    fontWeight: AppTheme.typography.fontWeight.semibold,
+    fontSize: AppTheme.typography.fontSize.lg,
+  },
+  emptyCard: {
+    ...AppTheme.shadows.sm,
+  },
+  emptyContent: {
+    alignItems: "center",
+    paddingVertical: AppTheme.spacing.xl,
+  },
+  emptyText: {
+    marginTop: AppTheme.spacing.md,
+    textAlign: "center",
+    color: AppTheme.colors.textSecondary,
+  },
+  fab: {
+    position: "absolute",
+    right: AppTheme.spacing.lg,
+    bottom: AppTheme.spacing.lg,
+    backgroundColor: AppTheme.colors.primary,
+  },
+  dialogContent: {
+    gap: AppTheme.spacing.lg,
+  },
+  input: {
+    backgroundColor: AppTheme.colors.background,
+  },
+  categorySelector: {
+    marginTop: AppTheme.spacing.md,
+  },
+  categoryLabel: {
+    marginBottom: AppTheme.spacing.sm,
+    color: AppTheme.colors.textSecondary,
+  },
+  categoryChips: {
+    marginBottom: AppTheme.spacing.sm,
+  },
+  categoryChip: {
+    marginRight: AppTheme.spacing.sm,
+  },
+});

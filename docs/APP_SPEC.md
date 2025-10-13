@@ -52,7 +52,7 @@ Shopping €200 | Spent: €450 (225%) | Left: -€250
 
 **Interactions:**
 
-- **Month Selector:** Tap arrows to navigate between months (past or future)
+- **Month Selector:** Tap arrows to navigate between months (past or future); synced across Budget and Transactions tabs
 - **Copy Previous Month:** Button appears only when all sections are empty; copies all items from previous month
 - **Mark/Unmark Paid (Incomes/Invoices):** Tap checkbox to toggle paid status; marking creates transaction, unmarking deletes it
 - **Add Income:** Opens dialog with fields: Name (optional, uses category if empty), Category (dropdown from categories), Amount, Notes (optional)
@@ -88,12 +88,13 @@ Jan 10 - Salary Payment (Income) +€2,944.0
 
 **Interactions:**
 
-- **Month Selector:** Navigate between months using arrows
-- **Upcoming Section:** Tap header to collapse/expand; shows unpaid incomes, invoices, and upcoming transactions
-- **Manual Entry:** Add transactions with category, amount, date, and status
+- **Month Selector:** Navigate between months using arrows; synced with Budget tab
+- **Upcoming Section:** Tap header to collapse/expand; shows unpaid incomes and invoices for current month only
+- **Manual Entry:** Add paid transactions with category, amount, and date (no upcoming status); amounts are automatically negative for expenses
 - **Edit/Delete:** Tap pencil or trash icons on each transaction
 - **Color Coding:** Green (+) for income, Red (-) for expenses
 - **Amount Format:** Single decimal (e.g., €50.0), with + or - prefix
+- **Category Selection:** Dropdown with all visible categories from Categories tab
 
 ---
 

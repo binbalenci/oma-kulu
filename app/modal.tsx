@@ -5,16 +5,16 @@ import { StyleSheet, View } from "react-native";
 import { Button, List, Switch, Text, TextInput } from "react-native-paper";
 
 const PRESET: Category[] = [
-  { id: "income", name: "Income", is_visible: true },
-  { id: "investing", name: "Investing", is_visible: true },
-  { id: "loan_credit", name: "Loan+Credit", is_visible: true },
-  { id: "vietnam", name: "Vietnam", is_visible: true },
-  { id: "apartment", name: "Apartment", is_visible: true },
-  { id: "insurance", name: "Insurance", is_visible: true },
-  { id: "groceries_fuel", name: "Groceries+Fuel", is_visible: true },
-  { id: "shopping", name: "Shopping", is_visible: true },
-  { id: "subscriptions", name: "Subscriptions", is_visible: true },
-  { id: "incurred", name: "Incurred", is_visible: true },
+  { id: "income", name: "Income", type: "income", is_visible: true },
+  { id: "investing", name: "Investing", type: "expense", is_visible: true },
+  { id: "loan_credit", name: "Loan+Credit", type: "expense", is_visible: true },
+  { id: "vietnam", name: "Vietnam", type: "expense", is_visible: true },
+  { id: "apartment", name: "Apartment", type: "expense", is_visible: true },
+  { id: "insurance", name: "Insurance", type: "expense", is_visible: true },
+  { id: "groceries_fuel", name: "Groceries+Fuel", type: "expense", is_visible: true },
+  { id: "shopping", name: "Shopping", type: "expense", is_visible: true },
+  { id: "subscriptions", name: "Subscriptions", type: "expense", is_visible: true },
+  { id: "incurred", name: "Incurred", type: "expense", is_visible: true },
 ];
 
 export default function CategoriesModal() {
@@ -41,7 +41,12 @@ export default function CategoriesModal() {
   const add = () => {
     if (!newName.trim()) return;
     setCategories((prev) => [
-      { id: newName.toLowerCase().replace(/\s+/g, "_"), name: newName.trim(), is_visible: true },
+      {
+        id: newName.toLowerCase().replace(/\s+/g, "_"),
+        name: newName.trim(),
+        type: "expense", // Default to expense type
+        is_visible: true,
+      },
       ...prev,
     ]);
     setNewName("");

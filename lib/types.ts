@@ -49,6 +49,7 @@ export interface Category {
   icon?: string;
   color?: string;
   is_visible: boolean;
+  budget_enabled?: boolean;
   order_index?: number;
   created_at?: string;
 }

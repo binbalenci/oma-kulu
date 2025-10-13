@@ -1,4 +1,8 @@
 import { useSnackbar } from "@/components/snackbar-provider";
+import { Dialog } from "@/components/ui/Dialog";
+import { GradientProgressBar } from "@/components/ui/GradientProgressBar";
+import { AppTheme } from "@/constants/AppTheme";
+import { useMonth } from "@/lib/month-context";
 import {
   deleteBudget,
   deleteIncome,
@@ -16,32 +20,22 @@ import {
   saveTransaction,
 } from "@/lib/storage";
 import type { Budget, Category, ExpectedIncome, ExpectedInvoice, Transaction } from "@/lib/types";
+import Ionicons from "@react-native-vector-icons/ionicons";
+import MaterialIcons from "@react-native-vector-icons/material-design-icons";
 import { addMonths, endOfMonth, format, startOfMonth } from "date-fns";
 import { useFocusEffect } from "expo-router";
 import React from "react";
-import { ScrollView, View } from "react-native";
-import {
-  Button,
-  Card,
-  Checkbox,
-  Dialog,
-  Divider,
-  IconButton,
-  Portal,
-  ProgressBar,
-  Text,
-  TextInput,
-  useTheme,
-} from "react-native-paper";
+import { ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
+import { Button, Card, Checkbox, IconButton, Text, TextInput, useTheme } from "react-native-paper";
 
 function monthKey(d: Date): string {
   return format(d, "yyyy-MM");
 }
 
-export default function BudgetsScreen() {
+export default function HomeScreen() {
   const theme = useTheme();
   const { showSnackbar } = useSnackbar();
-  const [now, setNow] = React.useState(new Date());
+  const { currentMonth, setCurrentMonth } = useMonth();
 
   // Data states
   const [incomes, setIncomes] = React.useState<ExpectedIncome[]>([]);
@@ -49,50 +43,58 @@ export default function BudgetsScreen() {
   const [budgets, setBudgets] = React.useState<Budget[]>([]);
   const [transactions, setTransactions] = React.useState<Transaction[]>([]);
   const [categories, setCategories] = React.useState<Category[]>([]);
-  const [startingBalance, setStartingBalance] = React.useState<number>(0);
+  const [settings, setSettings] = React.useState({ starting_balance: 0 });
 
-  // Dialog states
+  // UI states
   const [dialogVisible, setDialogVisible] = React.useState(false);
   const [dialogType, setDialogType] = React.useState<"income" | "invoice" | "budget">("income");
-  const [editingItem, setEditingItem] = React.useState<any>(null);
+  const [editingItem, setEditingItem] = React.useState<
+    ExpectedIncome | ExpectedInvoice | Budget | null
+  >(null);
   const [itemName, setItemName] = React.useState("");
   const [itemCategory, setItemCategory] = React.useState("");
   const [itemAmount, setItemAmount] = React.useState("");
   const [itemNotes, setItemNotes] = React.useState("");
 
-  // Load data on mount and when month changes
+  // Category grouping states
+  const [expandedCategories, setExpandedCategories] = React.useState<Set<string>>(new Set());
+
+  // Load data on mount
   React.useEffect(() => {
     (async () => {
-      const [cats, txs, settings, incms, invcs, bdgts] = await Promise.all([
-        loadCategories(),
-        loadTransactions(),
-        loadSettings(),
+      const [incms, invcs, bdgts, txs, cats, sttngs] = await Promise.all([
         loadIncomes(),
         loadInvoices(),
         loadBudgets(),
+        loadTransactions(),
+        loadCategories(),
+        loadSettings(),
       ]);
-      setCategories(cats);
-      setTransactions(txs);
-      setStartingBalance(settings.starting_balance ?? 0);
       setIncomes(incms);
       setInvoices(invcs);
       setBudgets(bdgts);
+      setTransactions(txs);
+      setCategories(cats);
+      setSettings({
+        starting_balance: sttngs.starting_balance || 0,
+      });
     })();
   }, []);
 
-  // Refetch categories when screen comes into focus
+  // Refetch categories and transactions when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
       (async () => {
-        const cats = await loadCategories();
+        const [cats, txs] = await Promise.all([loadCategories(), loadTransactions()]);
         setCategories(cats);
+        setTransactions(txs);
       })();
     }, [])
   );
 
-  const curMonth = monthKey(now);
-  const monthStart = startOfMonth(now);
-  const monthEnd = endOfMonth(now);
+  const curMonth = monthKey(currentMonth);
+  const monthStart = startOfMonth(currentMonth);
+  const monthEnd = endOfMonth(currentMonth);
 
   // Filter items for current month
   const currentIncomes = incomes.filter((i) => i.month === curMonth);
@@ -118,14 +120,36 @@ export default function BudgetsScreen() {
   const expectedExpenses = currentInvoices.reduce((sum, i) => sum + i.amount, 0);
   const totalAllocated = currentBudgets.reduce((sum, b) => sum + b.allocated_amount, 0);
   const moneyToAssign = expectedIncome - expectedExpenses - totalAllocated;
-  const actualInBank = startingBalance + transactions.reduce((sum, t) => sum + t.amount, 0);
+  const actualInBank =
+    settings.starting_balance + transactions.reduce((sum, t) => sum + t.amount, 0);
 
   // Check if all sections are empty
   const allEmpty =
     currentIncomes.length === 0 && currentInvoices.length === 0 && currentBudgets.length === 0;
 
-  const goPrevMonth = () => setNow((d) => addMonths(d, -1));
-  const goNextMonth = () => setNow((d) => addMonths(d, 1));
+  // Group incomes by category
+  const incomesByCategory = currentIncomes.reduce<Record<string, ExpectedIncome[]>>(
+    (acc, income) => {
+      if (!acc[income.category]) {
+        acc[income.category] = [];
+      }
+      acc[income.category].push(income);
+      return acc;
+    },
+    {}
+  );
+
+  // Group invoices by category
+  const invoicesByCategory = currentInvoices.reduce<Record<string, ExpectedInvoice[]>>(
+    (acc, invoice) => {
+      if (!acc[invoice.category]) {
+        acc[invoice.category] = [];
+      }
+      acc[invoice.category].push(invoice);
+      return acc;
+    },
+    {}
+  );
 
   const openAddDialog = (type: "income" | "invoice" | "budget") => {
     setDialogType(type);
@@ -140,126 +164,11 @@ export default function BudgetsScreen() {
   const openEditDialog = (type: "income" | "invoice" | "budget", item: any) => {
     setDialogType(type);
     setEditingItem(item);
-    // If name matches category, show as empty (user left it blank)
     setItemName(type === "budget" ? "" : item.name === item.category ? "" : item.name);
     setItemCategory(item.category);
     setItemAmount(String(type === "budget" ? item.allocated_amount : item.amount));
     setItemNotes(item.notes || "");
     setDialogVisible(true);
-  };
-
-  const handleSaveItem = async () => {
-    const amount = parseFloat(itemAmount || "0");
-    if (isNaN(amount) || amount <= 0) {
-      showSnackbar("Please enter a valid amount");
-      return;
-    }
-    if (!itemCategory) {
-      showSnackbar("Please select a category");
-      return;
-    }
-    // Name is optional for incomes/invoices - will use category name if empty
-
-    const id = editingItem?.id || crypto.randomUUID();
-
-    if (dialogType === "income") {
-      const income: ExpectedIncome = {
-        id,
-        name: itemName || itemCategory, // Use category name if name is empty
-        category: itemCategory,
-        amount,
-        month: curMonth,
-        is_paid: editingItem?.is_paid || false,
-        notes: itemNotes || undefined,
-        created_at: editingItem?.created_at || new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-
-      const success = await saveIncome(income);
-      if (success) {
-        setIncomes((prev) => {
-          const filtered = prev.filter((i) => i.id !== id);
-          return [...filtered, income];
-        });
-        showSnackbar(editingItem ? "Income updated!" : "Income added!");
-      } else {
-        showSnackbar("Failed to save income");
-      }
-    } else if (dialogType === "invoice") {
-      const invoice: ExpectedInvoice = {
-        id,
-        name: itemName || itemCategory, // Use category name if name is empty
-        category: itemCategory,
-        amount,
-        month: curMonth,
-        is_paid: editingItem?.is_paid || false,
-        notes: itemNotes || undefined,
-        created_at: editingItem?.created_at || new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-
-      const success = await saveInvoice(invoice);
-      if (success) {
-        setInvoices((prev) => {
-          const filtered = prev.filter((i) => i.id !== id);
-          return [...filtered, invoice];
-        });
-        showSnackbar(editingItem ? "Invoice updated!" : "Invoice added!");
-      } else {
-        showSnackbar("Failed to save invoice");
-      }
-    } else {
-      const budget: Budget = {
-        id,
-        category: itemCategory,
-        allocated_amount: amount,
-        month: curMonth,
-        notes: itemNotes || undefined,
-        created_at: editingItem?.created_at || new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-
-      const success = await saveBudget(budget);
-      if (success) {
-        setBudgets((prev) => {
-          const filtered = prev.filter((b) => b.id !== id);
-          return [...filtered, budget];
-        });
-        showSnackbar(editingItem ? "Budget updated!" : "Budget added!");
-      } else {
-        showSnackbar("Failed to save budget");
-      }
-    }
-
-    setDialogVisible(false);
-  };
-
-  const handleDeleteItem = async (type: "income" | "invoice" | "budget", id: string) => {
-    if (type === "income") {
-      const success = await deleteIncome(id);
-      if (success) {
-        setIncomes((prev) => prev.filter((i) => i.id !== id));
-        showSnackbar("Income deleted");
-      } else {
-        showSnackbar("Failed to delete income");
-      }
-    } else if (type === "invoice") {
-      const success = await deleteInvoice(id);
-      if (success) {
-        setInvoices((prev) => prev.filter((i) => i.id !== id));
-        showSnackbar("Invoice deleted");
-      } else {
-        showSnackbar("Failed to delete invoice");
-      }
-    } else {
-      const success = await deleteBudget(id);
-      if (success) {
-        setBudgets((prev) => prev.filter((b) => b.id !== id));
-        showSnackbar("Budget deleted");
-      } else {
-        showSnackbar("Failed to delete budget");
-      }
-    }
   };
 
   const togglePaid = async (type: "income" | "invoice", item: ExpectedIncome | ExpectedInvoice) => {
@@ -299,7 +208,7 @@ export default function BudgetsScreen() {
       return;
     }
 
-    // Create transaction
+    // Mark as paid - create transaction
     const tx: Transaction = {
       id: crypto.randomUUID(),
       amount: type === "income" ? item.amount : -item.amount,
@@ -340,71 +249,178 @@ export default function BudgetsScreen() {
     }
   };
 
-  const copyFromPreviousMonth = async () => {
-    const prevMonth = monthKey(addMonths(now, -1));
-    const prevIncomes = incomes.filter((i) => i.month === prevMonth);
-    const prevInvoices = invoices.filter((i) => i.month === prevMonth);
-    const prevBudgets = budgets.filter((b) => b.month === prevMonth);
-
-    if (prevIncomes.length === 0 && prevInvoices.length === 0 && prevBudgets.length === 0) {
-      showSnackbar(`No data found for ${format(addMonths(now, -1), "MMMM yyyy")}`);
+  const handleSaveItem = async () => {
+    const amount = parseFloat(itemAmount);
+    if (Number.isNaN(amount) || amount <= 0) {
+      showSnackbar("Please enter a valid amount");
       return;
     }
 
-    const newIncomes = prevIncomes.map((i) => ({
-      id: crypto.randomUUID(),
-      name: i.name,
-      category: i.category,
-      amount: i.amount,
-      month: curMonth,
-      is_paid: false,
-      notes: i.notes,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }));
+    if (!itemCategory) {
+      showSnackbar("Please select a category");
+      return;
+    }
 
-    const newInvoices = prevInvoices.map((i) => ({
-      id: crypto.randomUUID(),
-      name: i.name,
-      category: i.category,
-      amount: i.amount,
-      month: curMonth,
-      is_paid: false,
-      notes: i.notes,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }));
+    const id = editingItem?.id || crypto.randomUUID();
+    const now = new Date().toISOString();
 
-    const newBudgets = prevBudgets.map((b) => ({
-      id: crypto.randomUUID(),
-      category: b.category,
-      allocated_amount: b.allocated_amount,
-      month: curMonth,
-      notes: b.notes,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }));
-
-    // Save to database
-    await Promise.all([
-      ...newIncomes.map((i) => saveIncome(i)),
-      ...newInvoices.map((i) => saveInvoice(i)),
-      ...newBudgets.map((b) => saveBudget(b)),
-    ]);
-
-    setIncomes((prev) => [...prev, ...newIncomes]);
-    setInvoices((prev) => [...prev, ...newInvoices]);
-    setBudgets((prev) => [...prev, ...newBudgets]);
-
-    const count = newIncomes.length + newInvoices.length + newBudgets.length;
-    showSnackbar(`Copied ${count} item(s) from ${format(addMonths(now, -1), "MMMM yyyy")}`);
+    if (dialogType === "income") {
+      const income: ExpectedIncome = {
+        id,
+        name: itemName || itemCategory, // Use category name if name is empty
+        category: itemCategory,
+        amount,
+        month: curMonth,
+        is_paid: (editingItem as ExpectedIncome)?.is_paid || false,
+        notes: itemNotes || undefined,
+        created_at: editingItem?.created_at || now,
+        updated_at: now,
+      };
+      const success = await saveIncome(income);
+      if (success) {
+        setIncomes((prev) => {
+          const next = prev.filter((i) => i.id !== id);
+          next.push(income);
+          return next;
+        });
+        showSnackbar(editingItem ? "Income updated!" : "Income added!");
+        setDialogVisible(false);
+      } else {
+        showSnackbar("Failed to save income");
+      }
+    } else if (dialogType === "invoice") {
+      const invoice: ExpectedInvoice = {
+        id,
+        name: itemName || itemCategory, // Use category name if name is empty
+        category: itemCategory,
+        amount,
+        month: curMonth,
+        is_paid: (editingItem as ExpectedInvoice)?.is_paid || false,
+        notes: itemNotes || undefined,
+        created_at: editingItem?.created_at || now,
+        updated_at: now,
+      };
+      const success = await saveInvoice(invoice);
+      if (success) {
+        setInvoices((prev) => {
+          const next = prev.filter((i) => i.id !== id);
+          next.push(invoice);
+          return next;
+        });
+        showSnackbar(editingItem ? "Invoice updated!" : "Invoice added!");
+        setDialogVisible(false);
+      } else {
+        showSnackbar("Failed to save invoice");
+      }
+    } else if (dialogType === "budget") {
+      const budget: Budget = {
+        id,
+        category: itemCategory,
+        allocated_amount: amount,
+        month: curMonth,
+        notes: itemNotes || undefined,
+        created_at: editingItem?.created_at || now,
+        updated_at: now,
+      };
+      const success = await saveBudget(budget);
+      if (success) {
+        setBudgets((prev) => {
+          const next = prev.filter((b) => b.id !== id);
+          next.push(budget);
+          return next;
+        });
+        showSnackbar(editingItem ? "Budget updated!" : "Budget added!");
+        setDialogVisible(false);
+      } else {
+        showSnackbar("Failed to save budget");
+      }
+    }
   };
 
-  const getProgressColor = (ratio: number) => {
-    if (ratio === 0) return theme.colors.surfaceDisabled;
-    if (ratio < 0.75) return "#4caf50"; // green
-    if (ratio < 0.96) return "#ff9800"; // orange
-    return "#f44336"; // red
+  const handleDeleteItem = async (type: "income" | "invoice" | "budget", id: string) => {
+    let success = false;
+    if (type === "income") {
+      success = await deleteIncome(id);
+      if (success) {
+        setIncomes((prev) => prev.filter((i) => i.id !== id));
+        showSnackbar("Income deleted!");
+      }
+    } else if (type === "invoice") {
+      success = await deleteInvoice(id);
+      if (success) {
+        setInvoices((prev) => prev.filter((i) => i.id !== id));
+        showSnackbar("Invoice deleted!");
+      }
+    } else if (type === "budget") {
+      success = await deleteBudget(id);
+      if (success) {
+        setBudgets((prev) => prev.filter((b) => b.id !== id));
+        showSnackbar("Budget deleted!");
+      }
+    }
+
+    if (!success) {
+      showSnackbar("Failed to delete item");
+    }
+  };
+
+  const copyPreviousMonth = async () => {
+    const prevMonth = monthKey(addMonths(currentMonth, -1));
+    const [prevIncomes, prevInvoices, prevBudgets] = await Promise.all([
+      loadIncomes(prevMonth),
+      loadInvoices(prevMonth),
+      loadBudgets(prevMonth),
+    ]);
+
+    let count = 0;
+
+    // Copy incomes
+    for (const income of prevIncomes) {
+      const newIncome = { ...income, id: crypto.randomUUID(), month: curMonth, is_paid: false };
+      const success = await saveIncome(newIncome);
+      if (success) {
+        setIncomes((prev) => [...prev, newIncome]);
+        count++;
+      }
+    }
+
+    // Copy invoices
+    for (const invoice of prevInvoices) {
+      const newInvoice = { ...invoice, id: crypto.randomUUID(), month: curMonth, is_paid: false };
+      const success = await saveInvoice(newInvoice);
+      if (success) {
+        setInvoices((prev) => [...prev, newInvoice]);
+        count++;
+      }
+    }
+
+    // Copy budgets
+    for (const budget of prevBudgets) {
+      const newBudget = { ...budget, id: crypto.randomUUID(), month: curMonth };
+      const success = await saveBudget(newBudget);
+      if (success) {
+        setBudgets((prev) => [...prev, newBudget]);
+        count++;
+      }
+    }
+
+    showSnackbar(`Copied ${count} items from ${format(addMonths(currentMonth, -1), "MMMM yyyy")}`);
+  };
+
+  const toggleCategoryExpansion = (category: string) => {
+    setExpandedCategories((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(category)) {
+        newSet.delete(category);
+      } else {
+        newSet.add(category);
+      }
+      return newSet;
+    });
+  };
+
+  const getCategoryInfo = (categoryName: string) => {
+    return categories.find((c) => c.name === categoryName);
   };
 
   const filteredCategories = categories.filter((c) => {
@@ -413,313 +429,375 @@ export default function BudgetsScreen() {
     return c.type === "expense" && c.is_visible;
   });
 
-  return (
-    <View style={{ flex: 1 }}>
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: 100 }}
-      >
-        {/* Month Selector */}
-        <View
-          style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
-        >
-          <IconButton icon="chevron-left" size={24} onPress={goPrevMonth} />
-          <Text variant="titleLarge">{format(now, "MMMM yyyy")}</Text>
-          <IconButton icon="chevron-right" size={24} onPress={goNextMonth} />
-        </View>
+  const renderCategoryGroup = (
+    categoryName: string,
+    items: (ExpectedIncome | ExpectedInvoice)[],
+    type: "income" | "invoice"
+  ) => {
+    const categoryInfo = getCategoryInfo(categoryName);
+    const isExpanded = expandedCategories.has(categoryName);
+    const totalAmount = items.reduce((sum, item) => sum + item.amount, 0);
+    const paidCount = items.filter((item) => item.is_paid).length;
 
+    return (
+      <Card key={categoryName} style={styles.categoryCard}>
+        <TouchableOpacity
+          onPress={() => toggleCategoryExpansion(categoryName)}
+          style={styles.categoryHeader}
+        >
+          <View style={styles.categoryHeaderLeft}>
+            <View
+              style={[
+                styles.categoryIcon,
+                { backgroundColor: categoryInfo?.color || AppTheme.colors.primary },
+              ]}
+            >
+              <MaterialIcons
+                name={(categoryInfo?.icon || "category") as any}
+                size={20}
+                color={AppTheme.colors.textInverse}
+              />
+            </View>
+            <View style={styles.categoryInfo}>
+              <Text variant="titleMedium" style={styles.categoryName}>
+                {categoryName}
+              </Text>
+              <Text variant="bodySmall" style={styles.categorySubtext}>
+                {paidCount}/{items.length} paid • €{totalAmount.toFixed(1)}
+              </Text>
+            </View>
+          </View>
+          <Ionicons
+            name={isExpanded ? "chevron-up" : "chevron-down"}
+            size={20}
+            color={AppTheme.colors.textSecondary}
+          />
+        </TouchableOpacity>
+
+        {isExpanded && (
+          <View style={styles.categoryItems}>
+            {items.map((item) => (
+              <View key={item.id} style={styles.itemRow}>
+                <Checkbox
+                  status={item.is_paid ? "checked" : "unchecked"}
+                  onPress={() => togglePaid(type, item)}
+                />
+                <View style={styles.itemInfo}>
+                  <Text
+                    variant="bodyLarge"
+                    style={[styles.itemName, item.is_paid && styles.itemPaid]}
+                  >
+                    {item.name}
+                  </Text>
+                  {item.notes && (
+                    <Text variant="bodySmall" style={styles.itemNotes}>
+                      {item.notes}
+                    </Text>
+                  )}
+                </View>
+                <Text
+                  variant="bodyLarge"
+                  style={[styles.itemAmount, item.is_paid && styles.itemPaid]}
+                >
+                  €{item.amount.toFixed(1)}
+                </Text>
+                <IconButton icon="pencil" size={16} onPress={() => openEditDialog(type, item)} />
+                <IconButton
+                  icon="delete"
+                  size={16}
+                  onPress={() => handleDeleteItem(type, item.id)}
+                />
+              </View>
+            ))}
+          </View>
+        )}
+      </Card>
+    );
+  };
+
+  return (
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.monthSelector}>
+          <IconButton
+            icon="chevron-left"
+            size={24}
+            onPress={() =>
+              setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))
+            }
+          />
+          <Text variant="headlineSmall" style={styles.monthText}>
+            {format(currentMonth, "MMMM yyyy")}
+          </Text>
+          <IconButton
+            icon="chevron-right"
+            size={24}
+            onPress={() =>
+              setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))
+            }
+          />
+        </View>
+        <View style={styles.headerActions}>
+          <IconButton icon="bell-outline" size={24} />
+          <IconButton icon="account-circle-outline" size={24} />
+        </View>
+      </View>
+
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Cash Overview */}
-        <Card>
+        <Card style={styles.overviewCard}>
           <Card.Content>
-            <Text variant="labelSmall" style={{ color: theme.colors.secondary, marginBottom: 8 }}>
+            <Text variant="labelMedium" style={styles.overviewLabel}>
               CASH OVERVIEW
             </Text>
-            <View style={{ gap: 8 }}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <Text variant="bodyMedium">Total expected income:</Text>
-                <Text variant="bodyMedium" style={{ fontWeight: "600" }}>
+            <View style={styles.overviewGrid}>
+              <View style={styles.overviewItem}>
+                <View style={styles.overviewIcon}>
+                  <Ionicons name="wallet" size={24} color={AppTheme.colors.primary} />
+                </View>
+                <Text variant="bodySmall" style={styles.overviewLabel}>
+                  In Bank
+                </Text>
+                <Text
+                  variant="titleLarge"
+                  style={[
+                    styles.overviewAmount,
+                    actualInBank >= 0 ? styles.positiveAmount : styles.negativeAmount,
+                  ]}
+                >
+                  €{actualInBank.toFixed(1)}
+                </Text>
+              </View>
+              <View style={styles.overviewItem}>
+                <View style={styles.overviewIcon}>
+                  <Ionicons name="trending-up" size={24} color={AppTheme.colors.success} />
+                </View>
+                <Text variant="bodySmall" style={styles.overviewLabel}>
+                  Expected Income
+                </Text>
+                <Text variant="titleLarge" style={styles.positiveAmount}>
                   €{expectedIncome.toFixed(1)}
                 </Text>
               </View>
-              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <Text variant="bodyMedium">Total expected expenses:</Text>
-                <Text variant="bodyMedium" style={{ fontWeight: "600" }}>
+              <View style={styles.overviewItem}>
+                <View style={styles.overviewIcon}>
+                  <Ionicons name="trending-down" size={24} color={AppTheme.colors.error} />
+                </View>
+                <Text variant="bodySmall" style={styles.overviewLabel}>
+                  Expected Expenses
+                </Text>
+                <Text variant="titleLarge" style={styles.negativeAmount}>
                   €{expectedExpenses.toFixed(1)}
                 </Text>
               </View>
-              <Divider />
-              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <Text variant="bodyLarge" style={{ fontWeight: "bold" }}>
-                  Money to assign:
+              <View style={[styles.overviewItem, styles.moneyToAssign]}>
+                <View style={styles.overviewIcon}>
+                  <Ionicons name="add-circle" size={24} color={AppTheme.colors.warning} />
+                </View>
+                <Text variant="bodySmall" style={styles.overviewLabel}>
+                  Money to Assign
                 </Text>
                 <Text
-                  variant="bodyLarge"
-                  style={{
-                    fontWeight: "bold",
-                    color: moneyToAssign < 0 ? theme.colors.error : theme.colors.primary,
-                  }}
+                  variant="headlineSmall"
+                  style={[
+                    styles.overviewAmount,
+                    moneyToAssign >= 0 ? styles.positiveAmount : styles.negativeAmount,
+                  ]}
                 >
                   €{moneyToAssign.toFixed(1)}
-                </Text>
-              </View>
-              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <Text variant="bodyLarge" style={{ fontWeight: "bold" }}>
-                  Money left in bank:
-                </Text>
-                <Text variant="bodyLarge" style={{ fontWeight: "bold" }}>
-                  €{actualInBank.toFixed(1)}
                 </Text>
               </View>
             </View>
           </Card.Content>
         </Card>
 
-        {/* Copy Previous Month Button */}
+        {/* Copy Previous Month */}
         {allEmpty && (
-          <Card style={{ backgroundColor: theme.colors.secondaryContainer }}>
-            <Card.Content
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "space-between",
-                paddingVertical: 12,
-              }}
-            >
-              <Text variant="bodyMedium">💡 No budget set?</Text>
-              <Button mode="contained-tonal" onPress={copyFromPreviousMonth} compact>
-                Copy Previous Month
-              </Button>
+          <Card style={styles.copyCard}>
+            <Card.Content>
+              <View style={styles.copyContent}>
+                <Ionicons name="copy-outline" size={32} color={AppTheme.colors.primary} />
+                <Text variant="titleMedium" style={styles.copyTitle}>
+                  Start Fresh or Copy Previous Month
+                </Text>
+                <Text variant="bodyMedium" style={styles.copySubtitle}>
+                  Copy all items from {format(addMonths(currentMonth, -1), "MMMM yyyy")} to get
+                  started quickly
+                </Text>
+                <Button
+                  mode="contained"
+                  onPress={copyPreviousMonth}
+                  style={styles.copyButton}
+                  icon="content-copy"
+                >
+                  Copy Previous Month
+                </Button>
+              </View>
             </Card.Content>
           </Card>
         )}
 
-        {/* Expected Incomes Section */}
-        <View>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
-              marginBottom: 12,
-            }}
-          >
-            <Text variant="labelLarge" style={{ color: theme.colors.secondary, letterSpacing: 1 }}>
-              EXPECTED INCOMES
-            </Text>
-            <Button icon="plus" mode="text" compact onPress={() => openAddDialog("income")}>
-              Add Income
+        {/* Expected Incomes */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionTitle}>
+              <Ionicons name="trending-up" size={24} color={AppTheme.colors.success} />
+              <Text variant="headlineSmall" style={styles.sectionTitleText}>
+                Expected Incomes
+              </Text>
+            </View>
+            <Button
+              mode="contained"
+              onPress={() => openAddDialog("income")}
+              style={styles.addButton}
+              icon="plus"
+            >
+              Add
             </Button>
           </View>
-          <Divider style={{ marginBottom: 12 }} />
 
-          {currentIncomes.length === 0 ? (
-            <Text
-              variant="bodyMedium"
-              style={{
-                textAlign: "center",
-                color: theme.colors.secondary,
-                paddingVertical: 24,
-              }}
-            >
-              No expected incomes yet. Tap + to add one.
-            </Text>
+          {Object.keys(incomesByCategory).length === 0 ? (
+            <Card style={styles.emptyCard}>
+              <Card.Content style={styles.emptyContent}>
+                <Ionicons name="trending-up-outline" size={48} color={AppTheme.colors.textMuted} />
+                <Text variant="bodyLarge" style={styles.emptyText}>
+                  No expected incomes yet. Tap + to add one.
+                </Text>
+              </Card.Content>
+            </Card>
           ) : (
-            <View style={{ gap: 8 }}>
-              {currentIncomes.map((income) => (
-                <Card key={income.id} style={{ opacity: income.is_paid ? 0.6 : 1 }}>
-                  <Card.Content>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                      <Checkbox
-                        status={income.is_paid ? "checked" : "unchecked"}
-                        onPress={() => togglePaid("income", income)}
-                      />
-                      <View style={{ flex: 1 }}>
-                        <Text variant="bodyLarge">{income.name}</Text>
-                        <Text variant="bodySmall" style={{ color: theme.colors.secondary }}>
-                          {income.category}
-                        </Text>
-                      </View>
-                      <Text variant="bodyLarge" style={{ fontWeight: "600" }}>
-                        €{income.amount.toFixed(1)}
-                      </Text>
-                      <IconButton
-                        icon="pencil"
-                        size={20}
-                        onPress={() => openEditDialog("income", income)}
-                      />
-                      <IconButton
-                        icon="delete"
-                        size={20}
-                        onPress={() => handleDeleteItem("income", income.id)}
-                      />
-                    </View>
-                  </Card.Content>
-                </Card>
-              ))}
+            <View style={styles.categoryList}>
+              {Object.entries(incomesByCategory).map(([categoryName, items]) =>
+                renderCategoryGroup(categoryName, items, "income")
+              )}
             </View>
           )}
         </View>
 
-        {/* Expected Invoices Section */}
-        <View>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
-              marginBottom: 12,
-            }}
-          >
-            <Text variant="labelLarge" style={{ color: theme.colors.secondary, letterSpacing: 1 }}>
-              EXPECTED INVOICES
-            </Text>
-            <Button icon="plus" mode="text" compact onPress={() => openAddDialog("invoice")}>
-              Add Invoice
+        {/* Expected Invoices */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionTitle}>
+              <Ionicons name="trending-down" size={24} color={AppTheme.colors.error} />
+              <Text variant="headlineSmall" style={styles.sectionTitleText}>
+                Expected Invoices
+              </Text>
+            </View>
+            <Button
+              mode="contained"
+              onPress={() => openAddDialog("invoice")}
+              style={styles.addButton}
+              icon="plus"
+            >
+              Add
             </Button>
           </View>
-          <Divider style={{ marginBottom: 12 }} />
 
-          {currentInvoices.length === 0 ? (
-            <Text
-              variant="bodyMedium"
-              style={{
-                textAlign: "center",
-                color: theme.colors.secondary,
-                paddingVertical: 24,
-              }}
-            >
-              No expected invoices yet. Tap + to add one.
-            </Text>
+          {Object.keys(invoicesByCategory).length === 0 ? (
+            <Card style={styles.emptyCard}>
+              <Card.Content style={styles.emptyContent}>
+                <Ionicons
+                  name="trending-down-outline"
+                  size={48}
+                  color={AppTheme.colors.textMuted}
+                />
+                <Text variant="bodyLarge" style={styles.emptyText}>
+                  No expected invoices yet. Tap + to add one.
+                </Text>
+              </Card.Content>
+            </Card>
           ) : (
-            <View style={{ gap: 8 }}>
-              {currentInvoices.map((invoice) => (
-                <Card key={invoice.id} style={{ opacity: invoice.is_paid ? 0.6 : 1 }}>
-                  <Card.Content>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                      <Checkbox
-                        status={invoice.is_paid ? "checked" : "unchecked"}
-                        onPress={() => togglePaid("invoice", invoice)}
-                      />
-                      <View style={{ flex: 1 }}>
-                        <Text variant="bodyLarge">{invoice.name}</Text>
-                        <Text variant="bodySmall" style={{ color: theme.colors.secondary }}>
-                          {invoice.category}
-                        </Text>
-                      </View>
-                      <Text variant="bodyLarge" style={{ fontWeight: "600" }}>
-                        €{invoice.amount.toFixed(1)}
-                      </Text>
-                      <IconButton
-                        icon="pencil"
-                        size={20}
-                        onPress={() => openEditDialog("invoice", invoice)}
-                      />
-                      <IconButton
-                        icon="delete"
-                        size={20}
-                        onPress={() => handleDeleteItem("invoice", invoice.id)}
-                      />
-                    </View>
-                  </Card.Content>
-                </Card>
-              ))}
+            <View style={styles.categoryList}>
+              {Object.entries(invoicesByCategory).map(([categoryName, items]) =>
+                renderCategoryGroup(categoryName, items, "invoice")
+              )}
             </View>
           )}
         </View>
 
-        {/* Budgets Section */}
-        <View>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
-              marginBottom: 12,
-            }}
-          >
-            <Text variant="labelLarge" style={{ color: theme.colors.secondary, letterSpacing: 1 }}>
-              BUDGETS
-            </Text>
-            <Button icon="plus" mode="text" compact onPress={() => openAddDialog("budget")}>
-              Add Budget
+        {/* Budgets */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionTitle}>
+              <Ionicons name="pie-chart" size={24} color={AppTheme.colors.primary} />
+              <Text variant="headlineSmall" style={styles.sectionTitleText}>
+                Budgets
+              </Text>
+            </View>
+            <Button
+              mode="contained"
+              onPress={() => openAddDialog("budget")}
+              style={styles.addButton}
+              icon="plus"
+            >
+              Add
             </Button>
           </View>
-          <Divider style={{ marginBottom: 12 }} />
 
           {currentBudgets.length === 0 ? (
-            <Text
-              variant="bodyMedium"
-              style={{
-                textAlign: "center",
-                color: theme.colors.secondary,
-                paddingVertical: 24,
-              }}
-            >
-              No budgets yet. Tap + to add one.
-            </Text>
+            <Card style={styles.emptyCard}>
+              <Card.Content style={styles.emptyContent}>
+                <Ionicons name="pie-chart-outline" size={48} color={AppTheme.colors.textMuted} />
+                <Text variant="bodyLarge" style={styles.emptyText}>
+                  No budgets yet. Tap + to add one.
+                </Text>
+              </Card.Content>
+            </Card>
           ) : (
-            <View style={{ gap: 12 }}>
+            <View style={styles.budgetList}>
               {currentBudgets.map((budget) => {
-                const spent = spentByCategory[budget.category] ?? 0;
-                const remaining = budget.allocated_amount - spent;
-                const ratio = budget.allocated_amount > 0 ? spent / budget.allocated_amount : 0;
-                const progressColor = getProgressColor(ratio);
+                const categoryInfo = getCategoryInfo(budget.category);
+                const spent = spentByCategory[budget.category] || 0;
+                const progress = budget.allocated_amount > 0 ? spent / budget.allocated_amount : 0;
 
                 return (
-                  <Card key={budget.id}>
+                  <Card key={budget.id} style={styles.budgetCard}>
                     <Card.Content>
-                      <View
-                        style={{
-                          flexDirection: "row",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                          marginBottom: 8,
-                        }}
-                      >
-                        <Text variant="titleMedium">{budget.category}</Text>
-                        <View style={{ flexDirection: "row" }}>
+                      <View style={styles.budgetHeader}>
+                        <View style={styles.budgetInfo}>
+                          <View
+                            style={[
+                              styles.budgetIcon,
+                              { backgroundColor: categoryInfo?.color || AppTheme.colors.primary },
+                            ]}
+                          >
+                            <MaterialIcons
+                              name={(categoryInfo?.icon || "category") as any}
+                              size={20}
+                              color={AppTheme.colors.textInverse}
+                            />
+                          </View>
+                          <View>
+                            <Text variant="titleMedium" style={styles.budgetCategory}>
+                              {budget.category}
+                            </Text>
+                            {budget.notes && (
+                              <Text variant="bodySmall" style={styles.budgetNotes}>
+                                {budget.notes}
+                              </Text>
+                            )}
+                          </View>
+                        </View>
+                        <View style={styles.budgetActions}>
                           <IconButton
                             icon="pencil"
-                            size={20}
+                            size={16}
                             onPress={() => openEditDialog("budget", budget)}
                           />
                           <IconButton
                             icon="delete"
-                            size={20}
+                            size={16}
                             onPress={() => handleDeleteItem("budget", budget.id)}
                           />
                         </View>
                       </View>
-                      <View style={{ gap: 4, marginBottom: 8 }}>
-                        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                          <Text variant="bodySmall">
-                            Allocated: €{budget.allocated_amount.toFixed(1)}
-                          </Text>
-                          <Text variant="bodySmall">Spent: €{spent.toFixed(1)}</Text>
-                          <Text
-                            variant="bodySmall"
-                            style={{
-                              color: remaining < 0 ? theme.colors.error : undefined,
-                            }}
-                          >
-                            Left: €{remaining.toFixed(1)}
-                          </Text>
-                        </View>
-                      </View>
-                      <ProgressBar
-                        progress={Math.min(ratio, 1)}
-                        color={progressColor}
-                        style={{ height: 8, borderRadius: 4 }}
+                      <GradientProgressBar
+                        progress={progress}
+                        allocated={budget.allocated_amount}
+                        spent={spent}
+                        height={12}
                       />
-                      <Text
-                        variant="bodySmall"
-                        style={{
-                          color: theme.colors.secondary,
-                          marginTop: 4,
-                        }}
-                      >
-                        {Math.round(ratio * 100)}% used
-                      </Text>
                     </Card.Content>
                   </Card>
                 );
@@ -730,67 +808,293 @@ export default function BudgetsScreen() {
       </ScrollView>
 
       {/* Add/Edit Dialog */}
-      <Portal>
-        <Dialog visible={dialogVisible} onDismiss={() => setDialogVisible(false)}>
-          <Dialog.Title>
-            {editingItem ? "Edit" : "Add"}{" "}
-            {dialogType === "income" ? "Income" : dialogType === "invoice" ? "Invoice" : "Budget"}
-          </Dialog.Title>
-          <Dialog.Content style={{ gap: 12 }}>
-            {dialogType !== "budget" && (
-              <TextInput
-                label="Name (optional)"
-                value={itemName}
-                onChangeText={setItemName}
-                placeholder={
-                  dialogType === "income"
-                    ? "Leave empty to use category name"
-                    : "Leave empty to use category name"
-                }
-              />
-            )}
+      <Dialog
+        visible={dialogVisible}
+        onDismiss={() => setDialogVisible(false)}
+        title={`${editingItem ? "Edit" : "Add"} ${
+          dialogType === "income" ? "Income" : dialogType === "invoice" ? "Invoice" : "Budget"
+        }`}
+        onSave={handleSaveItem}
+        hasUnsavedChanges={!!(itemName || itemAmount || itemCategory || itemNotes)}
+      >
+        <View style={styles.dialogContent}>
+          {dialogType !== "budget" && (
             <TextInput
-              label="Category"
-              value={itemCategory}
-              onChangeText={setItemCategory}
-              placeholder="Select or type category"
+              label="Name (optional)"
+              value={itemName}
+              onChangeText={setItemName}
+              placeholder={`Uses ${dialogType} category if empty`}
+              style={styles.input}
             />
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-              {filteredCategories.slice(0, 10).map((cat) => (
-                <Button
-                  key={cat.id}
-                  mode={itemCategory === cat.name ? "contained" : "outlined"}
-                  onPress={() => setItemCategory(cat.name)}
-                  compact
-                >
-                  {cat.icon} {cat.name}
-                </Button>
-              ))}
-            </View>
-            <TextInput
-              label="Amount"
-              value={itemAmount}
-              onChangeText={setItemAmount}
-              keyboardType="decimal-pad"
-              placeholder="0.0"
-            />
-            <TextInput
-              label="Notes (optional)"
-              value={itemNotes}
-              onChangeText={setItemNotes}
-              placeholder="Add any notes..."
-              multiline
-              numberOfLines={3}
-            />
-          </Dialog.Content>
-          <Dialog.Actions>
-            <Button onPress={() => setDialogVisible(false)}>Cancel</Button>
-            <Button mode="contained" onPress={handleSaveItem}>
-              {editingItem ? "Update" : "Add"}
-            </Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
+          )}
+
+          <TextInput
+            label="Category"
+            value={itemCategory}
+            onChangeText={setItemCategory}
+            placeholder="Select category"
+            style={styles.input}
+          />
+
+          <TextInput
+            label="Amount"
+            value={itemAmount}
+            onChangeText={setItemAmount}
+            keyboardType="decimal-pad"
+            placeholder="0.0"
+            style={styles.input}
+          />
+
+          <TextInput
+            label="Notes (optional)"
+            value={itemNotes}
+            onChangeText={setItemNotes}
+            placeholder="Additional notes"
+            multiline
+            numberOfLines={3}
+            style={styles.input}
+          />
+        </View>
+      </Dialog>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: AppTheme.colors.background,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: AppTheme.spacing.lg,
+    paddingVertical: AppTheme.spacing.lg,
+    backgroundColor: AppTheme.colors.card,
+    ...AppTheme.shadows.sm,
+  },
+  monthSelector: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: AppTheme.spacing.sm,
+  },
+  monthText: {
+    fontWeight: AppTheme.typography.fontWeight.semibold,
+    color: AppTheme.colors.textPrimary,
+  },
+  headerActions: {
+    flexDirection: "row",
+    gap: AppTheme.spacing.xs,
+  },
+  content: {
+    flex: 1,
+    padding: AppTheme.spacing.lg,
+  },
+  overviewCard: {
+    marginBottom: AppTheme.spacing.xl,
+    ...AppTheme.shadows.md,
+  },
+  overviewLabel: {
+    color: AppTheme.colors.textSecondary,
+    marginBottom: AppTheme.spacing.lg,
+    fontWeight: AppTheme.typography.fontWeight.medium,
+  },
+  overviewGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: AppTheme.spacing.lg,
+  },
+  overviewItem: {
+    flex: 1,
+    minWidth: "45%",
+    alignItems: "center",
+  },
+  moneyToAssign: {
+    minWidth: "100%",
+    marginTop: AppTheme.spacing.md,
+    paddingTop: AppTheme.spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: AppTheme.colors.border,
+  },
+  overviewIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: AppTheme.colors.backgroundSecondary,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: AppTheme.spacing.sm,
+  },
+  overviewAmount: {
+    fontWeight: AppTheme.typography.fontWeight.bold,
+    marginTop: AppTheme.spacing.xs,
+  },
+  positiveAmount: {
+    color: AppTheme.colors.success,
+  },
+  negativeAmount: {
+    color: AppTheme.colors.error,
+  },
+  copyCard: {
+    marginBottom: AppTheme.spacing.xl,
+    ...AppTheme.shadows.md,
+  },
+  copyContent: {
+    alignItems: "center",
+    paddingVertical: AppTheme.spacing.lg,
+  },
+  copyTitle: {
+    marginTop: AppTheme.spacing.md,
+    marginBottom: AppTheme.spacing.sm,
+    fontWeight: AppTheme.typography.fontWeight.semibold,
+    color: AppTheme.colors.textPrimary,
+  },
+  copySubtitle: {
+    textAlign: "center",
+    color: AppTheme.colors.textSecondary,
+    marginBottom: AppTheme.spacing.lg,
+  },
+  copyButton: {
+    backgroundColor: AppTheme.colors.primary,
+  },
+  section: {
+    marginBottom: AppTheme.spacing.xl,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: AppTheme.spacing.lg,
+  },
+  sectionTitle: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: AppTheme.spacing.sm,
+  },
+  sectionTitleText: {
+    fontWeight: AppTheme.typography.fontWeight.semibold,
+    color: AppTheme.colors.textPrimary,
+  },
+  addButton: {
+    backgroundColor: AppTheme.colors.primary,
+  },
+  emptyCard: {
+    ...AppTheme.shadows.sm,
+  },
+  emptyContent: {
+    alignItems: "center",
+    paddingVertical: AppTheme.spacing.xl,
+  },
+  emptyText: {
+    marginTop: AppTheme.spacing.md,
+    textAlign: "center",
+    color: AppTheme.colors.textSecondary,
+  },
+  categoryList: {
+    gap: AppTheme.spacing.md,
+  },
+  categoryCard: {
+    ...AppTheme.shadows.sm,
+  },
+  categoryHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: AppTheme.spacing.lg,
+  },
+  categoryHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  categoryIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: AppTheme.spacing.md,
+  },
+  categoryInfo: {
+    flex: 1,
+  },
+  categoryName: {
+    fontWeight: AppTheme.typography.fontWeight.semibold,
+    color: AppTheme.colors.textPrimary,
+  },
+  categorySubtext: {
+    color: AppTheme.colors.textSecondary,
+    marginTop: 2,
+  },
+  categoryItems: {
+    paddingHorizontal: AppTheme.spacing.lg,
+    paddingBottom: AppTheme.spacing.lg,
+  },
+  itemRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: AppTheme.spacing.sm,
+    gap: AppTheme.spacing.sm,
+  },
+  itemInfo: {
+    flex: 1,
+  },
+  itemName: {
+    fontWeight: AppTheme.typography.fontWeight.medium,
+    color: AppTheme.colors.textPrimary,
+  },
+  itemPaid: {
+    opacity: 0.6,
+  },
+  itemNotes: {
+    color: AppTheme.colors.textSecondary,
+    marginTop: 2,
+  },
+  itemAmount: {
+    fontWeight: AppTheme.typography.fontWeight.semibold,
+    color: AppTheme.colors.textPrimary,
+  },
+  budgetList: {
+    gap: AppTheme.spacing.md,
+  },
+  budgetCard: {
+    ...AppTheme.shadows.sm,
+  },
+  budgetHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: AppTheme.spacing.md,
+  },
+  budgetInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  budgetIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: AppTheme.spacing.md,
+  },
+  budgetCategory: {
+    fontWeight: AppTheme.typography.fontWeight.semibold,
+    color: AppTheme.colors.textPrimary,
+  },
+  budgetNotes: {
+    color: AppTheme.colors.textSecondary,
+    marginTop: 2,
+  },
+  budgetActions: {
+    flexDirection: "row",
+  },
+  dialogContent: {
+    gap: AppTheme.spacing.lg,
+  },
+  input: {
+    backgroundColor: AppTheme.colors.background,
+  },
+});
