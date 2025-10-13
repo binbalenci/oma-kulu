@@ -1,7 +1,8 @@
 import { useSnackbar } from "@/components/snackbar-provider";
 import { ColorPickerDialog } from "@/components/ui/ColorPickerDialog";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Dialog as CustomDialog } from "@/components/ui/Dialog";
-import { IconPickerDialog } from "@/components/ui/IconPickerDialog";
+import { EmojiPickerDialog } from "@/components/ui/EmojiPickerDialog";
 import { AppTheme } from "@/constants/AppTheme";
 import { deleteCategory, loadCategories, saveCategory } from "@/lib/storage";
 import type { Category } from "@/lib/types";
@@ -18,6 +19,7 @@ import {
   Text,
   TextInput,
 } from "react-native-paper";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function CategoriesScreen() {
   const { showSnackbar } = useSnackbar();
@@ -26,16 +28,17 @@ export default function CategoriesScreen() {
   const [editing, setEditing] = React.useState<Category | null>(null);
   const [dialogVisible, setDialogVisible] = React.useState(false);
   const [colorPickerVisible, setColorPickerVisible] = React.useState(false);
-  const [iconPickerVisible, setIconPickerVisible] = React.useState(false);
+  const [emojiPickerVisible, setEmojiPickerVisible] = React.useState(false);
   const [selectedType, setSelectedType] = React.useState<"income" | "expense">("expense");
+
+  // Confirmation dialog states
+  const [confirmDialogVisible, setConfirmDialogVisible] = React.useState(false);
+  const [categoryToDelete, setCategoryToDelete] = React.useState<string | null>(null);
 
   // Form states
   const [name, setName] = React.useState("");
   const [color, setColor] = React.useState("#2563EB");
-  const [icon, setIcon] = React.useState("category");
-  const [iconFamily, setIconFamily] = React.useState<"MaterialIcons" | "Ionicons" | "Feather">(
-    "MaterialIcons"
-  );
+  const [emoji, setEmoji] = React.useState("📁");
   const [isVisible, setIsVisible] = React.useState(true);
   const [budgetEnabled, setBudgetEnabled] = React.useState(true);
 
@@ -61,8 +64,7 @@ export default function CategoriesScreen() {
       setEditing(cat);
       setName(cat.name);
       setColor(cat.color || "#2563EB");
-      setIcon(cat.icon ? cat.icon : "category");
-      setIconFamily((cat as any).icon_family || "MaterialIcons");
+      setEmoji(cat.emoji || "📁");
       setIsVisible(cat.is_visible);
       setBudgetEnabled(cat.budget_enabled ?? true);
       setSelectedType(cat.type);
@@ -70,8 +72,7 @@ export default function CategoriesScreen() {
       setEditing(null);
       setName("");
       setColor("#2563EB");
-      setIcon("category");
-      setIconFamily("MaterialIcons");
+      setEmoji("📁");
       setIsVisible(true);
       setBudgetEnabled(true);
       setSelectedType("expense");
@@ -91,7 +92,7 @@ export default function CategoriesScreen() {
       is_visible: isVisible,
       color,
       type: selectedType,
-      icon,
+      emoji,
       order_index: editing?.order_index ?? (items[items.length - 1]?.order_index ?? 0) + 1,
       budget_enabled: budgetEnabled,
       created_at: editing?.created_at || new Date().toISOString(),
@@ -111,30 +112,22 @@ export default function CategoriesScreen() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    const success = await deleteCategory(id);
+  const handleDelete = (id: string) => {
+    setCategoryToDelete(id);
+    setConfirmDialogVisible(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!categoryToDelete) return;
+
+    const success = await deleteCategory(categoryToDelete);
     if (success) {
-      setItems((prev) => prev.filter((c) => c.id !== id));
+      setItems((prev) => prev.filter((c) => c.id !== categoryToDelete));
       showSnackbar("Category deleted!");
     } else {
       showSnackbar("Failed to delete category");
     }
-  };
-
-  const toggleVisibility = async (category: Category) => {
-    const updated = { ...category, is_visible: !category.is_visible };
-    const success = await saveCategory(updated);
-    if (success) {
-      setItems((prev) => prev.map((c) => (c.id === category.id ? updated : c)));
-    }
-  };
-
-  const toggleBudgetEnabled = async (category: Category) => {
-    const updated = { ...category, budget_enabled: !category.budget_enabled };
-    const success = await saveCategory(updated);
-    if (success) {
-      setItems((prev) => prev.map((c) => (c.id === category.id ? updated : c)));
-    }
+    setCategoryToDelete(null);
   };
 
   const renderCategoryItem = ({ item }: { item: Category }) => (
@@ -142,44 +135,25 @@ export default function CategoriesScreen() {
       <Card.Content style={styles.categoryContent}>
         <View style={styles.categoryLeft}>
           <View style={[styles.categoryColorBar, { backgroundColor: item.color }]} />
+          {item.emoji && <Text style={styles.categoryEmoji}>{item.emoji}</Text>}
           <View style={styles.categoryInfo}>
             <View style={styles.categoryHeader}>
-              <Text variant="titleMedium" style={styles.categoryName}>
-                {item.name}
-              </Text>
+              <View style={styles.categoryInfo}>
+                <Text variant="titleMedium" style={styles.categoryName}>
+                  {item.name}
+                </Text>
+                <View style={styles.statusBadges}>
+                  <Text variant="labelSmall" style={styles.statusText}>
+                    {item.is_visible ? "Visible" : "Hidden"}
+                  </Text>
+                  <Text variant="labelSmall" style={styles.statusText}>
+                    {item.budget_enabled ?? true ? "Budget" : "No Budget"}
+                  </Text>
+                </View>
+              </View>
               <View style={styles.categoryActions}>
                 <IconButton icon="pencil" size={20} onPress={() => openEdit(item)} />
                 <IconButton icon="delete" size={20} onPress={() => handleDelete(item.id)} />
-              </View>
-            </View>
-            <View style={styles.categorySwitches}>
-              <View style={styles.switchRow}>
-                <Text variant="bodySmall" style={styles.switchLabel}>
-                  Visible
-                </Text>
-                <Switch
-                  value={item.is_visible}
-                  onValueChange={() => toggleVisibility(item)}
-                  trackColor={{ false: AppTheme.colors.border, true: AppTheme.colors.primary }}
-                  thumbColor={
-                    item.is_visible ? AppTheme.colors.textInverse : AppTheme.colors.textMuted
-                  }
-                />
-              </View>
-              <View style={styles.switchRow}>
-                <Text variant="bodySmall" style={styles.switchLabel}>
-                  Budget Enabled
-                </Text>
-                <Switch
-                  value={item.budget_enabled ?? true}
-                  onValueChange={() => toggleBudgetEnabled(item)}
-                  trackColor={{ false: AppTheme.colors.border, true: AppTheme.colors.primary }}
-                  thumbColor={
-                    item.budget_enabled ?? true
-                      ? AppTheme.colors.textInverse
-                      : AppTheme.colors.textMuted
-                  }
-                />
               </View>
             </View>
           </View>
@@ -204,7 +178,12 @@ export default function CategoriesScreen() {
           <Text variant="headlineSmall" style={styles.sectionTitleText}>
             {title}
           </Text>
-          <Chip mode="flat" compact style={styles.countChip}>
+          <Chip
+            mode="flat"
+            compact
+            style={[styles.countChip, { backgroundColor: AppTheme.colors.accent }]}
+            textStyle={{ color: AppTheme.colors.textInverse }}
+          >
             {categories.length}
           </Chip>
         </View>
@@ -240,14 +219,14 @@ export default function CategoriesScreen() {
           keyExtractor={(item) => item.id}
           renderItem={renderCategoryItem}
           scrollEnabled={false}
-          style={styles.categoryList}
+          ItemSeparatorComponent={() => <View style={styles.categorySeparator} />}
         />
       )}
     </View>
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       {/* Header */}
       <View style={styles.header}>
         <Text variant="headlineMedium" style={styles.headerTitle}>
@@ -284,7 +263,7 @@ export default function CategoriesScreen() {
         onDismiss={() => setDialogVisible(false)}
         title={`${editing ? "Edit" : "Add"} Category`}
         onSave={saveEdit}
-        hasUnsavedChanges={!!(name || color || icon)}
+        hasUnsavedChanges={!!(name || color || emoji)}
       >
         <View style={styles.dialogContent}>
           <TextInput
@@ -348,13 +327,15 @@ export default function CategoriesScreen() {
           <View style={styles.pickerRow}>
             <TouchableOpacity
               style={styles.pickerButton}
-              onPress={() => setIconPickerVisible(true)}
+              onPress={() => setEmojiPickerVisible(true)}
             >
               <Text variant="labelMedium" style={styles.pickerLabel}>
-                Icon
+                Emoji
               </Text>
               <View style={styles.pickerValue}>
-                <Text variant="bodyLarge">{icon}</Text>
+                <Text variant="bodyLarge" style={styles.emojiPreview}>
+                  {emoji}
+                </Text>
                 <Ionicons name="chevron-down" size={16} color={AppTheme.colors.textSecondary} />
               </View>
             </TouchableOpacity>
@@ -381,7 +362,7 @@ export default function CategoriesScreen() {
               <Switch
                 value={isVisible}
                 onValueChange={setIsVisible}
-                trackColor={{ false: AppTheme.colors.border, true: AppTheme.colors.primary }}
+                trackColor={{ false: AppTheme.colors.border, true: AppTheme.colors.toggle }}
                 thumbColor={isVisible ? AppTheme.colors.textInverse : AppTheme.colors.textMuted}
               />
             </View>
@@ -392,7 +373,7 @@ export default function CategoriesScreen() {
               <Switch
                 value={budgetEnabled}
                 onValueChange={setBudgetEnabled}
-                trackColor={{ false: AppTheme.colors.border, true: AppTheme.colors.primary }}
+                trackColor={{ false: AppTheme.colors.border, true: AppTheme.colors.toggle }}
                 thumbColor={budgetEnabled ? AppTheme.colors.textInverse : AppTheme.colors.textMuted}
               />
             </View>
@@ -408,17 +389,25 @@ export default function CategoriesScreen() {
         selectedColor={color}
       />
 
-      {/* Icon Picker Dialog */}
-      <IconPickerDialog
-        visible={iconPickerVisible}
-        onDismiss={() => setIconPickerVisible(false)}
-        onSelectIcon={(iconData) => {
-          setIcon(iconData.name);
-          setIconFamily(iconData.family);
-        }}
-        selectedIcon={{ name: icon, family: iconFamily }}
+      {/* Emoji Picker Dialog */}
+      <EmojiPickerDialog
+        visible={emojiPickerVisible}
+        onDismiss={() => setEmojiPickerVisible(false)}
+        onSelectEmoji={setEmoji}
+        selectedEmoji={emoji}
       />
-    </View>
+
+      {/* Confirmation Dialog */}
+      <ConfirmDialog
+        visible={confirmDialogVisible}
+        onDismiss={() => setConfirmDialogVisible(false)}
+        onConfirm={confirmDelete}
+        title="Delete Category"
+        message="Are you sure you want to delete this category? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+      />
+    </SafeAreaView>
   );
 }
 
@@ -491,8 +480,8 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: AppTheme.colors.textSecondary,
   },
-  categoryList: {
-    gap: AppTheme.spacing.sm,
+  categorySeparator: {
+    height: AppTheme.spacing.md,
   },
   categoryCard: {
     ...AppTheme.shadows.sm,
@@ -510,6 +499,10 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     marginRight: AppTheme.spacing.md,
   },
+  categoryEmoji: {
+    fontSize: 20,
+    marginRight: AppTheme.spacing.sm,
+  },
   categoryInfo: {
     flex: 1,
   },
@@ -525,18 +518,19 @@ const styles = StyleSheet.create({
   },
   categoryActions: {
     flexDirection: "row",
+    gap: AppTheme.spacing.xs,
   },
-  categorySwitches: {
-    flexDirection: "row",
-    gap: AppTheme.spacing.xl,
+  categoryStatus: {
+    marginTop: AppTheme.spacing.sm,
   },
-  switchRow: {
+  statusBadges: {
     flexDirection: "row",
-    alignItems: "center",
     gap: AppTheme.spacing.sm,
+    marginTop: AppTheme.spacing.xs,
   },
-  switchLabel: {
-    color: AppTheme.colors.textSecondary,
+  statusText: {
+    color: AppTheme.colors.textMuted,
+    fontWeight: AppTheme.typography.fontWeight.medium,
   },
   dialogContent: {
     gap: AppTheme.spacing.lg,
@@ -600,6 +594,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
+  emojiPreview: {
+    fontSize: 24,
+  },
   colorPreview: {
     width: 20,
     height: 20,
@@ -609,5 +606,13 @@ const styles = StyleSheet.create({
   },
   switchSection: {
     gap: AppTheme.spacing.md,
+  },
+  switchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: AppTheme.spacing.sm,
+  },
+  switchLabel: {
+    color: AppTheme.colors.textSecondary,
   },
 });

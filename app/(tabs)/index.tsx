@@ -1,6 +1,8 @@
 import { useSnackbar } from "@/components/snackbar-provider";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Dialog } from "@/components/ui/Dialog";
 import { GradientProgressBar } from "@/components/ui/GradientProgressBar";
+import { SimpleDropdown } from "@/components/ui/SimpleDropdown";
 import { AppTheme } from "@/constants/AppTheme";
 import { useMonth } from "@/lib/month-context";
 import {
@@ -26,14 +28,14 @@ import { addMonths, endOfMonth, format, startOfMonth } from "date-fns";
 import { useFocusEffect } from "expo-router";
 import React from "react";
 import { ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
-import { Button, Card, Checkbox, IconButton, Text, TextInput, useTheme } from "react-native-paper";
+import { Button, Card, Checkbox, IconButton, Text, TextInput } from "react-native-paper";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 function monthKey(d: Date): string {
   return format(d, "yyyy-MM");
 }
 
 export default function HomeScreen() {
-  const theme = useTheme();
   const { showSnackbar } = useSnackbar();
   const { currentMonth, setCurrentMonth } = useMonth();
 
@@ -58,6 +60,10 @@ export default function HomeScreen() {
 
   // Category grouping states
   const [expandedCategories, setExpandedCategories] = React.useState<Set<string>>(new Set());
+
+  // Confirmation dialog states
+  const [confirmDialogVisible, setConfirmDialogVisible] = React.useState(false);
+  const [itemToDelete, setItemToDelete] = React.useState<{ id: string; type: string } | null>(null);
 
   // Load data on mount
   React.useEffect(() => {
@@ -337,31 +343,38 @@ export default function HomeScreen() {
     }
   };
 
-  const handleDeleteItem = async (type: "income" | "invoice" | "budget", id: string) => {
+  const handleDeleteItem = (type: "income" | "invoice" | "budget", id: string) => {
+    setItemToDelete({ id, type });
+    setConfirmDialogVisible(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!itemToDelete) return;
+
     let success = false;
-    if (type === "income") {
-      success = await deleteIncome(id);
+    if (itemToDelete.type === "income") {
+      success = await deleteIncome(itemToDelete.id);
       if (success) {
-        setIncomes((prev) => prev.filter((i) => i.id !== id));
+        setIncomes((prev) => prev.filter((i) => i.id !== itemToDelete.id));
         showSnackbar("Income deleted!");
       }
-    } else if (type === "invoice") {
-      success = await deleteInvoice(id);
+    } else if (itemToDelete.type === "invoice") {
+      success = await deleteInvoice(itemToDelete.id);
       if (success) {
-        setInvoices((prev) => prev.filter((i) => i.id !== id));
+        setInvoices((prev) => prev.filter((i) => i.id !== itemToDelete.id));
         showSnackbar("Invoice deleted!");
       }
-    } else if (type === "budget") {
-      success = await deleteBudget(id);
+    } else if (itemToDelete.type === "budget") {
+      success = await deleteBudget(itemToDelete.id);
       if (success) {
-        setBudgets((prev) => prev.filter((b) => b.id !== id));
+        setBudgets((prev) => prev.filter((b) => b.id !== itemToDelete.id));
         showSnackbar("Budget deleted!");
       }
     }
-
     if (!success) {
       showSnackbar("Failed to delete item");
     }
+    setItemToDelete(null);
   };
 
   const copyPreviousMonth = async () => {
@@ -423,12 +436,6 @@ export default function HomeScreen() {
     return categories.find((c) => c.name === categoryName);
   };
 
-  const filteredCategories = categories.filter((c) => {
-    if (dialogType === "income") return c.type === "income" && c.is_visible;
-    if (dialogType === "invoice") return c.type === "expense" && c.is_visible;
-    return c.type === "expense" && c.is_visible;
-  });
-
   const renderCategoryGroup = (
     categoryName: string,
     items: (ExpectedIncome | ExpectedInvoice)[],
@@ -452,11 +459,11 @@ export default function HomeScreen() {
                 { backgroundColor: categoryInfo?.color || AppTheme.colors.primary },
               ]}
             >
-              <MaterialIcons
-                name={(categoryInfo?.icon || "category") as any}
-                size={20}
-                color={AppTheme.colors.textInverse}
-              />
+              {categoryInfo?.emoji ? (
+                <Text style={styles.categoryEmoji}>{categoryInfo.emoji}</Text>
+              ) : (
+                <MaterialIcons name="folder" size={20} color={AppTheme.colors.textInverse} />
+              )}
             </View>
             <View style={styles.categoryInfo}>
               <Text variant="titleMedium" style={styles.categoryName}>
@@ -501,12 +508,20 @@ export default function HomeScreen() {
                 >
                   €{item.amount.toFixed(1)}
                 </Text>
-                <IconButton icon="pencil" size={16} onPress={() => openEditDialog(type, item)} />
-                <IconButton
-                  icon="delete"
-                  size={16}
-                  onPress={() => handleDeleteItem(type, item.id)}
-                />
+                <View style={styles.itemActions}>
+                  <IconButton
+                    icon="pencil"
+                    size={16}
+                    onPress={() => openEditDialog(type, item)}
+                    style={styles.actionButton}
+                  />
+                  <IconButton
+                    icon="delete"
+                    size={16}
+                    onPress={() => handleDeleteItem(type, item.id)}
+                    style={styles.actionButton}
+                  />
+                </View>
               </View>
             ))}
           </View>
@@ -516,7 +531,7 @@ export default function HomeScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.monthSelector}>
@@ -551,61 +566,59 @@ export default function HomeScreen() {
             <Text variant="labelMedium" style={styles.overviewLabel}>
               CASH OVERVIEW
             </Text>
-            <View style={styles.overviewGrid}>
+
+            {/* Top Row: Expected Income, Expected Expenses, Money to Assign */}
+            <View style={styles.overviewTopRow}>
               <View style={styles.overviewItem}>
-                <View style={styles.overviewIcon}>
-                  <Ionicons name="wallet" size={24} color={AppTheme.colors.primary} />
-                </View>
-                <Text variant="bodySmall" style={styles.overviewLabel}>
-                  In Bank
-                </Text>
-                <Text
-                  variant="titleLarge"
-                  style={[
-                    styles.overviewAmount,
-                    actualInBank >= 0 ? styles.positiveAmount : styles.negativeAmount,
-                  ]}
-                >
-                  €{actualInBank.toFixed(1)}
-                </Text>
-              </View>
-              <View style={styles.overviewItem}>
-                <View style={styles.overviewIcon}>
-                  <Ionicons name="trending-up" size={24} color={AppTheme.colors.success} />
-                </View>
+                <Ionicons name="trending-up" size={20} color={AppTheme.colors.success} />
                 <Text variant="bodySmall" style={styles.overviewLabel}>
                   Expected Income
                 </Text>
-                <Text variant="titleLarge" style={styles.positiveAmount}>
+                <Text variant="titleMedium" style={styles.positiveAmount}>
                   €{expectedIncome.toFixed(1)}
                 </Text>
               </View>
               <View style={styles.overviewItem}>
-                <View style={styles.overviewIcon}>
-                  <Ionicons name="trending-down" size={24} color={AppTheme.colors.error} />
-                </View>
+                <Ionicons name="trending-down" size={20} color={AppTheme.colors.error} />
                 <Text variant="bodySmall" style={styles.overviewLabel}>
                   Expected Expenses
                 </Text>
-                <Text variant="titleLarge" style={styles.negativeAmount}>
+                <Text variant="titleMedium" style={styles.negativeAmount}>
                   €{expectedExpenses.toFixed(1)}
                 </Text>
               </View>
-              <View style={[styles.overviewItem, styles.moneyToAssign]}>
-                <View style={styles.overviewIcon}>
-                  <Ionicons name="add-circle" size={24} color={AppTheme.colors.warning} />
-                </View>
+              <View style={styles.overviewItem}>
+                <Ionicons name="add-circle" size={20} color={AppTheme.colors.warning} />
                 <Text variant="bodySmall" style={styles.overviewLabel}>
                   Money to Assign
                 </Text>
                 <Text
-                  variant="headlineSmall"
+                  variant="titleMedium"
                   style={[
                     styles.overviewAmount,
                     moneyToAssign >= 0 ? styles.positiveAmount : styles.negativeAmount,
                   ]}
                 >
                   €{moneyToAssign.toFixed(1)}
+                </Text>
+              </View>
+            </View>
+
+            {/* Bottom Row: In Bank */}
+            <View style={styles.overviewBottomRow}>
+              <View style={styles.overviewItem}>
+                <Ionicons name="wallet" size={20} color={AppTheme.colors.primary} />
+                <Text variant="bodySmall" style={styles.overviewLabel}>
+                  In Bank
+                </Text>
+                <Text
+                  variant="headlineSmall"
+                  style={[
+                    styles.overviewAmount,
+                    actualInBank >= 0 ? styles.positiveAmount : styles.negativeAmount,
+                  ]}
+                >
+                  €{actualInBank.toFixed(1)}
                 </Text>
               </View>
             </View>
@@ -653,7 +666,7 @@ export default function HomeScreen() {
               style={styles.addButton}
               icon="plus"
             >
-              Add
+              Add Income
             </Button>
           </View>
 
@@ -690,7 +703,7 @@ export default function HomeScreen() {
               style={styles.addButton}
               icon="plus"
             >
-              Add
+              Add Invoice
             </Button>
           </View>
 
@@ -731,7 +744,7 @@ export default function HomeScreen() {
               style={styles.addButton}
               icon="plus"
             >
-              Add
+              Add Budget
             </Button>
           </View>
 
@@ -762,11 +775,15 @@ export default function HomeScreen() {
                               { backgroundColor: categoryInfo?.color || AppTheme.colors.primary },
                             ]}
                           >
-                            <MaterialIcons
-                              name={(categoryInfo?.icon || "category") as any}
-                              size={20}
-                              color={AppTheme.colors.textInverse}
-                            />
+                            {categoryInfo?.emoji ? (
+                              <Text style={styles.budgetEmoji}>{categoryInfo.emoji}</Text>
+                            ) : (
+                              <MaterialIcons
+                                name="folder"
+                                size={20}
+                                color={AppTheme.colors.textInverse}
+                              />
+                            )}
                           </View>
                           <View>
                             <Text variant="titleMedium" style={styles.budgetCategory}>
@@ -828,10 +845,13 @@ export default function HomeScreen() {
             />
           )}
 
-          <TextInput
+          <SimpleDropdown
             label="Category"
             value={itemCategory}
-            onChangeText={setItemCategory}
+            onValueChange={setItemCategory}
+            data={categories
+              .filter((c) => c.is_visible && c.type === dialogType)
+              .map((cat) => ({ id: cat.name, name: cat.name }))}
             placeholder="Select category"
             style={styles.input}
           />
@@ -841,7 +861,7 @@ export default function HomeScreen() {
             value={itemAmount}
             onChangeText={setItemAmount}
             keyboardType="decimal-pad"
-            placeholder="0.0"
+            placeholder="€0.0"
             style={styles.input}
           />
 
@@ -856,7 +876,20 @@ export default function HomeScreen() {
           />
         </View>
       </Dialog>
-    </View>
+
+      {/* Confirmation Dialog */}
+      <ConfirmDialog
+        visible={confirmDialogVisible}
+        onDismiss={() => setConfirmDialogVisible(false)}
+        onConfirm={confirmDelete}
+        title={`Delete ${itemToDelete?.type || "Item"}`}
+        message={`Are you sure you want to delete this ${
+          itemToDelete?.type || "item"
+        }? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+      />
+    </SafeAreaView>
   );
 }
 
@@ -900,31 +933,21 @@ const styles = StyleSheet.create({
     marginBottom: AppTheme.spacing.lg,
     fontWeight: AppTheme.typography.fontWeight.medium,
   },
-  overviewGrid: {
+  overviewTopRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: AppTheme.spacing.lg,
+    gap: AppTheme.spacing.md,
+    marginBottom: AppTheme.spacing.lg,
   },
-  overviewItem: {
-    flex: 1,
-    minWidth: "45%",
-    alignItems: "center",
-  },
-  moneyToAssign: {
-    minWidth: "100%",
-    marginTop: AppTheme.spacing.md,
+  overviewBottomRow: {
+    flexDirection: "row",
     paddingTop: AppTheme.spacing.lg,
     borderTopWidth: 1,
     borderTopColor: AppTheme.colors.border,
   },
-  overviewIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: AppTheme.colors.backgroundSecondary,
+  overviewItem: {
+    flex: 1,
     alignItems: "center",
-    justifyContent: "center",
-    marginBottom: AppTheme.spacing.sm,
+    gap: AppTheme.spacing.xs,
   },
   overviewAmount: {
     fontWeight: AppTheme.typography.fontWeight.bold,
@@ -1016,6 +1039,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginRight: AppTheme.spacing.md,
   },
+  categoryEmoji: {
+    fontSize: 20,
+    color: AppTheme.colors.textInverse,
+  },
   categoryInfo: {
     flex: 1,
   },
@@ -1055,6 +1082,13 @@ const styles = StyleSheet.create({
     fontWeight: AppTheme.typography.fontWeight.semibold,
     color: AppTheme.colors.textPrimary,
   },
+  itemActions: {
+    flexDirection: "row",
+    gap: AppTheme.spacing.xs,
+  },
+  actionButton: {
+    margin: 0,
+  },
   budgetList: {
     gap: AppTheme.spacing.md,
   },
@@ -1079,6 +1113,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginRight: AppTheme.spacing.md,
+  },
+  budgetEmoji: {
+    fontSize: 20,
+    color: AppTheme.colors.textInverse,
   },
   budgetCategory: {
     fontWeight: AppTheme.typography.fontWeight.semibold,

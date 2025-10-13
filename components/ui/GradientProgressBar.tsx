@@ -1,13 +1,13 @@
-import React from 'react';
-import { StyleSheet, View, Text } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { AppTheme, ProgressGradients } from "@/constants/AppTheme";
+import { LinearGradient } from "expo-linear-gradient";
+import React from "react";
+import { StyleSheet, Text, View } from "react-native";
 import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
   interpolate,
-} from 'react-native-reanimated';
-import { AppTheme, ProgressGradients } from '@/constants/AppTheme';
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 
 interface GradientProgressBarProps {
   progress: number; // 0-1
@@ -32,7 +32,7 @@ export function GradientProgressBar({
     animatedProgress.value = withTiming(Math.max(0, Math.min(1, progress)), {
       duration: 500,
     });
-  }, [progress]);
+  }, [progress, animatedProgress]);
 
   const animatedStyle = useAnimatedStyle(() => {
     const width = interpolate(animatedProgress.value, [0, 1], [0, 100]);
@@ -54,12 +54,12 @@ export function GradientProgressBar({
           <Text style={styles.percentageText}>{percentage}%</Text>
         </View>
       )}
-      
+
       <View style={[styles.progressContainer, { height }]}>
         <View style={[styles.progressTrack, { height }]} />
         <Animated.View style={[styles.progressFill, animatedStyle, { height }]}>
           <LinearGradient
-            colors={gradient.colors}
+            colors={gradient.colors as any}
             start={gradient.start}
             end={gradient.end}
             style={[styles.gradient, { height }]}
@@ -72,12 +72,12 @@ export function GradientProgressBar({
 
 const styles = StyleSheet.create({
   container: {
-    width: '100%',
+    width: "100%",
   },
   textContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: AppTheme.spacing.sm,
   },
   amountText: {
@@ -91,13 +91,13 @@ const styles = StyleSheet.create({
     color: AppTheme.colors.textPrimary,
   },
   progressContainer: {
-    position: 'relative',
-    width: '100%',
+    position: "relative",
+    width: "100%",
     borderRadius: AppTheme.borderRadius.full,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   progressTrack: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
@@ -105,11 +105,11 @@ const styles = StyleSheet.create({
     borderRadius: AppTheme.borderRadius.full,
   },
   progressFill: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     borderRadius: AppTheme.borderRadius.full,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   gradient: {
     flex: 1,

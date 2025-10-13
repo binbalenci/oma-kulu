@@ -1,9 +1,14 @@
-import React from 'react';
-import { StyleSheet, View } from 'react-native';
-import { Text, Button } from 'react-native-paper';
-import ColorPicker, { Panel1, Swatches, Preview, OpacitySlider, HueSlider } from 'reanimated-color-picker';
-import { Dialog } from './Dialog';
-import { AppTheme } from '@/constants/AppTheme';
+import { AppTheme } from "@/constants/AppTheme";
+import React from "react";
+import { StyleSheet, View } from "react-native";
+import ColorPicker, {
+  HueSlider,
+  OpacitySlider,
+  Panel1,
+  Preview,
+  Swatches,
+} from "reanimated-color-picker";
+import { Dialog } from "./Dialog";
 
 interface ColorPickerDialogProps {
   visible: boolean;
@@ -16,7 +21,7 @@ export function ColorPickerDialog({
   visible,
   onDismiss,
   onSelectColor,
-  selectedColor = '#2563EB',
+  selectedColor = "#2563EB",
 }: ColorPickerDialogProps) {
   const [tempColor, setTempColor] = React.useState(selectedColor);
 
@@ -50,11 +55,7 @@ export function ColorPickerDialog({
       cancelText="Cancel"
     >
       <View style={styles.container}>
-        <ColorPicker
-          style={styles.colorPicker}
-          value={tempColor}
-          onComplete={handleColorChange}
-        >
+        <ColorPicker style={styles.colorPicker} value={tempColor} onComplete={handleColorChange}>
           <Preview style={styles.preview} />
           <Panel1 style={styles.panel} />
           <HueSlider style={styles.slider} />
@@ -68,10 +69,10 @@ export function ColorPickerDialog({
 
 const styles = StyleSheet.create({
   container: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   colorPicker: {
-    width: '100%',
+    width: "100%",
   },
   preview: {
     height: 60,

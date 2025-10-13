@@ -1,22 +1,18 @@
 import { AppTheme } from "@/constants/AppTheme";
-import Feather from "@react-native-vector-icons/feather";
-import Ionicons from "@react-native-vector-icons/ionicons";
-import MaterialIcons from "@react-native-vector-icons/material-design-icons";
 import React from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { Text } from "react-native-paper";
 
 interface CategoryBadgeProps {
   category: string;
-  icon?: string;
-  iconFamily?: "MaterialIcons" | "Ionicons" | "Feather";
+  emoji?: string;
   color?: string;
   size?: "sm" | "md" | "lg";
   onPress?: () => void;
   style?: any;
 }
 
-const ICON_SIZES = {
+const EMOJI_SIZES = {
   sm: 14,
   md: 16,
   lg: 20,
@@ -30,33 +26,19 @@ const PADDING_SIZES = {
 
 export function CategoryBadge({
   category,
-  icon,
-  iconFamily = "MaterialIcons",
+  emoji,
   color = AppTheme.colors.primary,
   size = "md",
   onPress,
   style,
 }: CategoryBadgeProps) {
-  const iconSize = ICON_SIZES[size];
+  const emojiSize = EMOJI_SIZES[size];
   const padding = PADDING_SIZES[size];
 
-  const renderIcon = () => {
-    if (!icon) return null;
+  const renderEmoji = () => {
+    if (!emoji) return null;
 
-    const iconProps = {
-      name: icon,
-      size: iconSize,
-      color: AppTheme.colors.textInverse,
-    };
-
-    switch (iconFamily) {
-      case "Ionicons":
-        return <Ionicons {...iconProps} />;
-      case "Feather":
-        return <Feather {...iconProps} />;
-      default:
-        return <MaterialIcons {...iconProps} />;
-    }
+    return <Text style={[styles.emoji, { fontSize: emojiSize }]}>{emoji}</Text>;
   };
 
   const Component = onPress ? TouchableOpacity : View;
@@ -75,13 +57,13 @@ export function CategoryBadge({
       onPress={onPress}
     >
       <View style={styles.content}>
-        {renderIcon()}
+        {renderEmoji()}
         <Text
           style={[
             styles.text,
             {
               fontSize: size === "sm" ? 12 : size === "md" ? 14 : 16,
-              marginLeft: icon ? 6 : 0,
+              marginLeft: emoji ? 6 : 0,
             },
           ]}
         >
@@ -104,5 +86,8 @@ const styles = StyleSheet.create({
   text: {
     color: AppTheme.colors.textInverse,
     fontWeight: AppTheme.typography.fontWeight.medium,
+  },
+  emoji: {
+    color: AppTheme.colors.textInverse,
   },
 });

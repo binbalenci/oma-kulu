@@ -1,17 +1,16 @@
-import React from 'react';
-import { Modal, StyleSheet, View, TouchableWithoutFeedback, Dimensions } from 'react-native';
-import { Text, Button, Portal } from 'react-native-paper';
+import { AppTheme } from "@/constants/AppTheme";
+import { BlurView } from "expo-blur";
+import React from "react";
+import { Dimensions, Modal, StyleSheet, TouchableWithoutFeedback, View } from "react-native";
+import { Button, Portal, Text } from "react-native-paper";
 import Animated, {
-  useSharedValue,
   useAnimatedStyle,
+  useSharedValue,
   withSpring,
   withTiming,
-  runOnJS,
-} from 'react-native-reanimated';
-import { BlurView } from 'expo-blur';
-import { AppTheme } from '@/constants/AppTheme';
+} from "react-native-reanimated";
 
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 interface DialogProps {
   visible: boolean;
@@ -23,6 +22,8 @@ interface DialogProps {
   saveText?: string;
   cancelText?: string;
   showActions?: boolean;
+  saveButtonColor?: string;
+  allowOutsideDismiss?: boolean;
 }
 
 export function Dialog({
@@ -32,9 +33,11 @@ export function Dialog({
   children,
   onSave,
   hasUnsavedChanges = false,
-  saveText = 'Save',
-  cancelText = 'Cancel',
+  saveText = "Save",
+  cancelText = "Cancel",
   showActions = true,
+  saveButtonColor = AppTheme.colors.primary,
+  allowOutsideDismiss = true,
 }: DialogProps) {
   const translateY = useSharedValue(SCREEN_HEIGHT);
   const opacity = useSharedValue(0);
@@ -42,15 +45,16 @@ export function Dialog({
   React.useEffect(() => {
     if (visible) {
       translateY.value = withSpring(0, {
-        damping: 20,
-        stiffness: 300,
+        damping: 25,
+        stiffness: 200,
+        mass: 0.8,
       });
-      opacity.value = withTiming(1, { duration: 300 });
+      opacity.value = withTiming(1, { duration: 250 });
     } else {
-      translateY.value = withTiming(SCREEN_HEIGHT, { duration: 300 });
-      opacity.value = withTiming(0, { duration: 300 });
+      translateY.value = withTiming(SCREEN_HEIGHT, { duration: 250 });
+      opacity.value = withTiming(0, { duration: 250 });
     }
-  }, [visible]);
+  }, [visible, translateY, opacity]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],
@@ -63,7 +67,7 @@ export function Dialog({
   const handleDismiss = () => {
     if (hasUnsavedChanges) {
       // TODO: Show confirmation dialog
-      console.log('Has unsaved changes - should show confirmation');
+      console.log("Has unsaved changes - should show confirmation");
     }
     onDismiss();
   };
@@ -86,10 +90,11 @@ export function Dialog({
         onRequestClose={handleDismiss}
         statusBarTranslucent
       >
-        <TouchableWithoutFeedback onPress={handleDismiss}>
+        <TouchableWithoutFeedback onPress={allowOutsideDismiss ? handleDismiss : undefined}>
           <View style={styles.backdrop}>
             <Animated.View style={[styles.backdropOverlay, backdropStyle]}>
-              <BlurView intensity={20} style={StyleSheet.absoluteFill} />
+              <View style={styles.darkOverlay} />
+              <BlurView intensity={30} style={StyleSheet.absoluteFill} />
             </Animated.View>
           </View>
         </TouchableWithoutFeedback>
@@ -99,34 +104,23 @@ export function Dialog({
             <Text variant="headlineSmall" style={styles.title}>
               {title}
             </Text>
-            <Button
-              mode="text"
-              onPress={handleDismiss}
-              icon="close"
-              style={styles.closeButton}
-            >
-              {''}
+            <Button mode="text" onPress={handleDismiss} icon="close" style={styles.closeButton}>
+              {""}
             </Button>
           </View>
 
-          <View style={styles.content}>
-            {children}
-          </View>
+          <View style={styles.content}>{children}</View>
 
           {showActions && (
             <View style={styles.actions}>
-              <Button
-                mode="outlined"
-                onPress={handleDismiss}
-                style={styles.actionButton}
-              >
+              <Button mode="outlined" onPress={handleDismiss} style={styles.actionButton}>
                 {cancelText}
               </Button>
               {onSave && (
                 <Button
                   mode="contained"
                   onPress={handleSave}
-                  style={[styles.actionButton, styles.saveButton]}
+                  style={[styles.actionButton, { backgroundColor: saveButtonColor }]}
                 >
                   {saveText}
                 </Button>
@@ -142,10 +136,15 @@ export function Dialog({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    justifyContent: 'flex-end',
+    justifyContent: "flex-end",
+    backgroundColor: "transparent",
   },
   backdropOverlay: {
     ...StyleSheet.absoluteFillObject,
+  },
+  darkOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
   },
   dialog: {
     backgroundColor: AppTheme.colors.card,
@@ -153,11 +152,12 @@ const styles = StyleSheet.create({
     borderTopRightRadius: AppTheme.borderRadius.xl,
     maxHeight: SCREEN_HEIGHT * 0.9,
     ...AppTheme.shadows.xl,
+    marginTop: "auto",
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: AppTheme.spacing.lg,
     paddingVertical: AppTheme.spacing.lg,
     borderBottomWidth: 1,
@@ -170,6 +170,8 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     marginLeft: AppTheme.spacing.md,
+    justifyContent: "center",
+    alignItems: "center",
   },
   content: {
     paddingHorizontal: AppTheme.spacing.lg,
@@ -177,8 +179,8 @@ const styles = StyleSheet.create({
     maxHeight: SCREEN_HEIGHT * 0.6,
   },
   actions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
+    flexDirection: "row",
+    justifyContent: "flex-end",
     paddingHorizontal: AppTheme.spacing.lg,
     paddingVertical: AppTheme.spacing.lg,
     borderTopWidth: 1,

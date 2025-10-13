@@ -46,7 +46,7 @@ export interface Category {
   id: string;
   name: string;
   type: 'income' | 'expense';
-  icon?: string;
+  emoji?: string;
   color?: string;
   is_visible: boolean;
   budget_enabled?: boolean;

@@ -1,6 +1,8 @@
 import { useSnackbar } from "@/components/snackbar-provider";
 import { CategoryBadge } from "@/components/ui/CategoryBadge";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Dialog as CustomDialog } from "@/components/ui/Dialog";
+import { SimpleDropdown } from "@/components/ui/SimpleDropdown";
 import { AppTheme } from "@/constants/AppTheme";
 import { useMonth } from "@/lib/month-context";
 import {
@@ -17,7 +19,8 @@ import { format } from "date-fns";
 import { useFocusEffect } from "expo-router";
 import React from "react";
 import { FlatList, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
-import { Card, Chip, FAB, IconButton, Menu, Searchbar, Text, TextInput } from "react-native-paper";
+import { Card, Chip, FAB, IconButton, Searchbar, Text, TextInput } from "react-native-paper";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function TransactionsScreen() {
   const { showSnackbar } = useSnackbar();
@@ -31,7 +34,6 @@ export default function TransactionsScreen() {
   // Search and filter states
   const [searchQuery, setSearchQuery] = React.useState("");
   const [selectedCategory, setSelectedCategory] = React.useState<string | null>(null);
-  const [menuVisible, setMenuVisible] = React.useState(false);
 
   // Form states
   const [dialogVisible, setDialogVisible] = React.useState(false);
@@ -40,6 +42,10 @@ export default function TransactionsScreen() {
   const [description, setDescription] = React.useState("");
   const [date, setDate] = React.useState(format(new Date(), "yyyy-MM-dd"));
   const [category, setCategory] = React.useState("General");
+
+  // Confirmation dialog states
+  const [confirmDialogVisible, setConfirmDialogVisible] = React.useState(false);
+  const [itemToDelete, setItemToDelete] = React.useState<{ id: string; type: string } | null>(null);
 
   // Load data when screen gains focus
   useFocusEffect(
@@ -134,14 +140,22 @@ export default function TransactionsScreen() {
     setDialogVisible(true);
   };
 
-  const handleDelete = async (id: string) => {
-    const success = await deleteTransaction(id);
+  const handleDelete = (id: string) => {
+    setItemToDelete({ id, type: "transaction" });
+    setConfirmDialogVisible(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!itemToDelete) return;
+
+    const success = await deleteTransaction(itemToDelete.id);
     if (success) {
-      setTransactions((prev) => prev.filter((t) => t.id !== id));
+      setTransactions((prev) => prev.filter((t) => t.id !== itemToDelete.id));
       showSnackbar("Transaction deleted");
     } else {
       showSnackbar("Failed to delete transaction");
     }
+    setItemToDelete(null);
   };
 
   const getCategoryInfo = (categoryName: string) => {
@@ -167,8 +181,7 @@ export default function TransactionsScreen() {
           <View style={styles.transactionLeft}>
             <CategoryBadge
               category={item.category}
-              icon={categoryInfo?.icon}
-              iconFamily="MaterialIcons"
+              emoji={categoryInfo?.emoji}
               color={categoryInfo?.color || AppTheme.colors.primary}
               size="sm"
             />
@@ -184,30 +197,20 @@ export default function TransactionsScreen() {
 
           <View style={styles.transactionRight}>
             {formatAmount(item.amount)}
-            <Menu
-              visible={menuVisible}
-              onDismiss={() => setMenuVisible(false)}
-              anchor={
-                <IconButton icon="dots-vertical" size={20} onPress={() => setMenuVisible(true)} />
-              }
-            >
-              <Menu.Item
-                onPress={() => {
-                  setMenuVisible(false);
-                  handleEdit(item);
-                }}
-                title="Edit"
-                leadingIcon="pencil"
+            <View style={styles.transactionActions}>
+              <IconButton
+                icon="pencil"
+                size={20}
+                onPress={() => handleEdit(item)}
+                style={styles.actionButton}
               />
-              <Menu.Item
-                onPress={() => {
-                  setMenuVisible(false);
-                  handleDelete(item.id);
-                }}
-                title="Delete"
-                leadingIcon="delete"
+              <IconButton
+                icon="delete"
+                size={20}
+                onPress={() => handleDelete(item.id)}
+                style={styles.actionButton}
               />
-            </Menu>
+            </View>
           </View>
         </Card.Content>
       </Card>
@@ -228,8 +231,7 @@ export default function TransactionsScreen() {
           <View style={styles.upcomingLeft}>
             <CategoryBadge
               category={item.category}
-              icon={categoryInfo?.icon}
-              iconFamily="MaterialIcons"
+              emoji={categoryInfo?.emoji}
               color={categoryInfo?.color || AppTheme.colors.primary}
               size="sm"
             />
@@ -268,7 +270,7 @@ export default function TransactionsScreen() {
     upcomingFromIncomes.length + upcomingFromInvoices.length + upcomingTransactions.length;
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.monthSelector}>
@@ -316,7 +318,13 @@ export default function TransactionsScreen() {
             <Chip
               mode={selectedCategory === null ? "flat" : "outlined"}
               onPress={() => setSelectedCategory(null)}
-              style={styles.filterChip}
+              style={[
+                styles.filterChip,
+                selectedCategory === null && { backgroundColor: AppTheme.colors.chip },
+              ]}
+              textStyle={
+                selectedCategory === null ? { color: AppTheme.colors.chipText } : undefined
+              }
             >
               All Categories
             </Chip>
@@ -327,7 +335,13 @@ export default function TransactionsScreen() {
                   key={cat.id}
                   mode={selectedCategory === cat.name ? "flat" : "outlined"}
                   onPress={() => setSelectedCategory(cat.name)}
-                  style={styles.filterChip}
+                  style={[
+                    styles.filterChip,
+                    selectedCategory === cat.name && { backgroundColor: AppTheme.colors.chip },
+                  ]}
+                  textStyle={
+                    selectedCategory === cat.name ? { color: AppTheme.colors.chipText } : undefined
+                  }
                 >
                   {cat.name}
                 </Chip>
@@ -346,7 +360,12 @@ export default function TransactionsScreen() {
               Upcoming
             </Text>
             {totalUpcoming > 0 && (
-              <Chip mode="flat" compact style={styles.countChip}>
+              <Chip
+                mode="flat"
+                compact
+                style={[styles.countChip, { backgroundColor: AppTheme.colors.accent }]}
+                textStyle={{ color: AppTheme.colors.textInverse }}
+              >
                 {totalUpcoming}
               </Chip>
             )}
@@ -412,7 +431,7 @@ export default function TransactionsScreen() {
       </ScrollView>
 
       <FAB
-        style={styles.fab}
+        style={[styles.fab, { backgroundColor: AppTheme.colors.primary }]}
         icon="plus"
         onPress={() => {
           resetForm();
@@ -434,9 +453,8 @@ export default function TransactionsScreen() {
             value={amount}
             onChangeText={setAmount}
             keyboardType="decimal-pad"
-            placeholder="0.0"
+            placeholder="€0.0"
             style={styles.input}
-            left={<TextInput.Icon icon="currency-eur" />}
           />
           <TextInput
             label="Description"
@@ -452,11 +470,14 @@ export default function TransactionsScreen() {
             placeholder="2025-01-15"
             style={styles.input}
           />
-          <TextInput
+          <SimpleDropdown
             label="Category"
             value={category}
-            onChangeText={setCategory}
-            placeholder="e.g., Groceries"
+            onValueChange={setCategory}
+            data={categories
+              .filter((c) => c.is_visible)
+              .map((cat) => ({ id: cat.name, name: cat.name }))}
+            placeholder="Select category"
             style={styles.input}
           />
 
@@ -478,7 +499,6 @@ export default function TransactionsScreen() {
                       mode={category === cat.name ? "flat" : "outlined"}
                       onPress={() => setCategory(cat.name)}
                       style={styles.categoryChip}
-                      icon={cat.icon}
                     >
                       {cat.name}
                     </Chip>
@@ -488,7 +508,18 @@ export default function TransactionsScreen() {
           )}
         </View>
       </CustomDialog>
-    </View>
+
+      {/* Confirmation Dialog */}
+      <ConfirmDialog
+        visible={confirmDialogVisible}
+        onDismiss={() => setConfirmDialogVisible(false)}
+        onConfirm={confirmDelete}
+        title="Delete Transaction"
+        message="Are you sure you want to delete this transaction? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+      />
+    </SafeAreaView>
   );
 }
 
@@ -636,6 +667,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: AppTheme.spacing.sm,
+  },
+  transactionActions: {
+    flexDirection: "row",
+    gap: AppTheme.spacing.xs,
+  },
+  actionButton: {
+    margin: 0,
   },
   amountText: {
     fontWeight: AppTheme.typography.fontWeight.semibold,

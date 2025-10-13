@@ -48,6 +48,16 @@ export const AppTheme = {
     // Overlay Colors
     overlay: 'rgba(0, 0, 0, 0.5)',
     backdrop: 'rgba(0, 0, 0, 0.3)',
+
+    // UI Element Colors
+    chip: '#E0E7FF', // Light blue for chips
+    chipText: '#3730A3', // Dark blue for chip text
+    toggle: '#10B981', // Green for toggle thumb
+    toggleTrack: '#D1FAE5', // Light green for toggle track
+    buttonSecondary: '#6B7280', // Gray for secondary buttons
+    buttonSecondaryText: '#FFFFFF', // White text for secondary buttons
+    accent: '#8B5CF6', // Purple for accent elements
+    accentLight: '#EDE9FE', // Light purple for accent backgrounds
   },
 
   spacing: {
@@ -138,9 +148,8 @@ export const AppTheme = {
 
   // Animation timings
   animation: {
-    fast: 200,
-    normal: 300,
-    slow: 500,
+    scale: 1,
+    defaultAnimationDuration: 300,
   },
 
   // Icon sizes
