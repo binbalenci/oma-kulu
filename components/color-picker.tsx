@@ -173,8 +173,12 @@ export function ColorPicker({ selectedColor, onSelectColor }: ColorPickerProps) 
               <Text variant="labelLarge" style={{ marginTop: 16, marginBottom: 8 }}>
                 Presets
               </Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View style={styles.presetsContainer}>
+              <View style={styles.presetsScrollContainer}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.presetsContainer}
+                >
                   {PRESET_COLORS.map((color) => (
                     <TouchableOpacity
                       key={color}
@@ -191,8 +195,8 @@ export function ColorPicker({ selectedColor, onSelectColor }: ColorPickerProps) 
                       ]}
                     />
                   ))}
-                </View>
-              </ScrollView>
+                </ScrollView>
+              </View>
 
               <View style={styles.actions}>
                 <Button mode="outlined" onPress={() => setVisible(false)}>
@@ -237,9 +241,10 @@ const styles = StyleSheet.create({
   modalContent: {
     backgroundColor: "#fff",
     borderRadius: 16,
-    padding: 24,
+    padding: 20,
     width: "90%",
     maxWidth: 400,
+    maxHeight: "80%",
   },
   header: {
     flexDirection: "row",
@@ -279,10 +284,15 @@ const styles = StyleSheet.create({
     textAlign: "right",
     fontSize: 14,
   },
+  presetsScrollContainer: {
+    width: "100%",
+    height: 60,
+  },
   presetsContainer: {
     flexDirection: "row",
     gap: 8,
     paddingVertical: 8,
+    paddingHorizontal: 4,
   },
   presetColor: {
     width: 40,

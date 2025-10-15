@@ -55,13 +55,38 @@ export function ColorPickerDialog({
       cancelText="Cancel"
     >
       <View style={styles.container}>
-        <ColorPicker style={styles.colorPicker} value={tempColor} onComplete={handleColorChange}>
-          <Preview style={styles.preview} />
-          <Panel1 style={styles.panel} />
-          <HueSlider style={styles.slider} />
-          <OpacitySlider style={styles.slider} />
-          <Swatches style={styles.swatches} />
-        </ColorPicker>
+        <View style={styles.pickerWrapper}>
+          <ColorPicker value={tempColor} onComplete={handleColorChange}>
+            <Preview style={styles.preview} />
+            <Panel1 style={styles.panel} />
+            <HueSlider style={styles.slider} />
+            <OpacitySlider style={styles.slider} />
+            <Swatches
+              style={styles.swatches}
+              colors={[
+                "#f44336",
+                "#E91E63",
+                "#9C27B0",
+                "#673AB7",
+                "#3F51B5",
+                "#2196F3",
+                "#03A9F4",
+                "#00BCD4",
+                "#009688",
+                "#4CAF50",
+                "#8BC34A",
+                "#CDDC39",
+                "#FFEB3B",
+                "#FFC107",
+                "#FF9800",
+                "#FF5722",
+                "#795548",
+                "#9E9E9E",
+                "#607D8B",
+              ]}
+            />
+          </ColorPicker>
+        </View>
       </View>
     </Dialog>
   );
@@ -70,27 +95,29 @@ export function ColorPickerDialog({
 const styles = StyleSheet.create({
   container: {
     alignItems: "center",
+    width: "100%",
   },
-  colorPicker: {
+  pickerWrapper: {
     width: "100%",
   },
   preview: {
-    height: 60,
+    height: 50,
     borderRadius: AppTheme.borderRadius.md,
-    marginBottom: AppTheme.spacing.lg,
-  },
-  panel: {
-    height: 200,
-    borderRadius: AppTheme.borderRadius.md,
-    marginBottom: AppTheme.spacing.lg,
-  },
-  slider: {
-    height: 40,
-    borderRadius: AppTheme.borderRadius.sm,
     marginBottom: AppTheme.spacing.md,
   },
-  swatches: {
-    height: 60,
+  panel: {
+    height: 180,
     borderRadius: AppTheme.borderRadius.md,
+    marginBottom: AppTheme.spacing.md,
+  },
+  slider: {
+    height: 35,
+    borderRadius: AppTheme.borderRadius.sm,
+    marginBottom: AppTheme.spacing.sm,
+  },
+  swatches: {
+    height: 40,
+    borderRadius: AppTheme.borderRadius.md,
+    marginBottom: 0,
   },
 });

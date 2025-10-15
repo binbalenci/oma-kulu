@@ -1,6 +1,12 @@
 import { AppTheme } from "@/constants/AppTheme";
 import React from "react";
-import { ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
+import {
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
+} from "react-native";
 import { Text, TextInput } from "react-native-paper";
 
 interface SimpleDropdownProps {
@@ -46,27 +52,35 @@ export function SimpleDropdown({
       </TouchableOpacity>
 
       {visible && (
-        <View style={styles.dropdownList}>
-          <ScrollView
-            style={styles.scrollView}
-            showsVerticalScrollIndicator={true}
-            nestedScrollEnabled={true}
-          >
-            {data.map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                style={[styles.dropdownItem, item.name === value && styles.selectedItem]}
-                onPress={() => handleSelect(item)}
-              >
-                <Text
-                  style={[styles.dropdownItemText, item.name === value && styles.selectedItemText]}
+        <>
+          <TouchableWithoutFeedback onPress={() => setVisible(false)}>
+            <View style={styles.backdrop} />
+          </TouchableWithoutFeedback>
+          <View style={styles.dropdownList}>
+            <ScrollView
+              style={styles.scrollView}
+              showsVerticalScrollIndicator={true}
+              nestedScrollEnabled={true}
+            >
+              {data.map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={[styles.dropdownItem, item.name === value && styles.selectedItem]}
+                  onPress={() => handleSelect(item)}
                 >
-                  {item.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
+                  <Text
+                    style={[
+                      styles.dropdownItemText,
+                      item.name === value && styles.selectedItemText,
+                    ]}
+                  >
+                    {item.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </>
       )}
     </View>
   );
@@ -76,6 +90,7 @@ const styles = StyleSheet.create({
   container: {
     position: "relative",
     zIndex: 1000,
+    elevation: 1000,
   },
   label: {
     marginBottom: AppTheme.spacing.xs,
@@ -97,8 +112,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: AppTheme.colors.border,
     maxHeight: 200,
-    zIndex: 1001,
+    zIndex: 9999,
     ...AppTheme.shadows.md,
+    elevation: 1001,
   },
   scrollView: {
     maxHeight: 200,
@@ -119,5 +135,14 @@ const styles = StyleSheet.create({
   selectedItemText: {
     color: AppTheme.colors.primary,
     fontWeight: AppTheme.typography.fontWeight.medium,
+  },
+  backdrop: {
+    position: "absolute",
+    top: -1000,
+    left: -1000,
+    right: -1000,
+    bottom: -1000,
+    zIndex: 9998,
+    elevation: 999,
   },
 });

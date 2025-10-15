@@ -1,7 +1,7 @@
 import { AppTheme } from "@/constants/AppTheme";
 import { BlurView } from "expo-blur";
 import React from "react";
-import { Dimensions, Modal, ScrollView, StyleSheet, View } from "react-native";
+import { Dimensions, Modal, StyleSheet, View } from "react-native";
 import EmojiSelector from "react-native-emoji-selector";
 import { IconButton, Portal, Text } from "react-native-paper";
 import Animated, {
@@ -61,34 +61,30 @@ export function EmojiPickerDialog({
   return (
     <Portal>
       <Modal visible={visible} transparent animationType="none" statusBarTranslucent>
+        <Animated.View style={[styles.backdropOverlay, backdropStyle]}>
+          <View style={styles.darkOverlay} />
+          <BlurView intensity={30} style={StyleSheet.absoluteFill} />
+        </Animated.View>
+        
         <View style={styles.modalOverlay}>
-          <Animated.View style={[styles.backdropOverlay, backdropStyle]}>
-            <View style={styles.darkOverlay} />
-            <BlurView intensity={30} style={StyleSheet.absoluteFill} />
-          </Animated.View>
           <Animated.View style={[styles.modalContent, animatedStyle]}>
             <View style={styles.header}>
               <Text variant="titleLarge">Choose Emoji</Text>
               <IconButton icon="close" onPress={onDismiss} />
             </View>
 
-            <ScrollView
-              style={styles.emojiContainer}
-              showsVerticalScrollIndicator={true}
-              bounces={true}
-              alwaysBounceVertical={false}
-              contentContainerStyle={styles.emojiScrollContent}
-            >
+            <View style={styles.emojiContainer}>
               <EmojiSelector
                 onEmojiSelected={handleSelect}
                 showSearchBar
                 showTabs
                 showHistory={false}
                 showSectionTitles
-                columns={12}
+                columns={8}
                 placeholder="Search emoji..."
+                category={undefined}
               />
-            </ScrollView>
+            </View>
           </Animated.View>
         </View>
       </Modal>
@@ -103,6 +99,11 @@ const styles = StyleSheet.create({
   },
   backdropOverlay: {
     ...StyleSheet.absoluteFillObject,
+    width: "100%",
+    height: "100%",
+    position: "absolute",
+    top: 0,
+    left: 0,
   },
   darkOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -127,10 +128,7 @@ const styles = StyleSheet.create({
   },
   emojiContainer: {
     flex: 1,
-    paddingHorizontal: AppTheme.spacing.md,
-  },
-  emojiScrollContent: {
-    flexGrow: 1,
-    paddingBottom: AppTheme.spacing.xl,
+    width: "100%",
+    height: "100%",
   },
 });

@@ -1,7 +1,15 @@
 import { AppTheme } from "@/constants/AppTheme";
 import { BlurView } from "expo-blur";
 import React from "react";
-import { Dimensions, Modal, StyleSheet, TouchableWithoutFeedback, View } from "react-native";
+import {
+  Dimensions,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  StyleSheet,
+  TouchableWithoutFeedback,
+  View,
+} from "react-native";
 import { Button, Portal, Text } from "react-native-paper";
 import Animated, {
   useAnimatedStyle,
@@ -90,44 +98,50 @@ export function Dialog({
         onRequestClose={handleDismiss}
         statusBarTranslucent
       >
-        <TouchableWithoutFeedback onPress={allowOutsideDismiss ? handleDismiss : undefined}>
-          <View style={styles.backdrop}>
-            <Animated.View style={[styles.backdropOverlay, backdropStyle]}>
+        <Animated.View style={[styles.backdropOverlay, backdropStyle]}>
+          <TouchableWithoutFeedback onPress={allowOutsideDismiss ? handleDismiss : undefined}>
+            <View style={styles.backdrop}>
               <View style={styles.darkOverlay} />
               <BlurView intensity={30} style={StyleSheet.absoluteFill} />
-            </Animated.View>
-          </View>
-        </TouchableWithoutFeedback>
-
-        <Animated.View style={[styles.dialog, animatedStyle]}>
-          <View style={styles.header}>
-            <Text variant="headlineSmall" style={styles.title}>
-              {title}
-            </Text>
-            <Button mode="text" onPress={handleDismiss} icon="close" style={styles.closeButton}>
-              {""}
-            </Button>
-          </View>
-
-          <View style={styles.content}>{children}</View>
-
-          {showActions && (
-            <View style={styles.actions}>
-              <Button mode="outlined" onPress={handleDismiss} style={styles.actionButton}>
-                {cancelText}
-              </Button>
-              {onSave && (
-                <Button
-                  mode="contained"
-                  onPress={handleSave}
-                  style={[styles.actionButton, { backgroundColor: saveButtonColor }]}
-                >
-                  {saveText}
-                </Button>
-              )}
             </View>
-          )}
+          </TouchableWithoutFeedback>
         </Animated.View>
+
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
+          style={styles.keyboardAvoidingView}
+        >
+          <Animated.View style={[styles.dialog, animatedStyle]}>
+            <View style={styles.header}>
+              <Text variant="headlineSmall" style={styles.title}>
+                {title}
+              </Text>
+              <Button mode="text" onPress={handleDismiss} icon="close" style={styles.closeButton}>
+                {""}
+              </Button>
+            </View>
+
+            <View style={styles.content}>{children}</View>
+
+            {showActions && (
+              <View style={styles.actions}>
+                <Button mode="outlined" onPress={handleDismiss} style={styles.actionButton}>
+                  {cancelText}
+                </Button>
+                {onSave && (
+                  <Button
+                    mode="contained"
+                    onPress={handleSave}
+                    style={[styles.actionButton, { backgroundColor: saveButtonColor }]}
+                  >
+                    {saveText}
+                  </Button>
+                )}
+              </View>
+            )}
+          </Animated.View>
+        </KeyboardAvoidingView>
       </Modal>
     </Portal>
   );
@@ -138,9 +152,22 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "flex-end",
     backgroundColor: "transparent",
+    position: "absolute",
+    width: "100%",
+    height: "100%",
+  },
+  keyboardAvoidingView: {
+    flex: 1,
+    justifyContent: "flex-end",
+    height: "100%",
   },
   backdropOverlay: {
     ...StyleSheet.absoluteFillObject,
+    width: "100%",
+    height: "100%",
+    position: "absolute",
+    top: 0,
+    left: 0,
   },
   darkOverlay: {
     ...StyleSheet.absoluteFillObject,
