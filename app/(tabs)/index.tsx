@@ -850,7 +850,10 @@ export default function HomeScreen() {
             value={itemCategory}
             onValueChange={setItemCategory}
             data={categories
-              .filter((c) => c.is_visible && c.type === dialogType)
+              .filter((c) => c.is_visible && (
+                (dialogType === "income" && c.type === "income") || 
+                (dialogType !== "income" && c.type === "expense")
+              ))
               .map((cat) => ({ id: cat.name, name: cat.name }))}
             placeholder="Select category"
             style={styles.input}

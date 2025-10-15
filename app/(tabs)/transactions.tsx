@@ -475,7 +475,7 @@ export default function TransactionsScreen() {
             value={category}
             onValueChange={setCategory}
             data={categories
-              .filter((c) => c.is_visible)
+              .filter((c) => c.is_visible && c.type === "expense") 
               .map((cat) => ({ id: cat.name, name: cat.name }))}
             placeholder="Select category"
             style={styles.input}

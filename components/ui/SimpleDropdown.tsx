@@ -7,7 +7,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
-import { Text, TextInput } from "react-native-paper";
+import { Text } from "react-native-paper";
 
 interface SimpleDropdownProps {
   label: string;
@@ -27,7 +27,6 @@ export function SimpleDropdown({
   style,
 }: SimpleDropdownProps) {
   const [visible, setVisible] = React.useState(false);
-
   const selectedItem = data.find((item) => item.name === value);
 
   const handleSelect = (item: { id: string; name: string }) => {
@@ -42,13 +41,18 @@ export function SimpleDropdown({
       </Text>
 
       <TouchableOpacity style={styles.dropdown} onPress={() => setVisible(!visible)}>
-        <TextInput
-          value={selectedItem?.name || ""}
-          placeholder={placeholder}
-          editable={false}
-          style={styles.input}
-          right={<TextInput.Icon icon="chevron-down" />}
-        />
+        <View style={styles.inputWrapper}>
+          <Text style={styles.inputText} numberOfLines={1} ellipsizeMode="tail">
+            {selectedItem?.name || placeholder}
+          </Text>
+          <TouchableOpacity 
+            style={styles.arrowButton} 
+            onPress={() => setVisible(!visible)}
+            hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}
+          >
+            <Text style={styles.arrowIcon}>{visible ? '▲' : '▼'}</Text>
+          </TouchableOpacity>
+        </View>
       </TouchableOpacity>
 
       {visible && (
@@ -56,6 +60,7 @@ export function SimpleDropdown({
           <TouchableWithoutFeedback onPress={() => setVisible(false)}>
             <View style={styles.backdrop} />
           </TouchableWithoutFeedback>
+          
           <View style={styles.dropdownList}>
             <ScrollView
               style={styles.scrollView}
@@ -89,8 +94,7 @@ export function SimpleDropdown({
 const styles = StyleSheet.create({
   container: {
     position: "relative",
-    zIndex: 1000,
-    elevation: 1000,
+    zIndex: 9999,
   },
   label: {
     marginBottom: AppTheme.spacing.xs,
@@ -99,8 +103,30 @@ const styles = StyleSheet.create({
   dropdown: {
     backgroundColor: AppTheme.colors.background,
   },
-  input: {
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: AppTheme.colors.border,
+    borderRadius: AppTheme.borderRadius.sm,
     backgroundColor: AppTheme.colors.background,
+    paddingHorizontal: AppTheme.spacing.lg,
+    paddingVertical: AppTheme.spacing.md,
+    height: 56,  // Match TextInput height
+  },
+  inputText: {
+    flex: 1,
+    color: AppTheme.colors.textPrimary,
+    fontSize: AppTheme.typography.fontSize.base,
+    marginRight: AppTheme.spacing.md,
+  },
+  arrowButton: {
+    padding: 8,
+  },
+  arrowIcon: {
+    fontSize: 12,
+    color: AppTheme.colors.textSecondary,
   },
   dropdownList: {
     position: "absolute",
@@ -114,7 +140,7 @@ const styles = StyleSheet.create({
     maxHeight: 200,
     zIndex: 9999,
     ...AppTheme.shadows.md,
-    elevation: 1001,
+    elevation: 9999,
   },
   scrollView: {
     maxHeight: 200,
@@ -143,6 +169,5 @@ const styles = StyleSheet.create({
     right: -1000,
     bottom: -1000,
     zIndex: 9998,
-    elevation: 999,
   },
 });
