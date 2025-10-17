@@ -33,7 +33,7 @@ export default function RootLayout() {
                       options={{ presentation: "modal", title: "Modal" }}
                     />
                   </Stack>
-                  <StatusBar style="light" />
+                  <StatusBar style="dark" />
                 </>
               ) : (
                 <PasscodeGate onUnlocked={() => setUnlocked(true)} />
