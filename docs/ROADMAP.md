@@ -1,8 +1,10 @@
 # Oma Kulu Development Roadmap
 
-## Phase 1: Core MVP (Current)
+## Phase 1: Core MVP (Current) - v1.0.1
 
 Focus: Basic spreadsheet replacement with critical improvements
+
+**Latest Release (v1.0.1):** iOS compatibility fixes, emoji-based categories, improved dialog system
 
 ### Budget Management
 
@@ -21,11 +23,20 @@ Focus: Basic spreadsheet replacement with critical improvements
 
 ### Categories & Data
 
-- [x] Hybrid category system (fixed core + flexible)
-- [x] Category archive/restore functionality
+- [x] Emoji-based category system with color coding
+- [x] Category management with emoji and color pickers
+- [x] Budget-enabled toggle for categories
 - [x] Local data storage with Supabase
 - [x] 4-digit passcode protection
 - [x] CSV data export
+
+### iOS & Cross-Platform
+
+- [x] iOS color picker with scrollable color grid
+- [x] Dialog system improvements with seamless handoff
+- [x] Safe area handling for iPhone notch compatibility
+- [x] Status bar visibility fixes
+- [x] Cross-platform snackbar positioning
 
 ---
 

@@ -109,14 +109,12 @@ Jan 10 - Salary Payment (Income) +€2,944.0
 
 --- Categories Tab ---
 ACTIVE CATEGORIES
-[≡] Income [Edit] [Archive]
-[≡] Insurance [Edit] [Archive]
-[≡] Groceries+Fuel [Edit] [Archive]
+[💰] Income [Edit] [Delete]
+[🛡️] Insurance [Edit] [Delete]  
+[🛒] Groceries [Edit] [Delete]
+[⛽] Fuel [Edit] [Delete]
 
-ARCHIVED CATEGORIES
-[ ] Car Loan [Restore] [Delete]
-
-[+ Create Category]
+[+ Add Income Category] [+ Add Expense Category]
 
 --- Settings Tab ---
 
@@ -259,9 +257,10 @@ ARCHIVED CATEGORIES
   id: UUID (primary key)
   name: TEXT
   type: TEXT ('income' | 'expense')
-  icon: TEXT (optional, emoji or icon name)
+  emoji: TEXT (optional, emoji character)
   color: TEXT (optional, hex color)
   is_visible: BOOLEAN (default: true)
+  budget_enabled: BOOLEAN (default: true, whether category can be budgeted)
   order_index: INT (optional, for sorting)
   created_at: TIMESTAMPTZ
 }

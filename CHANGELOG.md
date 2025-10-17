@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2025-01-15
+
+### 🐛 Fixed
+
+- **iOS Color Picker Issues**
+  - Fixed dialog conflict where add dialog would close when color picker opened
+  - Implemented seamless dialog handoff system to maintain user context
+  - Fixed color overflow issue by making color grid scrollable
+  - Added proper ScrollView with 300px max height for color selection
+  - Increased dialog height to 500px on iOS to accommodate scrollable content
+
+- **iOS Status Bar & Safe Area Issues**
+  - Fixed snackbar positioning to respect safe area and not go behind notch
+  - Implemented dynamic positioning that works across all device sizes and platforms
+  - Changed status bar style from "light" to "dark" for proper visibility
+  - Added cross-platform positioning logic with screen size adaptation
+  - Snackbar now positions correctly below header on all iOS devices
+
+### 🔧 Improved
+
+- **Cross-Platform Compatibility**
+  - Dynamic snackbar positioning based on platform (iOS/Android) and screen size
+  - Percentage-based calculations for different device resolutions
+  - Future-proof solution that adapts to new device sizes automatically
+
+### 📱 Platform Support
+
+- Enhanced iOS compatibility with proper safe area handling
+- Fixed status bar content visibility on all iOS devices
+- Improved responsive design for various iPhone models (SE, 14, 14 Pro Max, etc.)
+
 ## [1.0.0-beta] - 2025-01-15
 
 ### 🎉 Major Release - Complete UI/UX Overhaul
