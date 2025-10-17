@@ -1,6 +1,6 @@
 import { AppTheme } from "@/constants/AppTheme";
 import React from "react";
-import { StyleSheet, TouchableOpacity, View } from "react-native";
+import { ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import { Text } from "react-native-paper";
 import { SimpleDialog } from "./SimpleDialog";
 
@@ -80,20 +80,26 @@ export function IOSColorPicker({
 
         <Text style={styles.sectionTitle}>Select a Color</Text>
 
-        <View style={styles.colorGrid}>
-          {COLOR_PALETTE.map((color) => (
-            <TouchableOpacity
-              key={color}
-              style={[
-                styles.colorOption,
-                { backgroundColor: color },
-                tempColor === color && styles.selectedColor,
-              ]}
-              onPress={() => setTempColor(color)}
-              activeOpacity={0.7}
-            />
-          ))}
-        </View>
+        <ScrollView 
+          style={styles.scrollContainer}
+          showsVerticalScrollIndicator={true}
+          bounces={false}
+        >
+          <View style={styles.colorGrid}>
+            {COLOR_PALETTE.map((color) => (
+              <TouchableOpacity
+                key={color}
+                style={[
+                  styles.colorOption,
+                  { backgroundColor: color },
+                  tempColor === color && styles.selectedColor,
+                ]}
+                onPress={() => setTempColor(color)}
+                activeOpacity={0.7}
+              />
+            ))}
+          </View>
+        </ScrollView>
       </View>
     </SimpleDialog>
   );
@@ -125,11 +131,15 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: AppTheme.spacing.md,
   },
+  scrollContainer: {
+    maxHeight: 300, // Limit the scrollable area height
+  },
   colorGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "center",
     gap: 12,
+    paddingBottom: AppTheme.spacing.sm, // Add some bottom padding for better scrolling
   },
   colorOption: {
     width: 40,

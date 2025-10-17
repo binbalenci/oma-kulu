@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: AppTheme.spacing.lg,
-    maxHeight: Platform.OS === "ios" ? 400 : "60%",
+    maxHeight: Platform.OS === "ios" ? 500 : "60%", // Increased height for iOS to accommodate scrollable content
   },
   actions: {
     flexDirection: "row",
