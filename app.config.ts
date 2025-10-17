@@ -11,8 +11,13 @@ const config: ExpoConfig = {
   newArchEnabled: true,
   ios: {
     supportsTablet: true,
+    bundleIdentifier: "com.omakulu.app",
+    "infoPlist": {
+      "ITSAppUsesNonExemptEncryption": false
+    }
   },
   android: {
+    package: "com.omakulu.app",
     adaptiveIcon: {
       backgroundColor: "#E6F4FE",
       foregroundImage: "./assets/images/android-icon-foreground.png",
@@ -44,6 +49,12 @@ const config: ExpoConfig = {
     eas: {
       projectId: "15462d70-a977-4183-80b9-1ea7323ba9fc",
     },
+  },
+  updates: {
+    url: "https://u.expo.dev/15462d70-a977-4183-80b9-1ea7323ba9fc",
+  },
+  runtimeVersion: {
+    policy: "appVersion",
   },
   experiments: {
     typedRoutes: true,
