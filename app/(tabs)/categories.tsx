@@ -1,8 +1,8 @@
 import { useSnackbar } from "@/components/snackbar-provider";
-import { ColorPickerDialog } from "@/components/ui/ColorPickerDialog";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Dialog as CustomDialog } from "@/components/ui/Dialog";
-import { EmojiPickerDialog } from "@/components/ui/EmojiPickerDialog";
+import { IOSColorPicker } from "@/components/ui/IOSColorPicker";
+import { SimpleEmojiPicker } from "@/components/ui/SimpleEmojiPicker";
 import { AppTheme } from "@/constants/AppTheme";
 import { deleteCategory, loadCategories, saveCategory } from "@/lib/storage";
 import type { Category } from "@/lib/types";
@@ -327,7 +327,14 @@ export default function CategoriesScreen() {
           <View style={styles.pickerRow}>
             <TouchableOpacity
               style={styles.pickerButton}
-              onPress={() => setEmojiPickerVisible(true)}
+              onPress={() => {
+                // First close the edit dialog, then show emoji picker
+                setDialogVisible(false);
+                // Slight delay to ensure dialog animations don't overlap
+                setTimeout(() => {
+                  setEmojiPickerVisible(true);
+                }, 100);
+              }}
             >
               <Text variant="labelMedium" style={styles.pickerLabel}>
                 Emoji
@@ -342,7 +349,14 @@ export default function CategoriesScreen() {
 
             <TouchableOpacity
               style={styles.pickerButton}
-              onPress={() => setColorPickerVisible(true)}
+              onPress={() => {
+                // First close the edit dialog, then show color picker
+                setDialogVisible(false);
+                // Slight delay to ensure dialog animations don't overlap
+                setTimeout(() => {
+                  setColorPickerVisible(true);
+                }, 100);
+              }}
             >
               <Text variant="labelMedium" style={styles.pickerLabel}>
                 Color
@@ -382,7 +396,7 @@ export default function CategoriesScreen() {
       </CustomDialog>
 
       {/* Color Picker Dialog */}
-      <ColorPickerDialog
+      <IOSColorPicker
         visible={colorPickerVisible}
         onDismiss={() => setColorPickerVisible(false)}
         onSelectColor={setColor}
@@ -390,7 +404,7 @@ export default function CategoriesScreen() {
       />
 
       {/* Emoji Picker Dialog */}
-      <EmojiPickerDialog
+      <SimpleEmojiPicker
         visible={emojiPickerVisible}
         onDismiss={() => setEmojiPickerVisible(false)}
         onSelectEmoji={setEmoji}
