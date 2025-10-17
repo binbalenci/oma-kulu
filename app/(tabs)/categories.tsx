@@ -328,9 +328,8 @@ export default function CategoriesScreen() {
             <TouchableOpacity
               style={styles.pickerButton}
               onPress={() => {
-                // First close the edit dialog, then show emoji picker
+                // Temporarily close add dialog to avoid modal conflicts
                 setDialogVisible(false);
-                // Slight delay to ensure dialog animations don't overlap
                 setTimeout(() => {
                   setEmojiPickerVisible(true);
                 }, 100);
@@ -350,9 +349,8 @@ export default function CategoriesScreen() {
             <TouchableOpacity
               style={styles.pickerButton}
               onPress={() => {
-                // First close the edit dialog, then show color picker
+                // Temporarily close add dialog to avoid modal conflicts
                 setDialogVisible(false);
-                // Slight delay to ensure dialog animations don't overlap
                 setTimeout(() => {
                   setColorPickerVisible(true);
                 }, 100);
@@ -398,7 +396,13 @@ export default function CategoriesScreen() {
       {/* Color Picker Dialog */}
       <IOSColorPicker
         visible={colorPickerVisible}
-        onDismiss={() => setColorPickerVisible(false)}
+        onDismiss={() => {
+          setColorPickerVisible(false);
+          // Reopen the add dialog after color picker closes
+          setTimeout(() => {
+            setDialogVisible(true);
+          }, 100);
+        }}
         onSelectColor={setColor}
         selectedColor={color}
       />
@@ -406,7 +410,13 @@ export default function CategoriesScreen() {
       {/* Emoji Picker Dialog */}
       <SimpleEmojiPicker
         visible={emojiPickerVisible}
-        onDismiss={() => setEmojiPickerVisible(false)}
+        onDismiss={() => {
+          setEmojiPickerVisible(false);
+          // Reopen the add dialog after emoji picker closes
+          setTimeout(() => {
+            setDialogVisible(true);
+          }, 100);
+        }}
         onSelectEmoji={setEmoji}
         selectedEmoji={emoji}
       />
