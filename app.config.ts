@@ -3,7 +3,7 @@ import { ExpoConfig } from "expo/config";
 const config: ExpoConfig = {
   name: "oma-kulu",
   slug: "oma-kulu",
-  version: "0.4.0",
+  version: "1.0.1",
   orientation: "portrait",
   icon: "./assets/images/icon.png",
   scheme: "omakulu",
@@ -41,6 +41,9 @@ const config: ExpoConfig = {
   extra: {
     supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
     supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+    eas: {
+      projectId: "15462d70-a977-4183-80b9-1ea7323ba9fc",
+    },
   },
   experiments: {
     typedRoutes: true,
