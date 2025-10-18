@@ -2,7 +2,22 @@
 
 A beautiful, Apple-standard personal finance management app built with React Native and Expo.
 
-> **Version 1.0.0-beta** - Complete UI/UX overhaul with emoji system and enhanced user experience
+> **Version 1.1.0** - Enhanced emoji picker with blazing fast performance and cross-platform consistency
+
+## 🆕 What's New in 1.1.0
+
+### ⚡ Performance & UX Improvements
+- **Blazing Fast Emoji Picker**: Switched to `rn-emoji-picker` for superior performance
+- **Cross-Platform Consistency**: Optimized emoji sizing and density for both iOS and Web
+- **Enhanced Categories**: All 9 emoji categories enabled (emotion, activities, flags, food, places, nature, objects)
+- **Smart Density**: 10 emojis per row on Web, 7 on iOS for optimal viewing
+- **iOS Clipping Fix**: Resolved emoji text clipping issues on iOS devices
+
+### 🎨 UI/UX Enhancements
+- **Better Web Experience**: Larger dialog height and improved emoji density on Web
+- **Consistent Sizing**: Platform-specific optimizations for unified experience
+- **Improved Animations**: Smoother modal transitions and state changes
+- **Enhanced Search**: Real-time emoji search with better performance
 
 ## 🆕 What's New in 1.0.0-beta
 
