@@ -5,6 +5,54 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2025-01-15
+
+### ⚡ Performance & UX Improvements
+
+- **Blazing Fast Emoji Picker**
+  - Switched from `@hiraku-ai/react-native-emoji-picker` to `rn-emoji-picker`
+  - Dramatically improved performance with un-opinionated design
+  - Eliminated 2-second delays on iOS and web platforms
+  - Reduced memory usage and rendering complexity
+
+- **Cross-Platform Consistency**
+  - Optimized emoji sizing and density for both iOS and Web
+  - Platform-specific optimizations for unified experience
+  - Web: 10 emojis per row with 70% dialog height
+  - iOS: 7 emojis per row with 60% dialog height
+  - Consistent emoji scaling across platforms
+
+### 🎨 UI/UX Enhancements
+
+- **Enhanced Categories**
+  - Enabled all 9 emoji categories: recent, emotion, emojis, activities, flags, food, places, nature, objects
+  - Better emoji variety and selection options
+  - Improved category navigation and search
+
+- **iOS Clipping Fix**
+  - Resolved emoji text clipping issues on iOS devices
+  - Added proper line height and padding for emoji display
+  - Fixed both Add dialog emoji preview and category list emojis
+  - Improved text alignment and vertical centering
+
+- **Better Web Experience**
+  - Larger dialog height (70% vs 60%) for more emoji visibility
+  - Improved emoji density with 10 emojis per row
+  - Better scaling and proportions for web platform
+  - Enhanced search functionality with real-time filtering
+
+### 🔧 Technical Improvements
+
+- **Library Migration**
+  - Replaced heavy emoji library with lightweight `rn-emoji-picker`
+  - Removed complex filtering and styling that caused performance issues
+  - Simplified component architecture for better maintainability
+
+- **Platform-Specific Optimizations**
+  - Added Platform.OS checks for web vs mobile optimizations
+  - Implemented transform scaling for better web density
+  - Optimized container heights and constraints per platform
+
 ## [1.0.1] - 2025-01-15
 
 ### 🐛 Fixed
