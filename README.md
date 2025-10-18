@@ -2,7 +2,24 @@
 
 A beautiful, Apple-standard personal finance management app built with React Native and Expo.
 
-> **Version 1.1.0** - Enhanced emoji picker with blazing fast performance and cross-platform consistency
+> **Version 1.2.0** - Comprehensive error monitoring and logging with Sentry integration
+
+## 🆕 What's New in 1.2.0
+
+### 🔍 Error Monitoring & Logging
+- **Sentry Integration**: Comprehensive error tracking and performance monitoring
+- **User Journey Tracking**: Complete breadcrumb trail of user interactions
+- **Database Health Monitoring**: Success/failure tracking for all data operations
+- **Performance Analytics**: Automatic detection of slow operations (>3s)
+- **Structured Logging**: Contextual error reporting with operation details
+- **Real-time Alerts**: Instant notification of critical errors and issues
+
+### 🛠️ Developer Experience
+- **Comprehensive Logger**: Centralized logging utility with multiple log levels
+- **Error Context**: Rich error information for faster debugging
+- **User Action Tracking**: Detailed tracking of all user interactions
+- **Navigation Monitoring**: Screen navigation and user flow analytics
+- **Production Ready**: Full error monitoring without test code
 
 ## 🆕 What's New in 1.1.0
 
