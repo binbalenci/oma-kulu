@@ -48,6 +48,7 @@ const config: ExpoConfig = {
         url: "https://sentry.io/",
         organization: "benjamin-kz",
         project: "oma-kulu",
+        authToken: process.env.SENTRY_AUTH_TOKEN,
       },
     ],
   ],
