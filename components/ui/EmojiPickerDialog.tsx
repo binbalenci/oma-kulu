@@ -1,49 +1,18 @@
 import { AppTheme } from "@/constants/AppTheme";
-import EmojiPicker, { emojiData } from "@hiraku-ai/react-native-emoji-picker";
+import { BlurView } from "expo-blur";
 import React from "react";
+import { Dimensions, Modal, Platform, StyleSheet, View } from "react-native";
+import { IconButton, Portal, Text } from "react-native-paper";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
+import EmojiPicker from "rn-emoji-picker";
+import { emojis } from "rn-emoji-picker/dist/data";
 
-// Create a curated emoji dataset optimized for categories
-// First, let's get a good sample from each category
-const getEmojisByCategory = (categoryName: string, limit: number = 50) => {
-  return emojiData.filter((emoji: any) => {
-    return emoji && emoji.category === categoryName;
-  }).slice(0, limit);
-};
-
-// Get emojis from each relevant category
-const smileysEmojis = getEmojisByCategory('Smileys & Emotion', 60);
-const peopleEmojis = getEmojisByCategory('People & Body', 50);
-const foodEmojis = getEmojisByCategory('Food & Drink', 60);
-const travelEmojis = getEmojisByCategory('Travel & Places', 50);
-const activitiesEmojis = getEmojisByCategory('Activities', 40);
-const objectsEmojis = getEmojisByCategory('Objects', 60);
-const symbolsEmojis = getEmojisByCategory('Symbols', 40);
-
-// Combine all categories
-const CATEGORY_EMOJIS = [
-  ...smileysEmojis,
-  ...peopleEmojis,
-  ...foodEmojis,
-  ...travelEmojis,
-  ...activitiesEmojis,
-  ...objectsEmojis,
-  ...symbolsEmojis,
-];
-
-// Debug: Log category counts
-console.log('Category emoji counts:', {
-  smileys: smileysEmojis.length,
-  people: peopleEmojis.length,
-  food: foodEmojis.length,
-  travel: travelEmojis.length,
-  activities: activitiesEmojis.length,
-  objects: objectsEmojis.length,
-  symbols: symbolsEmojis.length,
-  total: CATEGORY_EMOJIS.length
-});
-
-// Fallback: If no emojis after filtering, use a simple slice
-const FINAL_EMOJIS = CATEGORY_EMOJIS.length > 0 ? CATEGORY_EMOJIS : emojiData.slice(0, 200);
+const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 interface EmojiPickerDialogProps {
   visible: boolean;
@@ -58,61 +27,134 @@ export const EmojiPickerDialog = React.memo(function EmojiPickerDialog({
   onSelectEmoji,
   selectedEmoji = "📁",
 }: EmojiPickerDialogProps) {
-  const handleEmojiSelect = React.useCallback((emoji: string) => {
-    onSelectEmoji(emoji);
-    // Close immediately without delay
+  const translateY = useSharedValue(SCREEN_HEIGHT);
+  const opacity = useSharedValue(0);
+
+  React.useEffect(() => {
+    if (visible) {
+      translateY.value = withSpring(0, {
+        damping: 25,
+        stiffness: 200,
+        mass: 0.8,
+      });
+      opacity.value = withTiming(1, { duration: 250 });
+    } else {
+      translateY.value = withTiming(SCREEN_HEIGHT, { duration: 250 });
+      opacity.value = withTiming(0, { duration: 250 });
+    }
+  }, [visible, translateY, opacity]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
+
+  const backdropStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
+
+  const handleEmojiSelect = React.useCallback((emoji: any) => {
+    onSelectEmoji(emoji.emoji);
     onDismiss();
   }, [onSelectEmoji, onDismiss]);
 
-  // Don't render if not visible to improve performance
   if (!visible) return null;
 
   return (
-    <EmojiPicker
-      onEmojiSelect={handleEmojiSelect}
-      emojis={FINAL_EMOJIS}
-      visible={visible}
-      onClose={onDismiss}
-      showHistoryTab={true}
-      showSearchBar={true}
-      showTabs={true}
-      modalTitle="Choose Emoji"
-      modalBackgroundColor={AppTheme.colors.card}
-      modalBorderRadius={AppTheme.borderRadius.xl}
-      searchPlaceholder="Search emojis..."
-      searchPlaceholderColor={AppTheme.colors.onSurfaceVariant}
-      searchIconColor={AppTheme.colors.onSurfaceVariant}
-      clearIconColor={AppTheme.colors.onSurfaceVariant}
-      modalCloseIconColor={AppTheme.colors.onSurface}
-      tabIconColors={{
-        'Recently Used': AppTheme.colors.primary,
-        'Smileys & Emotion': AppTheme.colors.secondary,
-        'People & Body': AppTheme.colors.tertiary,
-        'Food & Drink': '#FF6B35',
-        'Travel & Places': '#4ECDC4',
-        'Activities': '#45B7D1',
-        'Objects': '#96CEB4',
-        'Symbols': '#FFEAA7',
-      }}
-      activeTabStyle={{
-        backgroundColor: AppTheme.colors.primaryContainer,
-        borderRadius: AppTheme.borderRadius.md,
-      }}
-      tabStyle={{
-        borderRadius: AppTheme.borderRadius.md,
-      }}
-      categoryTitleStyle={{
-        color: AppTheme.colors.onSurface,
-        fontSize: 16,
-        fontWeight: '600',
-      }}
-      searchContainerStyle={{
-        backgroundColor: AppTheme.colors.surfaceVariant,
-        borderRadius: AppTheme.borderRadius.md,
-      }}
-      searchInputStyle={{
-        color: AppTheme.colors.onSurface,
-      }}
-    />
+    <Portal>
+      <Modal visible={visible} transparent animationType="none" statusBarTranslucent>
+        <Animated.View style={[styles.backdropOverlay, backdropStyle]}>
+          <View style={styles.darkOverlay} />
+          <BlurView intensity={30} style={StyleSheet.absoluteFill} />
+        </Animated.View>
+        
+        <View style={styles.modalOverlay}>
+          <Animated.View style={[styles.modalContent, animatedStyle]}>
+            <View style={styles.header}>
+              <Text variant="titleLarge">Choose Emoji</Text>
+              <IconButton icon="close" onPress={onDismiss} />
+            </View>
+
+            <View style={styles.emojiContainer}>
+              <View style={styles.emojiPickerWrapper}>
+                <EmojiPicker
+                  emojis={emojis}
+                  recent={[]} // We can implement recent emojis later if needed
+                  autoFocus={false}
+                  loading={false}
+                  darkMode={false} // Use light mode to match your app
+                perLine={Platform.OS === 'web' ? 10 : 7} // More emojis per line on web for better density
+                onSelect={handleEmojiSelect}
+                onChangeRecent={() => {}} // We can implement this later
+                enabledCategories={[
+                  'recent',
+                  'emotion',
+                  'emojis', 
+                  'activities',
+                  'flags',
+                  'food',
+                  'places',
+                  'nature',
+                  'objects'
+                ]}
+                defaultCategory={'emotion'}
+                backgroundColor={AppTheme.colors.card}
+                />
+              </View>
+            </View>
+          </Animated.View>
+        </View>
+      </Modal>
+    </Portal>
   );
+});
+
+const styles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  backdropOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    width: "100%",
+    height: "100%",
+    position: "absolute",
+    top: 0,
+    left: 0,
+  },
+  darkOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+  },
+  modalContent: {
+    backgroundColor: AppTheme.colors.card,
+    borderTopLeftRadius: AppTheme.borderRadius.xl,
+    borderTopRightRadius: AppTheme.borderRadius.xl,
+    height: Platform.OS === 'web' ? "70%" : "60%", // Larger height on web for more emojis
+    maxHeight: Platform.OS === 'web' ? SCREEN_HEIGHT * 0.7 : SCREEN_HEIGHT * 0.6,
+    ...AppTheme.shadows.xl,
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: AppTheme.spacing.lg,
+    paddingVertical: AppTheme.spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: AppTheme.colors.border,
+  },
+  emojiContainer: {
+    flex: 1,
+    width: "100%",
+    height: "100%",
+    // Add constraints to ensure consistent emoji sizing
+    maxHeight: Platform.OS === 'web' ? 600 : 500, // More height on web for more emojis
+    overflow: 'hidden', // Prevent overflow
+  },
+  emojiPickerWrapper: {
+    flex: 1,
+    width: "100%",
+    height: "100%",
+    // Additional constraints for consistent sizing
+    transform: Platform.OS === 'web' ? [{ scale: 0.85 }] : [], // Scale down more on web for better density
+  },
 });
