@@ -181,6 +181,7 @@ ACTIVE CATEGORIES
 **Database:** Supabase (PostgreSQL)
 **Authentication:** None (single-user app with passcode protection)
 **Access Control:** Open RLS policies (all operations allowed)
+**Error Monitoring:** Sentry integration for comprehensive error tracking and performance monitoring
 
 ### Data Models
 
@@ -281,7 +282,8 @@ ACTIVE CATEGORIES
 
 **Module:** `lib/database.ts`
 **Pattern:** Async functions using Supabase client
-**Error Handling:** Try-catch with console logging, returns empty arrays/defaults on error
+**Error Handling:** Try-catch with structured logging via Logger utility, returns empty arrays/defaults on error
+**Monitoring:** All database operations logged with success/failure tracking via Sentry
 
 **Key Functions:**
 
@@ -304,3 +306,52 @@ ACTIVE CATEGORIES
 - `saveSettings(settings)` - Update app settings
 
 **Compatibility Layer:** `lib/storage.ts` re-exports database functions to maintain backward compatibility with existing components.
+
+---
+
+## Monitoring & Logging System
+
+### Error Monitoring
+
+**Platform:** Sentry
+**Integration:** `@sentry/react-native` with Expo plugin
+**Configuration:** Environment-based DSN configuration
+
+**Features:**
+- Real-time error tracking with full stack traces
+- User journey tracking with breadcrumb trails
+- Performance monitoring with automatic slow operation detection
+- Session replay for debugging user interactions
+- Contextual error reporting with operation details
+
+### Logging Architecture
+
+**Module:** `app/utils/logger.ts`
+**Pattern:** Singleton logger with structured logging
+**Integration:** All logs sent to Sentry with appropriate categorization
+
+**Log Levels:**
+- `error(error, context?)` - Capture errors with context
+- `info(message, data?)` - Capture info messages
+- `warning(message, data?)` - Capture warnings
+- `critical(error, context?)` - Critical error handling
+- `breadcrumb(message, category?, data?)` - Track user journey
+- `userAction(action, data?)` - Track user interactions
+- `dataAction(action, data?)` - Track data operations
+- `navigationAction(screen, data?)` - Track navigation
+- `databaseError(error, operation, context?)` - Database error tracking
+- `databaseSuccess(operation, context?)` - Database success tracking
+- `performanceWarning(operation, duration, threshold?)` - Performance monitoring
+
+**Implementation:**
+- Navigation tracking on all screen loads
+- User action tracking for all interactions
+- Database operation monitoring for all CRUD operations
+- Performance warnings for operations exceeding 3 seconds
+- Error context enhancement throughout the application
+
+### Development vs Production
+
+**Development:** Console logging enabled for debugging
+**Production:** Sentry-only logging with structured data
+**Environment Detection:** Automatic based on `__DEV__` flag
