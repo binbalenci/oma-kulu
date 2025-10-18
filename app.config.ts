@@ -53,8 +53,6 @@ const config: ExpoConfig = {
     ],
   ],
   extra: {
-    supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
-    supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
     eas: {
       projectId: "15462d70-a977-4183-80b9-1ea7323ba9fc",
     },

@@ -1,12 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
-import Constants from 'expo-constants';
 
-const supabaseUrl = Constants?.expoConfig?.extra?.supabaseUrl as string;
-const supabaseAnonKey = Constants?.expoConfig?.extra?.supabaseAnonKey as string;
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL as string;
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY as string;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   // Throw early to avoid silent failures when environment is not configured
-  throw new Error('Missing Supabase configuration. Set extra.supabaseUrl and extra.supabaseAnonKey in app.json');
+  throw new Error('Missing Supabase configuration. Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY environment variables');
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
