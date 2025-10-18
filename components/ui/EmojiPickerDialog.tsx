@@ -2,6 +2,49 @@ import { AppTheme } from "@/constants/AppTheme";
 import EmojiPicker, { emojiData } from "@hiraku-ai/react-native-emoji-picker";
 import React from "react";
 
+// Create a curated emoji dataset optimized for categories
+// First, let's get a good sample from each category
+const getEmojisByCategory = (categoryName: string, limit: number = 50) => {
+  return emojiData.filter((emoji: any) => {
+    return emoji && emoji.category === categoryName;
+  }).slice(0, limit);
+};
+
+// Get emojis from each relevant category
+const smileysEmojis = getEmojisByCategory('Smileys & Emotion', 60);
+const peopleEmojis = getEmojisByCategory('People & Body', 50);
+const foodEmojis = getEmojisByCategory('Food & Drink', 60);
+const travelEmojis = getEmojisByCategory('Travel & Places', 50);
+const activitiesEmojis = getEmojisByCategory('Activities', 40);
+const objectsEmojis = getEmojisByCategory('Objects', 60);
+const symbolsEmojis = getEmojisByCategory('Symbols', 40);
+
+// Combine all categories
+const CATEGORY_EMOJIS = [
+  ...smileysEmojis,
+  ...peopleEmojis,
+  ...foodEmojis,
+  ...travelEmojis,
+  ...activitiesEmojis,
+  ...objectsEmojis,
+  ...symbolsEmojis,
+];
+
+// Debug: Log category counts
+console.log('Category emoji counts:', {
+  smileys: smileysEmojis.length,
+  people: peopleEmojis.length,
+  food: foodEmojis.length,
+  travel: travelEmojis.length,
+  activities: activitiesEmojis.length,
+  objects: objectsEmojis.length,
+  symbols: symbolsEmojis.length,
+  total: CATEGORY_EMOJIS.length
+});
+
+// Fallback: If no emojis after filtering, use a simple slice
+const FINAL_EMOJIS = CATEGORY_EMOJIS.length > 0 ? CATEGORY_EMOJIS : emojiData.slice(0, 200);
+
 interface EmojiPickerDialogProps {
   visible: boolean;
   onDismiss: () => void;
@@ -17,15 +60,17 @@ export const EmojiPickerDialog = React.memo(function EmojiPickerDialog({
 }: EmojiPickerDialogProps) {
   const handleEmojiSelect = React.useCallback((emoji: string) => {
     onSelectEmoji(emoji);
+    // Close immediately without delay
     onDismiss();
   }, [onSelectEmoji, onDismiss]);
 
+  // Don't render if not visible to improve performance
   if (!visible) return null;
 
   return (
     <EmojiPicker
       onEmojiSelect={handleEmojiSelect}
-      emojis={emojiData}
+      emojis={FINAL_EMOJIS}
       visible={visible}
       onClose={onDismiss}
       showHistoryTab={true}
@@ -48,7 +93,6 @@ export const EmojiPickerDialog = React.memo(function EmojiPickerDialog({
         'Activities': '#45B7D1',
         'Objects': '#96CEB4',
         'Symbols': '#FFEAA7',
-        'Flags': '#DDA0DD',
       }}
       activeTabStyle={{
         backgroundColor: AppTheme.colors.primaryContainer,
@@ -65,12 +109,9 @@ export const EmojiPickerDialog = React.memo(function EmojiPickerDialog({
       searchContainerStyle={{
         backgroundColor: AppTheme.colors.surfaceVariant,
         borderRadius: AppTheme.borderRadius.md,
-        marginHorizontal: AppTheme.spacing.md,
-        marginBottom: AppTheme.spacing.sm,
       }}
       searchInputStyle={{
         color: AppTheme.colors.onSurface,
-        fontSize: 16,
       }}
     />
   );

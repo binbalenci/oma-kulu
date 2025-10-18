@@ -328,11 +328,9 @@ export default function CategoriesScreen() {
             <TouchableOpacity
               style={styles.pickerButton}
               onPress={() => {
-                // Temporarily close add dialog to avoid modal conflicts
+                // Close add dialog and open emoji picker immediately
                 setDialogVisible(false);
-                setTimeout(() => {
-                  setEmojiPickerVisible(true);
-                }, 100);
+                setEmojiPickerVisible(true);
               }}
             >
               <Text variant="labelMedium" style={styles.pickerLabel}>
@@ -401,7 +399,7 @@ export default function CategoriesScreen() {
           // Reopen the add dialog after color picker closes
           setTimeout(() => {
             setDialogVisible(true);
-          }, 100);
+          }, 50);
         }}
         onSelectColor={setColor}
         selectedColor={color}
@@ -413,9 +411,7 @@ export default function CategoriesScreen() {
         onDismiss={() => {
           setEmojiPickerVisible(false);
           // Reopen the add dialog after emoji picker closes
-          setTimeout(() => {
-            setDialogVisible(true);
-          }, 100);
+          setDialogVisible(true);
         }}
         onSelectEmoji={setEmoji}
         selectedEmoji={emoji}
@@ -525,7 +521,10 @@ const styles = StyleSheet.create({
   },
   categoryEmoji: {
     fontSize: 20,
+    lineHeight: 24, // Add line height to prevent clipping
     marginRight: AppTheme.spacing.sm,
+    paddingTop: 1, // Small padding for iOS text rendering
+    textAlignVertical: 'center', // Center vertically on Android
   },
   categoryInfo: {
     flex: 1,
@@ -620,6 +619,9 @@ const styles = StyleSheet.create({
   },
   emojiPreview: {
     fontSize: 24,
+    lineHeight: 28, // Add line height to prevent clipping
+    paddingTop: 2, // Small padding to account for iOS text rendering
+    textAlignVertical: 'center', // Center vertically on Android
   },
   colorPreview: {
     width: 20,
