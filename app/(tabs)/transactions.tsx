@@ -1,3 +1,4 @@
+import logger from "@/app/utils/logger";
 import { useSnackbar } from "@/components/snackbar-provider";
 import { CategoryBadge } from "@/components/ui/CategoryBadge";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -6,12 +7,12 @@ import { SimpleDropdown } from "@/components/ui/SimpleDropdown";
 import { AppTheme } from "@/constants/AppTheme";
 import { useMonth } from "@/lib/month-context";
 import {
-  deleteTransaction,
-  loadCategories,
-  loadIncomes,
-  loadInvoices,
-  loadTransactions,
-  saveTransaction,
+    deleteTransaction,
+    loadCategories,
+    loadIncomes,
+    loadInvoices,
+    loadTransactions,
+    saveTransaction,
 } from "@/lib/storage";
 import type { Category, ExpectedIncome, ExpectedInvoice, Transaction } from "@/lib/types";
 import Ionicons from "@react-native-vector-icons/ionicons";
@@ -28,6 +29,11 @@ export default function TransactionsScreen() {
   const [transactions, setTransactions] = React.useState<Transaction[]>([]);
   const [incomes, setIncomes] = React.useState<ExpectedIncome[]>([]);
   const [invoices, setInvoices] = React.useState<ExpectedInvoice[]>([]);
+
+  // Log navigation
+  React.useEffect(() => {
+    logger.navigationAction("TransactionsScreen", { month: currentMonth });
+  }, [currentMonth]);
   const [categories, setCategories] = React.useState<Category[]>([]);
   const [upcomingExpanded, setUpcomingExpanded] = React.useState(true);
 

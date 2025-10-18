@@ -1,3 +1,4 @@
+import logger from "@/app/utils/logger";
 import { useSnackbar } from "@/components/snackbar-provider";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Dialog } from "@/components/ui/Dialog";
@@ -39,6 +40,11 @@ export default function HomeScreen() {
   const { showSnackbar } = useSnackbar();
   const { currentMonth, setCurrentMonth } = useMonth();
 
+  // Log navigation
+  React.useEffect(() => {
+    logger.navigationAction("BudgetScreen", { month: currentMonth });
+  }, [currentMonth]);
+
   // Data states
   const [incomes, setIncomes] = React.useState<ExpectedIncome[]>([]);
   const [invoices, setInvoices] = React.useState<ExpectedInvoice[]>([]);
@@ -68,22 +74,42 @@ export default function HomeScreen() {
   // Load data on mount
   React.useEffect(() => {
     (async () => {
-      const [incms, invcs, bdgts, txs, cats, sttngs] = await Promise.all([
-        loadIncomes(),
-        loadInvoices(),
-        loadBudgets(),
-        loadTransactions(),
-        loadCategories(),
-        loadSettings(),
-      ]);
-      setIncomes(incms);
-      setInvoices(invcs);
-      setBudgets(bdgts);
-      setTransactions(txs);
-      setCategories(cats);
-      setSettings({
-        starting_balance: sttngs.starting_balance || 0,
-      });
+      logger.breadcrumb("Loading budget screen data", "data_loading");
+      const startTime = Date.now();
+      
+      try {
+        const [incms, invcs, bdgts, txs, cats, sttngs] = await Promise.all([
+          loadIncomes(),
+          loadInvoices(),
+          loadBudgets(),
+          loadTransactions(),
+          loadCategories(),
+          loadSettings(),
+        ]);
+        
+        setIncomes(incms);
+        setInvoices(invcs);
+        setBudgets(bdgts);
+        setTransactions(txs);
+        setCategories(cats);
+        setSettings({
+          starting_balance: sttngs.starting_balance || 0,
+        });
+        
+        const duration = Date.now() - startTime;
+        logger.dataAction("load_budget_data", { 
+          incomesCount: incms.length,
+          invoicesCount: invcs.length,
+          budgetsCount: bdgts.length,
+          transactionsCount: txs.length,
+          categoriesCount: cats.length,
+          duration 
+        });
+        logger.performanceWarning("load_budget_data", duration);
+      } catch (error) {
+        logger.error(error as Error, { operation: "load_budget_data" });
+        showSnackbar("Failed to load budget data");
+      }
     })();
   }, []);
 

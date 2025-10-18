@@ -1,3 +1,4 @@
+import logger from "@/app/utils/logger";
 import { useSnackbar } from "@/components/snackbar-provider";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Dialog as CustomDialog } from "@/components/ui/Dialog";
@@ -28,6 +29,11 @@ export default function CategoriesScreen() {
   const [editing, setEditing] = React.useState<Category | null>(null);
   const [dialogVisible, setDialogVisible] = React.useState(false);
   const [colorPickerVisible, setColorPickerVisible] = React.useState(false);
+
+  // Log navigation
+  React.useEffect(() => {
+    logger.navigationAction("CategoriesScreen");
+  }, []);
   const [emojiPickerVisible, setEmojiPickerVisible] = React.useState(false);
   const [selectedType, setSelectedType] = React.useState<"income" | "expense">("expense");
 
@@ -98,6 +104,12 @@ export default function CategoriesScreen() {
       created_at: editing?.created_at || new Date().toISOString(),
     };
 
+    logger.userAction("save_category", { 
+      categoryId: category.id, 
+      categoryName: category.name,
+      isEdit: !!editing 
+    });
+    
     const success = await saveCategory(category);
     if (success) {
       setItems((prev) => {
@@ -105,14 +117,17 @@ export default function CategoriesScreen() {
         next.push(category);
         return next;
       });
+      logger.databaseSuccess("save_category", { categoryId: category.id });
       showSnackbar(editing ? "Category updated!" : "Category added!");
       setDialogVisible(false);
     } else {
+      logger.databaseError("Failed to save category", "save_category", { categoryId: category.id });
       showSnackbar("Failed to save category");
     }
   };
 
   const handleDelete = (id: string) => {
+    logger.userAction("initiate_delete_category", { categoryId: id });
     setCategoryToDelete(id);
     setConfirmDialogVisible(true);
   };
@@ -120,11 +135,14 @@ export default function CategoriesScreen() {
   const confirmDelete = async () => {
     if (!categoryToDelete) return;
 
+    logger.userAction("confirm_delete_category", { categoryId: categoryToDelete });
     const success = await deleteCategory(categoryToDelete);
     if (success) {
       setItems((prev) => prev.filter((c) => c.id !== categoryToDelete));
+      logger.databaseSuccess("delete_category", { categoryId: categoryToDelete });
       showSnackbar("Category deleted!");
     } else {
+      logger.databaseError("Failed to delete category", "delete_category", { categoryId: categoryToDelete });
       showSnackbar("Failed to delete category");
     }
     setCategoryToDelete(null);

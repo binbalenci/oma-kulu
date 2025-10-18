@@ -42,6 +42,14 @@ const config: ExpoConfig = {
         backgroundColor: "#ffffff",
       },
     ],
+    [
+      "@sentry/react-native/expo",
+      {
+        url: "https://sentry.io/",
+        organization: "benjamin-kz",
+        project: "oma-kulu",
+      },
+    ],
   ],
   extra: {
     supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
