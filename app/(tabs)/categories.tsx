@@ -1,8 +1,8 @@
 import { useSnackbar } from "@/components/snackbar-provider";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Dialog as CustomDialog } from "@/components/ui/Dialog";
+import { EmojiPickerDialog } from "@/components/ui/EmojiPickerDialog";
 import { IOSColorPicker } from "@/components/ui/IOSColorPicker";
-import { SimpleEmojiPicker } from "@/components/ui/SimpleEmojiPicker";
 import { AppTheme } from "@/constants/AppTheme";
 import { deleteCategory, loadCategories, saveCategory } from "@/lib/storage";
 import type { Category } from "@/lib/types";
@@ -408,7 +408,7 @@ export default function CategoriesScreen() {
       />
 
       {/* Emoji Picker Dialog */}
-      <SimpleEmojiPicker
+      <EmojiPickerDialog
         visible={emojiPickerVisible}
         onDismiss={() => {
           setEmojiPickerVisible(false);
