@@ -1,4 +1,5 @@
 import { hasPasscode, setPasscode, verifyPasscode } from "@/lib/passcode";
+import Constants from "expo-constants";
 import React from "react";
 import { View } from "react-native";
 import { Button, Text, TextInput } from "react-native-paper";
@@ -81,6 +82,11 @@ export default function PasscodeGate({ onUnlocked }: Props) {
       >
         {isSetup ? (step === "confirm" ? "Confirm" : "Continue") : "Unlock"}
       </Button>
+      
+      {/* Version Display */}
+      <Text variant="bodySmall" style={{ color: "#666", marginTop: 24 }}>
+        Version {Constants.expoConfig?.version || "1.0.0"}
+      </Text>
     </View>
   );
 }

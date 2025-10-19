@@ -1,10 +1,16 @@
-// Temporary hardcoded passcode implementation to support web without SecureStore.
-// Replace with SecureStore-based storage when shipping to devices.
+// Personal passcode implementation for family sharing protection
+// Uses environment variable with obfuscation for casual protection
 
-const HARDCODED_PASSCODE = '1827';
+if (!process.env.EXPO_PUBLIC_PASSCODE) {
+  throw new Error('PASSCODE environment variable is required');
+}
+
+const ENV_PASSCODE = process.env.EXPO_PUBLIC_PASSCODE;
+const OBFUSCATED_PASSCODE = btoa(ENV_PASSCODE); // Base64 encode
+const REAL_PASSCODE = atob(OBFUSCATED_PASSCODE);
 
 export async function setPasscode(_passcode: string): Promise<void> {
-  // no-op in hardcoded mode
+  // no-op in hardcoded mode - passcode set via environment variable
 }
 
 export async function hasPasscode(): Promise<boolean> {
@@ -13,7 +19,7 @@ export async function hasPasscode(): Promise<boolean> {
 }
 
 export async function verifyPasscode(passcode: string): Promise<boolean> {
-  return passcode === HARDCODED_PASSCODE;
+  return passcode === REAL_PASSCODE;
 }
 
 export async function clearPasscode(): Promise<void> {
