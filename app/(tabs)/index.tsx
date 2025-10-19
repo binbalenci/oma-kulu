@@ -129,13 +129,30 @@ export default function HomeScreen() {
     })();
   }, [showSnackbar]);
 
-  // Refetch categories and transactions when screen comes into focus
+  // Refetch ALL data when screen comes into focus (needed for category CASCADE updates)
   useFocusEffect(
     React.useCallback(() => {
       (async () => {
-        const [cats, txs] = await Promise.all([loadCategories(), loadTransactions()]);
+        logger.breadcrumb("Refreshing home screen data on focus", "data_refresh");
+        const [cats, txs, incms, invcs, bdgts] = await Promise.all([
+          loadCategories(), 
+          loadTransactions(),
+          loadIncomes(),    // ✅ Reload incomes (may have CASCADE updates)
+          loadInvoices(),   // ✅ Reload invoices (may have CASCADE updates) 
+          loadBudgets()     // ✅ Reload budgets (may have CASCADE updates)
+        ]);
         setCategories(cats);
         setTransactions(txs);
+        setIncomes(incms);      // ✅ Update incomes with fresh CASCADE data
+        setInvoices(invcs);     // ✅ Update invoices with fresh CASCADE data
+        setBudgets(bdgts);      // ✅ Update budgets with fresh CASCADE data
+        logger.dataAction("refresh_home_focus", { 
+          categoriesCount: cats.length,
+          transactionsCount: txs.length,
+          incomesCount: incms.length,
+          invoicesCount: invcs.length,
+          budgetsCount: bdgts.length
+        });
       })();
     }, [])
   );
@@ -148,6 +165,18 @@ export default function HomeScreen() {
   const currentIncomes = incomes.filter((i) => i.month === curMonth);
   const currentInvoices = invoices.filter((i) => i.month === curMonth);
   const currentBudgets = budgets.filter((b) => b.month === curMonth);
+
+  // Debug: Log what data we're working with
+  React.useEffect(() => {
+    if (currentIncomes.length > 0 || currentInvoices.length > 0 || currentBudgets.length > 0) {
+      logger.info("Home tab data for rendering", {
+        incomes: currentIncomes.map(i => ({ name: i.name, category: i.category })),
+        invoices: currentInvoices.map(i => ({ name: i.name, category: i.category })),
+        budgets: currentBudgets.map(b => ({ category: b.category })),
+        availableCategories: categories.map(c => c.name)
+      });
+    }
+  }, [currentIncomes, currentInvoices, currentBudgets, categories]);
 
   // Calculate month transactions
   const monthTx = transactions.filter((t) => {
@@ -475,7 +504,18 @@ export default function HomeScreen() {
   };
 
   const getCategoryInfo = (categoryName: string) => {
-    return categories.find((c) => c.name === categoryName);
+    const info = categories.find((c) => c.name === categoryName);
+    // Debug: Log category lookup for troubleshooting
+    if (!info) {
+      // Get stack trace to see where this is being called from
+      const stack = new Error().stack;
+      logger.warning(`Category not found: ${categoryName}`, { 
+        availableCategories: categories.map(c => c.name),
+        categoriesCount: categories.length,
+        callStack: stack?.split('\n').slice(0, 5) // First 5 lines of stack
+      });
+    }
+    return info;
   };
 
   const renderCategoryGroup = (

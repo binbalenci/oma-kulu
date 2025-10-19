@@ -7,12 +7,12 @@ import { SimpleDropdown } from "@/components/ui/SimpleDropdown";
 import { AppTheme } from "@/constants/AppTheme";
 import { useMonth } from "@/lib/month-context";
 import {
-    deleteTransaction,
-    loadCategories,
-    loadIncomes,
-    loadInvoices,
-    loadTransactions,
-    saveTransaction,
+  deleteTransaction,
+  loadCategories,
+  loadIncomes,
+  loadInvoices,
+  loadTransactions,
+  saveTransaction,
 } from "@/lib/storage";
 import type { Category, ExpectedIncome, ExpectedInvoice, Transaction } from "@/lib/types";
 import Ionicons from "@react-native-vector-icons/ionicons";
