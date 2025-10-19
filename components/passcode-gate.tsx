@@ -25,8 +25,8 @@ export default function PasscodeGate({ onUnlocked }: Props) {
 
   const onSubmit = async () => {
     setError(null);
-    if (pin.length !== 4) {
-      setError("Passcode");
+    if (pin.length === 0) {
+      setError("Please enter a passcode");
       return;
     }
     setLoading(true);
@@ -65,12 +65,11 @@ export default function PasscodeGate({ onUnlocked }: Props) {
         value={isSetup && step === "confirm" ? confirmPin : pin}
         onChangeText={(t) =>
           isSetup && step === "confirm"
-            ? setConfirmPin(t.replace(/\D/g, "").slice(0, 4))
-            : setPin(t.replace(/\D/g, "").slice(0, 4))
+            ? setConfirmPin(t)
+            : setPin(t)
         }
         secureTextEntry
         keyboardType="number-pad"
-        maxLength={4}
         style={{ width: "100%" }}
       />
       {!!error && <Text style={{ color: "red" }}>{error}</Text>}
