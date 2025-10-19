@@ -16,7 +16,7 @@ import {
 } from "@/lib/storage";
 import type { Category, ExpectedIncome, ExpectedInvoice, Transaction } from "@/lib/types";
 import Ionicons from "@react-native-vector-icons/ionicons";
-import { format } from "date-fns";
+import { endOfMonth, format, startOfMonth } from "date-fns";
 import * as Crypto from "expo-crypto";
 import { useFocusEffect } from "expo-router";
 import React from "react";
@@ -31,9 +31,22 @@ export default function TransactionsScreen() {
   const [incomes, setIncomes] = React.useState<ExpectedIncome[]>([]);
   const [invoices, setInvoices] = React.useState<ExpectedInvoice[]>([]);
 
-  // Log navigation
+  // Log navigation and refetch month-specific data when month changes
   React.useEffect(() => {
     logger.navigationAction("TransactionsScreen", { month: currentMonth });
+    
+    // Refetch only month-dependent data when month changes
+    (async () => {
+      const [txs, incms, invcs] = await Promise.all([
+        loadTransactions(), // needed for recent transactions
+        loadIncomes(),      // needed for upcoming incomes  
+        loadInvoices(),     // needed for upcoming invoices
+      ]);
+      setTransactions(txs);
+      setIncomes(incms);
+      setInvoices(invcs);
+      // Categories don't need refresh - they're month-independent
+    })();
   }, [currentMonth]);
   const [categories, setCategories] = React.useState<Category[]>([]);
   const [upcomingExpanded, setUpcomingExpanded] = React.useState(true);
@@ -74,15 +87,23 @@ export default function TransactionsScreen() {
 
   // Filter by current month
   const currentMonthKey = format(currentMonth, "yyyy-MM");
+  const monthStart = startOfMonth(currentMonth);
+  const monthEnd = endOfMonth(currentMonth);
 
   // Upcoming items: unpaid incomes/invoices for current month + upcoming transactions
   const upcomingFromIncomes = incomes.filter((i) => !i.is_paid && i.month === currentMonthKey);
   const upcomingFromInvoices = invoices.filter((i) => !i.is_paid && i.month === currentMonthKey);
   const upcomingTransactions = transactions.filter((t) => t.status === "upcoming");
 
-  // Recent: paid transactions only
+  // Recent: paid transactions for current month only
   const recentTransactions = transactions
-    .filter((t) => t.status === "paid")
+    .filter((t) => {
+      if (t.status !== "paid") return false;
+      
+      // Filter by current month
+      const transactionDate = new Date(t.date + "T00:00:00");
+      return transactionDate >= monthStart && transactionDate <= monthEnd;
+    })
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   // Filter transactions based on search and filters

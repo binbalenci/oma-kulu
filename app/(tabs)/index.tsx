@@ -41,9 +41,24 @@ export default function HomeScreen() {
   const { showSnackbar } = useSnackbar();
   const { currentMonth, setCurrentMonth } = useMonth();
 
-  // Log navigation
+  // Log navigation and refetch month-specific data when month changes  
   React.useEffect(() => {
     logger.navigationAction("BudgetScreen", { month: currentMonth });
+    
+    // Refetch only month-dependent data when month changes
+    (async () => {
+      const [incms, invcs, bdgts, txs] = await Promise.all([
+        loadIncomes(),      // needed for expected incomes by month
+        loadInvoices(),     // needed for expected invoices by month
+        loadBudgets(),      // needed for budgets by month
+        loadTransactions(), // needed for "in bank" calc and spent amounts
+      ]);
+      setIncomes(incms);
+      setInvoices(invcs);
+      setBudgets(bdgts);
+      setTransactions(txs);
+      // Categories and settings don't need refresh - they're month-independent
+    })();
   }, [currentMonth]);
 
   // Data states
