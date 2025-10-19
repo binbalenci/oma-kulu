@@ -112,9 +112,13 @@ export default function TransactionsScreen() {
       return;
     }
 
+    // Determine if this is an income or expense based on category type
+    const categoryInfo = getCategoryInfo(category);
+    const isIncome = categoryInfo?.type === "income";
+
     const tx: Transaction = {
       id: editing?.id || Crypto.randomUUID(),
-      amount: -Math.abs(amt), // Always negative for expenses
+      amount: isIncome ? Math.abs(amt) : -Math.abs(amt), // Positive for income, negative for expense
       description,
       date,
       category,
@@ -482,7 +486,7 @@ export default function TransactionsScreen() {
             value={category}
             onValueChange={setCategory}
             data={categories
-              .filter((c) => c.is_visible && c.type === "expense") 
+              .filter((c) => c.is_visible) 
               .map((cat) => ({ id: cat.name, name: cat.name }))}
             placeholder="Select category"
             style={styles.input}
