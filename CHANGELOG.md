@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2025-10-19
+
+### 🐛 Fixed
+
+- **iOS Compatibility Issues**
+  - Fixed `crypto.randomUUID()` not available on iOS by replacing with `expo-crypto`
+  - Resolved ReferenceError when adding transactions on iOS devices
+  - Updated all UUID generation across transactions, budgets, categories, and incomes
+
+- **Passcode Screen Theme**
+  - Fixed black screen issue on iOS when using system dark mode
+  - Applied app's light theme consistently to passcode gate screen
+  - Proper background color and themed styling for better user experience
+
+- **Code Quality**
+  - Fixed React Hook dependency warning in budget screen
+  - Added missing `showSnackbar` dependency to useEffect
+  - All linting checks now pass with zero warnings
+
+### 🎨 Improved
+
+- **UI Consistency**
+  - Passcode screen now uses AppTheme for consistent styling
+  - Better color contrast and typography alignment
+  - Professional appearance matching rest of the app
+
 ## [1.3.0] - 2025-10-19
 
 ### 🚀 Deployment & Development Workflow
