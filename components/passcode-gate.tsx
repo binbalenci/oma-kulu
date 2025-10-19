@@ -1,7 +1,8 @@
+import { AppTheme } from "@/constants/AppTheme";
 import { hasPasscode, setPasscode, verifyPasscode } from "@/lib/passcode";
 import Constants from "expo-constants";
 import React from "react";
-import { View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Button, Text, TextInput } from "react-native-paper";
 
 type Props = {
@@ -57,8 +58,10 @@ export default function PasscodeGate({ onUnlocked }: Props) {
   if (isSetup === null) return null;
 
   return (
-    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 24, gap: 16 }}>
-      <Text variant="headlineMedium">{isSetup ? "Set Passcode" : "Enter Passcode"}</Text>
+    <View style={styles.container}>
+      <Text variant="headlineMedium" style={styles.title}>
+        {isSetup ? "Set Passcode" : "Enter Passcode"}
+      </Text>
       <TextInput
         mode="outlined"
         label={isSetup && step === "confirm" ? "Confirm passcode" : "Passcode"}
@@ -70,22 +73,56 @@ export default function PasscodeGate({ onUnlocked }: Props) {
         }
         secureTextEntry
         keyboardType="number-pad"
-        style={{ width: "100%" }}
+        style={styles.input}
       />
-      {!!error && <Text style={{ color: "red" }}>{error}</Text>}
+      {!!error && <Text style={styles.errorText}>{error}</Text>}
       <Button
         mode="contained"
         onPress={onSubmit}
         loading={loading}
-        style={{ alignSelf: "stretch" }}
+        style={styles.button}
       >
         {isSetup ? (step === "confirm" ? "Confirm" : "Continue") : "Unlock"}
       </Button>
       
       {/* Version Display */}
-      <Text variant="bodySmall" style={{ color: "#666", marginTop: 24 }}>
+      <Text variant="bodySmall" style={styles.versionText}>
         Version {Constants.expoConfig?.version || "1.0.0"}
       </Text>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: AppTheme.spacing['3xl'],
+    gap: AppTheme.spacing.lg,
+    backgroundColor: AppTheme.colors.background,
+  },
+  title: {
+    fontWeight: AppTheme.typography.fontWeight.semibold,
+    color: AppTheme.colors.textPrimary,
+    textAlign: "center",
+  },
+  input: {
+    width: "100%",
+    backgroundColor: AppTheme.colors.background,
+  },
+  errorText: {
+    color: AppTheme.colors.error,
+    fontSize: AppTheme.typography.fontSize.sm,
+    textAlign: "center",
+  },
+  button: {
+    alignSelf: "stretch",
+    backgroundColor: AppTheme.colors.primary,
+  },
+  versionText: {
+    color: AppTheme.colors.textSecondary,
+    marginTop: AppTheme.spacing['3xl'],
+    textAlign: "center",
+  },
+});
