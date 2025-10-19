@@ -5,6 +5,66 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2025-10-19
+
+### 🚀 Deployment & Development Workflow
+
+- **Automated Deploy Scripts**
+  - Added `npm run deploy:ios` for native iOS deployments
+  - Added `npm run deploy:web` for web deployments with production flag
+  - Automated pre/post deployment hooks using npm lifecycle scripts
+  - Source map generation and upload to Sentry for both platforms
+
+- **Environment Management**
+  - Integrated direnv for automatic environment variable loading
+  - Secure passcode management via environment variables
+  - Project-specific environment configuration with `.envrc`
+  - Enhanced `.gitignore` for comprehensive file exclusion
+
+- **Source Map Integration**
+  - Automatic source map generation for iOS and web platforms
+  - Sentry source map upload for better error tracking
+  - Debug ID generation for accurate stack trace symbolication
+  - Support for both development and production builds
+
+### 🔐 Security & Authentication
+
+- **Enhanced Passcode System**
+  - Moved from hardcoded passcode to environment variable configuration
+  - Base64 obfuscation for additional security layer
+  - Removed 4-character limit - now supports any length passcode
+  - Maintained number pad input for better UX
+
+- **Version Display**
+  - Added app version display on passcode gate screen
+  - Automatic version reading from app configuration
+  - Subtle, non-intrusive version information for users
+
+### 🛠️ Developer Experience
+
+- **Improved Build Process**
+  - Streamlined export commands with platform-specific flags
+  - Automated source map generation during builds
+  - Production-ready web deployments with `--prod` flag
+  - Better error handling and build validation
+
+- **Enhanced Configuration**
+  - Updated Sentry plugin configuration with proper auth token handling
+  - Improved metro configuration for source map generation
+  - Better environment variable management across platforms
+
+### 📱 Platform Support
+
+- **Web Deployment**
+  - EAS Hosting integration for web deployments
+  - Static site generation with proper source maps
+  - Production-ready web builds with optimized assets
+
+- **iOS Deployment**
+  - EAS Update integration for over-the-air updates
+  - Platform-specific source map generation
+  - Improved iOS build process with automated uploads
+
 ## [1.2.0] - 2025-01-15
 
 ### 🔍 Error Monitoring & Logging
