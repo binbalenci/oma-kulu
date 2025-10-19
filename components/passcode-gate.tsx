@@ -1,6 +1,7 @@
 import { AppTheme } from "@/constants/AppTheme";
 import { hasPasscode, setPasscode, verifyPasscode } from "@/lib/passcode";
 import Constants from "expo-constants";
+import { Platform } from "expo-modules-core";
 import React from "react";
 import { StyleSheet, View } from "react-native";
 import { Button, Text, TextInput } from "react-native-paper";
@@ -26,7 +27,8 @@ export default function PasscodeGate({ onUnlocked }: Props) {
 
   const onSubmit = async () => {
     setError(null);
-    if (pin.length === 0) {
+    const currentPin = isSetup && step === "confirm" ? confirmPin : pin;
+    if (currentPin.length === 0) {
       setError("Please enter a passcode");
       return;
     }
@@ -55,6 +57,12 @@ export default function PasscodeGate({ onUnlocked }: Props) {
     }
   };
 
+  const handleKeyPress = (event: any) => {
+    if (Platform.OS === 'web' && event.nativeEvent.key === 'Enter') {
+      onSubmit();
+    }
+  };
+
   if (isSetup === null) return null;
 
   return (
@@ -74,6 +82,9 @@ export default function PasscodeGate({ onUnlocked }: Props) {
         secureTextEntry
         keyboardType="number-pad"
         style={styles.input}
+        onSubmitEditing={onSubmit}
+        onKeyPress={handleKeyPress}
+        returnKeyType="done"
       />
       {!!error && <Text style={styles.errorText}>{error}</Text>}
       <Button
