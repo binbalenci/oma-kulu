@@ -112,7 +112,7 @@ export default function HomeScreen() {
         showSnackbar("Failed to load budget data");
       }
     })();
-  }, []);
+  }, [showSnackbar]);
 
   // Refetch categories and transactions when screen comes into focus
   useFocusEffect(
