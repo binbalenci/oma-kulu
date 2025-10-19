@@ -17,6 +17,7 @@ import {
 import type { Category, ExpectedIncome, ExpectedInvoice, Transaction } from "@/lib/types";
 import Ionicons from "@react-native-vector-icons/ionicons";
 import { format } from "date-fns";
+import * as Crypto from "expo-crypto";
 import { useFocusEffect } from "expo-router";
 import React from "react";
 import { FlatList, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
@@ -112,7 +113,7 @@ export default function TransactionsScreen() {
     }
 
     const tx: Transaction = {
-      id: editing?.id || crypto.randomUUID(),
+      id: editing?.id || Crypto.randomUUID(),
       amount: -Math.abs(amt), // Always negative for expenses
       description,
       date,

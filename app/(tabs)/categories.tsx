@@ -8,6 +8,7 @@ import { AppTheme } from "@/constants/AppTheme";
 import { deleteCategory, loadCategories, saveCategory } from "@/lib/storage";
 import type { Category } from "@/lib/types";
 import Ionicons from "@react-native-vector-icons/ionicons";
+import * as Crypto from "expo-crypto";
 import React from "react";
 import { FlatList, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import {
@@ -93,7 +94,7 @@ export default function CategoriesScreen() {
     }
 
     const category: Category = {
-      id: editing?.id || crypto.randomUUID(),
+      id: editing?.id || Crypto.randomUUID(),
       name: name.trim(),
       is_visible: isVisible,
       color,

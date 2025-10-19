@@ -26,6 +26,7 @@ import type { Budget, Category, ExpectedIncome, ExpectedInvoice, Transaction } f
 import Ionicons from "@react-native-vector-icons/ionicons";
 import MaterialIcons from "@react-native-vector-icons/material-design-icons";
 import { addMonths, endOfMonth, format, startOfMonth } from "date-fns";
+import * as Crypto from "expo-crypto";
 import { useFocusEffect } from "expo-router";
 import React from "react";
 import { ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
@@ -242,7 +243,7 @@ export default function HomeScreen() {
 
     // Mark as paid - create transaction
     const tx: Transaction = {
-      id: crypto.randomUUID(),
+      id: Crypto.randomUUID(),
       amount: type === "income" ? item.amount : -item.amount,
       description: item.name,
       date: format(new Date(), "yyyy-MM-dd"),
@@ -293,7 +294,7 @@ export default function HomeScreen() {
       return;
     }
 
-    const id = editingItem?.id || crypto.randomUUID();
+    const id = editingItem?.id || Crypto.randomUUID();
     const now = new Date().toISOString();
 
     if (dialogType === "income") {
@@ -415,7 +416,7 @@ export default function HomeScreen() {
 
     // Copy incomes
     for (const income of prevIncomes) {
-      const newIncome = { ...income, id: crypto.randomUUID(), month: curMonth, is_paid: false };
+      const newIncome = { ...income, id: Crypto.randomUUID(), month: curMonth, is_paid: false };
       const success = await saveIncome(newIncome);
       if (success) {
         setIncomes((prev) => [...prev, newIncome]);
@@ -425,7 +426,7 @@ export default function HomeScreen() {
 
     // Copy invoices
     for (const invoice of prevInvoices) {
-      const newInvoice = { ...invoice, id: crypto.randomUUID(), month: curMonth, is_paid: false };
+      const newInvoice = { ...invoice, id: Crypto.randomUUID(), month: curMonth, is_paid: false };
       const success = await saveInvoice(newInvoice);
       if (success) {
         setInvoices((prev) => [...prev, newInvoice]);
@@ -435,7 +436,7 @@ export default function HomeScreen() {
 
     // Copy budgets
     for (const budget of prevBudgets) {
-      const newBudget = { ...budget, id: crypto.randomUUID(), month: curMonth };
+      const newBudget = { ...budget, id: Crypto.randomUUID(), month: curMonth };
       const success = await saveBudget(newBudget);
       if (success) {
         setBudgets((prev) => [...prev, newBudget]);
