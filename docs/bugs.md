@@ -197,18 +197,37 @@ This document tracks all identified issues, categorized by type with analysis, r
 
 ## 🟢 LOW - Transaction Flow Issues
 
-### 17. Expected Transaction Deletion Sync
-- [ ] **Issue**: Deleting transactions created from expected items should mark them as unpaid in Home
+### 17. Expected Transaction Deletion Sync ✅ FIXED
+- [x] **Issue**: Deleting transactions created from expected items should mark them as unpaid in Home
 - **Root Cause**: No bidirectional sync between transactions and expected items
 - **Location**: Transaction deletion logic
-- **Hypothesis**: Backend logic - need to track relationship and sync states
+- **Solution**: 
+  - Added database columns to track transaction source (expected income/invoice)
+  - When deleting a transaction, check if it has a source and mark the source item as unpaid
+  - Updates both the database and local state to keep UI in sync
+  - **UX Improvement**: Different icons and dialogs for transactions from expected items
+    - Manual transactions: Red `delete` icon, "Delete Transaction" dialog
+    - From expected items: Orange `clock-outline` icon, "Move to Pending?" dialog with warning color
+- **Database Changes**: 
+  - Added `source_type` column (text, nullable) to transactions table
+  - Added `source_id` column (uuid, nullable) to transactions table
+- **Files Modified**:
+  - `lib/types.ts` - Added source_type and source_id to Transaction interface
+  - `app/(tabs)/index.tsx` - Store source info when creating transaction from expected item (lines 302-303)
+  - `app/(tabs)/transactions.tsx` - Sync deletion back to source expected item, different UI for source transactions (lines 75-76, 240-297)
 - **Priority**: MEDIUM - Data consistency
 
-### 18. Expected Transaction Editing Sync
-- [ ] **Issue**: Editing transactions created from expected items should reflect in Home tab
+### 18. Expected Transaction Editing Sync ✅ FIXED
+- [x] **Issue**: Editing transactions created from expected items should reflect in Home tab
 - **Root Cause**: Same as above - no bidirectional sync
 - **Location**: Transaction editing logic
-- **Hypothesis**: Backend logic - need relationship tracking
+- **Solution**: 
+  - Preserve source tracking fields when editing transactions
+  - When editing a transaction with a source, sync changes (amount, category, description) back to the source expected item
+  - Only syncs if values actually changed to avoid unnecessary updates
+- **Database Changes**: Same as #17 (shared migration)
+- **Files Modified**:
+  - `app/(tabs)/transactions.tsx` - Preserve source fields and sync edits back to source (lines 161-226)
 - **Priority**: MEDIUM - Data consistency
 
 ### 19. Home Tab Data Refresh ✅ FIXED (merged with #2)
@@ -219,11 +238,13 @@ This document tracks all identified issues, categorized by type with analysis, r
 - **Files Modified**: See issue #2
 - **Priority**: LOW - Data freshness
 
-### 20. Money to Assign Text Change
-- [ ] **Issue**: Change "Money to assign" to "Remaining to budget"
-- **Root Cause**: Text label preference
-- **Location**: `app/(tabs)/index.tsx:620`
-- **Hypothesis**: Frontend - simple text change
+### 20. Money to Assign Text Change ✅ FIXED
+- [x] **Issue**: Change "Money to assign" to "Remaining to budget"
+- **Root Cause**: Text label preference - "Money to assign" was less clear than "Remaining to budget"
+- **Location**: `app/(tabs)/index.tsx`
+- **Solution**: Updated label text from "Money to Assign" to "Remaining to Budget" in cash overview section
+- **Files Modified**:
+  - `app/(tabs)/index.tsx` - Updated label text (line 697) and comment (line 674)
 - **Priority**: LOW - Copy improvement
 
 ---

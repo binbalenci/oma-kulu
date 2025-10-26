@@ -116,3 +116,6 @@ temp/
 
 # App specific
 app-example
+
+# Misc
+db.sql

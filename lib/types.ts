@@ -40,6 +40,8 @@ export interface Transaction {
   category: string;
   status: 'upcoming' | 'paid';
   created_at: string; // ISO timestamp
+  source_type?: 'income' | 'invoice'; // Type of expected item this transaction was created from
+  source_id?: string; // ID of the expected income/invoice item
 }
 
 export interface Category {

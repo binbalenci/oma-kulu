@@ -12,6 +12,8 @@ import {
   loadIncomes,
   loadInvoices,
   loadTransactions,
+  saveIncome,
+  saveInvoice,
   saveTransaction,
 } from "@/lib/storage";
 import type { Category, ExpectedIncome, ExpectedInvoice, Transaction } from "@/lib/types";
@@ -70,6 +72,8 @@ export default function TransactionsScreen() {
   // Confirmation dialog states
   const [confirmDialogVisible, setConfirmDialogVisible] = React.useState(false);
   const [itemToDelete, setItemToDelete] = React.useState<{ id: string; type: string } | null>(null);
+  const [pendingDialogVisible, setPendingDialogVisible] = React.useState(false);
+  const [itemToPending, setItemToPending] = React.useState<{ id: string; transaction: Transaction } | null>(null);
 
   // Load data when screen gains focus
   useFocusEffect(
@@ -164,12 +168,53 @@ export default function TransactionsScreen() {
       category,
       status: "paid", // Only allow paid transactions
       created_at: editing?.created_at || new Date().toISOString(),
+      // Preserve source fields when editing
+      source_type: editing?.source_type,
+      source_id: editing?.source_id,
     };
 
     const success = await saveTransaction(tx);
     if (success) {
       if (editing) {
         setTransactions((prev) => prev.map((t) => (t.id === tx.id ? tx : t)));
+        
+        // If transaction was created from an expected item, sync changes back
+        if (editing.source_type && editing.source_id) {
+          const amountChanged = Math.abs(tx.amount) !== Math.abs(editing.amount);
+          const categoryChanged = tx.category !== editing.category;
+          const descriptionChanged = tx.description !== editing.description;
+          
+          if (amountChanged || categoryChanged || descriptionChanged) {
+            if (editing.source_type === 'income') {
+              const sourceIncome = incomes.find((i) => i.id === editing.source_id);
+              if (sourceIncome) {
+                const updatedIncome = {
+                  ...sourceIncome,
+                  amount: Math.abs(tx.amount),
+                  category: tx.category,
+                  name: tx.description,
+                  updated_at: new Date().toISOString(),
+                };
+                await saveIncome(updatedIncome);
+                setIncomes((prev) => prev.map((i) => (i.id === editing.source_id ? updatedIncome : i)));
+              }
+            } else if (editing.source_type === 'invoice') {
+              const sourceInvoice = invoices.find((i) => i.id === editing.source_id);
+              if (sourceInvoice) {
+                const updatedInvoice = {
+                  ...sourceInvoice,
+                  amount: Math.abs(tx.amount),
+                  category: tx.category,
+                  name: tx.description,
+                  updated_at: new Date().toISOString(),
+                };
+                await saveInvoice(updatedInvoice);
+                setInvoices((prev) => prev.map((i) => (i.id === editing.source_id ? updatedInvoice : i)));
+              }
+            }
+          }
+        }
+        
         showSnackbar("Transaction updated!");
       } else {
         setTransactions((prev) => [tx, ...prev]);
@@ -192,9 +237,17 @@ export default function TransactionsScreen() {
     setDialogVisible(true);
   };
 
-  const handleDelete = (id: string) => {
-    setItemToDelete({ id, type: "transaction" });
-    setConfirmDialogVisible(true);
+  const handleDelete = (transaction: Transaction) => {
+    // Check if transaction has a source (created from expected income/invoice)
+    if (transaction.source_type && transaction.source_id) {
+      // Show "Move to Pending" dialog
+      setItemToPending({ id: transaction.id, transaction });
+      setPendingDialogVisible(true);
+    } else {
+      // Show regular delete dialog for manually created transactions
+      setItemToDelete({ id: transaction.id, type: "transaction" });
+      setConfirmDialogVisible(true);
+    }
   };
 
   const confirmDelete = async () => {
@@ -208,6 +261,39 @@ export default function TransactionsScreen() {
       showSnackbar("Failed to delete transaction");
     }
     setItemToDelete(null);
+  };
+
+  const confirmMoveToPending = async () => {
+    if (!itemToPending) return;
+
+    const { transaction } = itemToPending;
+    
+    const success = await deleteTransaction(transaction.id);
+    if (success) {
+      setTransactions((prev) => prev.filter((t) => t.id !== transaction.id));
+      
+      // Mark the source expected item as unpaid
+      if (transaction.source_type === 'income') {
+        const sourceIncome = incomes.find((i) => i.id === transaction.source_id);
+        if (sourceIncome) {
+          const updatedIncome = { ...sourceIncome, is_paid: false, updated_at: new Date().toISOString() };
+          await saveIncome(updatedIncome);
+          setIncomes((prev) => prev.map((i) => (i.id === transaction.source_id ? updatedIncome : i)));
+        }
+      } else if (transaction.source_type === 'invoice') {
+        const sourceInvoice = invoices.find((i) => i.id === transaction.source_id);
+        if (sourceInvoice) {
+          const updatedInvoice = { ...sourceInvoice, is_paid: false, updated_at: new Date().toISOString() };
+          await saveInvoice(updatedInvoice);
+          setInvoices((prev) => prev.map((i) => (i.id === transaction.source_id ? updatedInvoice : i)));
+        }
+      }
+      
+      showSnackbar("Moved back to pending");
+    } else {
+      showSnackbar("Failed to move to pending");
+    }
+    setItemToPending(null);
   };
 
   const getCategoryInfo = (categoryName: string) => {
@@ -259,10 +345,11 @@ export default function TransactionsScreen() {
                 style={styles.actionButton}
               />
               <IconButton
-                icon="delete"
+                icon={item.source_type && item.source_id ? "clock-outline" : "delete"}
                 size={20}
-                onPress={() => handleDelete(item.id)}
+                onPress={() => handleDelete(item)}
                 style={styles.actionButton}
+                iconColor={item.source_type && item.source_id ? AppTheme.colors.warning : undefined}
               />
             </View>
           </View>
@@ -626,7 +713,7 @@ export default function TransactionsScreen() {
         </View>
       </CustomDialog>
 
-      {/* Confirmation Dialog */}
+      {/* Confirmation Dialog for Manual Transactions */}
       <ConfirmDialog
         visible={confirmDialogVisible}
         onDismiss={() => setConfirmDialogVisible(false)}
@@ -635,6 +722,20 @@ export default function TransactionsScreen() {
         message="Are you sure you want to delete this transaction? This action cannot be undone."
         confirmText="Delete"
         cancelText="Cancel"
+      />
+
+      {/* Move to Pending Dialog for Transactions from Expected Items */}
+      <ConfirmDialog
+        visible={pendingDialogVisible}
+        onDismiss={() => setPendingDialogVisible(false)}
+        onConfirm={confirmMoveToPending}
+        title="Move to Pending?"
+        message={itemToPending?.transaction.source_type === 'income'
+          ? "This will mark the expected income as unpaid and move it back to pending."
+          : "This will mark the expected invoice as unpaid and move it back to pending."}
+        confirmText="Move to Pending"
+        cancelText="Cancel"
+        confirmColor={AppTheme.colors.warning}
       />
     </SafeAreaView>
   );

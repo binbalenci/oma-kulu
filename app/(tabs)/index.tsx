@@ -299,6 +299,8 @@ export default function HomeScreen() {
       category: item.category,
       status: "paid",
       created_at: new Date().toISOString(),
+      source_type: type,
+      source_id: item.id,
     };
 
     const txSuccess = await saveTransaction(tx);
@@ -671,7 +673,7 @@ export default function HomeScreen() {
               CASH OVERVIEW
             </Text>
 
-            {/* Top Row: Expected Income, Expected Expenses, Money to Assign */}
+            {/* Top Row: Expected Income, Expected Expenses, Remaining to Budget */}
             <View style={styles.overviewTopRow}>
               <View style={styles.overviewItem}>
                 <Ionicons name="trending-up" size={20} color={AppTheme.colors.success} />
@@ -694,7 +696,7 @@ export default function HomeScreen() {
               <View style={styles.overviewItem}>
                 <Ionicons name="add-circle" size={20} color={AppTheme.colors.warning} />
                 <Text variant="bodySmall" style={styles.overviewLabel}>
-                  Money to Assign
+                  Remaining to Budget
                 </Text>
                 <Text
                   variant="titleMedium"
