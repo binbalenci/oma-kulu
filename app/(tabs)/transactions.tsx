@@ -181,7 +181,7 @@ export default function TransactionsScreen() {
 
   const handleEdit = (t: Transaction) => {
     setEditing(t);
-    setAmount(String(Math.abs(t.amount)));
+    setAmount(Math.abs(t.amount).toFixed(2));
     setDescription(t.description);
     setDate(t.date);
     setCategory(t.category);

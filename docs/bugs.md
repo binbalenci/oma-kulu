@@ -76,11 +76,14 @@ This document tracks all identified issues, categorized by type with analysis, r
 - **Status**: ✅ FULLY FIXED - validation working with visual feedback across all forms
 - **Priority**: HIGH - Poor UX
 
-### 7. Decimal Input Rounding Issues
-- [ ] **Issue**: Decimal values round up, .0 shows but entering decimals doesn't work properly
-- **Root Cause**: Number parsing and display logic
+### 7. Decimal Input Rounding Issues ✅ FIXED
+- [x] **Issue**: Decimal values round up, .0 shows but entering decimals doesn't work properly
+- **Root Cause**: Using `String()` conversion which strips trailing zeros from decimal numbers
 - **Location**: Amount input fields across dialogs
-- **Hypothesis**: Frontend - number formatting and parsing logic
+- **Solution**: Changed to use `toFixed(2)` when loading amounts into edit forms to always display 2 decimal places
+- **Files Modified**: 
+  - `app/(tabs)/index.tsx` - Updated `openEditDialog` to format amounts with 2 decimal places (line 251)
+  - `app/(tabs)/transactions.tsx` - Updated `handleEdit` to format amounts with 2 decimal places (line 184)
 - **Priority**: MEDIUM - Accuracy in financial data
 
 ### 8. Euro Symbol Missing in Input

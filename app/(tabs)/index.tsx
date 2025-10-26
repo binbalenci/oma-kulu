@@ -247,7 +247,8 @@ export default function HomeScreen() {
     setEditingItem(item);
     setItemName(type === "budget" ? "" : item.name === item.category ? "" : item.name);
     setItemCategory(item.category);
-    setItemAmount(String(type === "budget" ? item.allocated_amount : item.amount));
+    const amountValue = type === "budget" ? item.allocated_amount : item.amount;
+    setItemAmount(Number(amountValue).toFixed(2));
     setItemNotes(item.notes || "");
     setDialogVisible(true);
   };
