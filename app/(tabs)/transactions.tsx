@@ -122,6 +122,10 @@ export default function TransactionsScreen() {
     return matchesSearch && matchesCategory;
   });
 
+  // Separate income and expense transactions
+  const incomeTransactions = filteredTransactions.filter(t => t.amount > 0);
+  const expenseTransactions = filteredTransactions.filter(t => t.amount < 0);
+
   const resetForm = () => {
     setAmount("");
     setDescription("");
@@ -448,29 +452,80 @@ export default function TransactionsScreen() {
           </View>
         )}
 
-        {/* Recent Transactions */}
+        {/* Income Section */}
         <View style={styles.section}>
           <View style={styles.sectionTitle}>
-            <Ionicons name="list" size={24} color={AppTheme.colors.primary} />
+            <Ionicons name="trending-up" size={24} color={AppTheme.colors.success} />
             <Text variant="headlineSmall" style={styles.sectionTitleText}>
-              Recent Transactions
+              Income
             </Text>
+            {incomeTransactions.length > 0 && (
+              <Chip
+                mode="flat"
+                compact
+                style={[styles.countChip, { backgroundColor: AppTheme.colors.success }]}
+                textStyle={{ color: AppTheme.colors.textInverse }}
+              >
+                {incomeTransactions.length}
+              </Chip>
+            )}
           </View>
 
-          {filteredTransactions.length === 0 ? (
+          {incomeTransactions.length === 0 ? (
             <Card style={styles.emptyCard}>
               <Card.Content style={styles.emptyContent}>
-                <Ionicons name="receipt-outline" size={48} color={AppTheme.colors.textMuted} />
+                <Ionicons name="trending-up" size={48} color={AppTheme.colors.textMuted} />
                 <Text variant="bodyLarge" style={styles.emptyText}>
                   {searchQuery || selectedCategory
-                    ? "No transactions match your filters"
-                    : "No recent transactions yet"}
+                    ? "No income transactions match your filters"
+                    : "No income transactions yet"}
                 </Text>
               </Card.Content>
             </Card>
           ) : (
             <FlatList
-              data={filteredTransactions}
+              data={incomeTransactions}
+              keyExtractor={(item) => item.id}
+              renderItem={renderTransactionItem}
+              scrollEnabled={false}
+              style={styles.transactionList}
+            />
+          )}
+        </View>
+
+        {/* Expenses Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionTitle}>
+            <Ionicons name="trending-down" size={24} color={AppTheme.colors.error} />
+            <Text variant="headlineSmall" style={styles.sectionTitleText}>
+              Expenses
+            </Text>
+            {expenseTransactions.length > 0 && (
+              <Chip
+                mode="flat"
+                compact
+                style={[styles.countChip, { backgroundColor: AppTheme.colors.error }]}
+                textStyle={{ color: AppTheme.colors.textInverse }}
+              >
+                {expenseTransactions.length}
+              </Chip>
+            )}
+          </View>
+
+          {expenseTransactions.length === 0 ? (
+            <Card style={styles.emptyCard}>
+              <Card.Content style={styles.emptyContent}>
+                <Ionicons name="trending-down" size={48} color={AppTheme.colors.textMuted} />
+                <Text variant="bodyLarge" style={styles.emptyText}>
+                  {searchQuery || selectedCategory
+                    ? "No expense transactions match your filters"
+                    : "No expense transactions yet"}
+                </Text>
+              </Card.Content>
+            </Card>
+          ) : (
+            <FlatList
+              data={expenseTransactions}
               keyExtractor={(item) => item.id}
               renderItem={renderTransactionItem}
               scrollEnabled={false}

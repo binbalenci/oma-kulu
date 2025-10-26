@@ -163,11 +163,20 @@ This document tracks all identified issues, categorized by type with analysis, r
 
 ## 🟡 MEDIUM - Missing Features
 
-### 14. Transaction Tab Needs Income/Expense Sections
-- [ ] **Issue**: Transaction tab should have separate Income and Expense sections
-- **Root Cause**: Current design shows all transactions together
+### 14. Transaction Tab Needs Income/Expense Sections ✅ FIXED
+- [x] **Issue**: Transaction tab should have separate Income and Expense sections
+- **Root Cause**: Current design showed all transactions together in a single "Recent Transactions" section
 - **Location**: `app/(tabs)/transactions.tsx`
-- **Hypothesis**: Frontend - need to add section separation logic
+- **Solution**: 
+  - Split transactions into two separate sections: "Income" and "Expenses"
+  - Income section shows transactions with positive amounts (green trending-up icon)
+  - Expenses section shows transactions with negative amounts (red trending-down icon)
+  - Each section has its own count badge with appropriate color
+  - Optimized filtering by pre-calculating income and expense arrays
+  - Empty states customized for each section
+  - Search and category filters work across both sections
+- **Files Modified**: 
+  - `app/(tabs)/transactions.tsx` - Added income/expense separation logic (lines 125-127, 455-535)
 - **Priority**: MEDIUM - Feature enhancement
 
 ### 15. Report Tab Missing
