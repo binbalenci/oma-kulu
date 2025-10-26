@@ -12,14 +12,14 @@ import * as Crypto from "expo-crypto";
 import React from "react";
 import { FlatList, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import {
-  Button,
-  Card,
-  Chip,
-  IconButton,
-  Searchbar,
-  Switch,
-  Text,
-  TextInput,
+    Button,
+    Card,
+    Chip,
+    IconButton,
+    Searchbar,
+    Switch,
+    Text,
+    TextInput,
 } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -48,6 +48,9 @@ export default function CategoriesScreen() {
   const [emoji, setEmoji] = React.useState("📁");
   const [isVisible, setIsVisible] = React.useState(true);
   const [budgetEnabled, setBudgetEnabled] = React.useState(true);
+  
+  // Validation error state
+  const [nameError, setNameError] = React.useState(false);
 
   React.useEffect(() => {
     (async () => {
@@ -89,8 +92,8 @@ export default function CategoriesScreen() {
 
   const saveEdit = async () => {
     if (!name.trim()) {
-      showSnackbar("Please enter a category name");
-      return;
+      setNameError(true);
+      return false;
     }
 
     const category: Category = {
@@ -120,10 +123,11 @@ export default function CategoriesScreen() {
       });
       logger.databaseSuccess("save_category", { categoryId: category.id });
       showSnackbar(editing ? "Category updated!" : "Category added!");
-      setDialogVisible(false);
+      return true;
     } else {
       logger.databaseError("Failed to save category", "save_category", { categoryId: category.id });
       showSnackbar("Failed to save category");
+      return false;
     }
   };
 
@@ -279,16 +283,22 @@ export default function CategoriesScreen() {
       {/* Add/Edit Dialog */}
       <CustomDialog
         visible={dialogVisible}
-        onDismiss={() => setDialogVisible(false)}
+        onDismiss={() => {
+          setDialogVisible(false);
+          setNameError(false);
+        }}
         title={`${editing ? "Edit" : "Add"} Category`}
         onSave={saveEdit}
         hasUnsavedChanges={!!(name || color || emoji)}
       >
         <View style={styles.dialogContent}>
           <TextInput
-            label="Category Name"
+            label={<Text style={{ color: nameError ? 'red' : AppTheme.colors.textSecondary }}>Category Name <Text style={{color: 'red'}}>*</Text></Text>}
             value={name}
-            onChangeText={setName}
+            onChangeText={(value) => {
+              setName(value);
+              setNameError(false);
+            }}
             placeholder="e.g., Groceries"
             style={styles.input}
           />

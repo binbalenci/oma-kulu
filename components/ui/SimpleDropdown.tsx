@@ -10,12 +10,13 @@ import {
 import { Text } from "react-native-paper";
 
 interface SimpleDropdownProps {
-  label: string;
+  label: string | React.ReactNode;
   value: string;
   onValueChange: (value: string) => void;
   data: { id: string; name: string }[];
   placeholder?: string;
   style?: any;
+  error?: boolean;
 }
 
 export function SimpleDropdown({
@@ -25,6 +26,7 @@ export function SimpleDropdown({
   data,
   placeholder = "Select option",
   style,
+  error = false,
 }: SimpleDropdownProps) {
   const [visible, setVisible] = React.useState(false);
   const selectedItem = data.find((item) => item.name === value);
@@ -36,13 +38,17 @@ export function SimpleDropdown({
 
   return (
     <View style={[styles.container, style]}>
-      <Text variant="labelMedium" style={styles.label}>
-        {label}
-      </Text>
+      {typeof label === 'string' ? (
+        <Text variant="labelMedium" style={styles.label}>
+          {label}
+        </Text>
+      ) : (
+        <View style={styles.label}>{label}</View>
+      )}
 
       <TouchableOpacity style={styles.dropdown} onPress={() => setVisible(!visible)}>
         <View style={styles.inputWrapper}>
-          <Text style={styles.inputText} numberOfLines={1} ellipsizeMode="tail">
+          <Text style={[styles.inputText, !selectedItem && error && styles.errorPlaceholder]} numberOfLines={1} ellipsizeMode="tail">
             {selectedItem?.name || placeholder}
           </Text>
           <TouchableOpacity 
@@ -169,5 +175,8 @@ const styles = StyleSheet.create({
     right: -1000,
     bottom: -1000,
     zIndex: 9998,
+  },
+  errorPlaceholder: {
+    color: 'red',
   },
 });

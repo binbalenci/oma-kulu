@@ -30,7 +30,7 @@ export function SnackbarProvider({ children }: { children: React.ReactNode }) {
     if (Platform.OS === 'ios') {
       // iOS: Account for status bar + header height
       // Use a combination of fixed offset and percentage for different screen sizes
-      const headerHeight = Math.max(90, screenHeight * 0.08); // At least 70px, or 8% of screen height
+      const headerHeight = Math.max(110, screenHeight * 0.08); // At least 70px, or 8% of screen height
       return baseOffset + headerHeight;
     } else {
       // Android: Account for status bar + action bar height

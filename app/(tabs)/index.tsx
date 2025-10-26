@@ -79,7 +79,11 @@ export default function HomeScreen() {
   const [itemCategory, setItemCategory] = React.useState("");
   const [itemAmount, setItemAmount] = React.useState("");
   const [itemNotes, setItemNotes] = React.useState("");
-
+  
+  // Validation error states
+  const [categoryError, setCategoryError] = React.useState(false);
+  const [amountError, setAmountError] = React.useState(false);
+ 
   // Category grouping states
   const [expandedCategories, setExpandedCategories] = React.useState<Set<string>>(new Set());
 
@@ -327,90 +331,107 @@ export default function HomeScreen() {
   };
 
   const handleSaveItem = async () => {
-    const amount = parseFloat(itemAmount);
-    if (Number.isNaN(amount) || amount <= 0) {
-      showSnackbar("Please enter a valid amount");
-      return;
+    // Check for missing required fields
+    const hasEmptyCategory = !itemCategory;
+    const hasEmptyAmount = !itemAmount;
+    
+    setCategoryError(hasEmptyCategory);
+    setAmountError(hasEmptyAmount);
+
+    if (hasEmptyCategory || hasEmptyAmount) {
+      return false;
     }
 
-    if (!itemCategory) {
-      showSnackbar("Please select a category");
-      return;
+    const amt = parseFloat(itemAmount.replace(",", "."));
+    if (isNaN(amt)) {
+      showSnackbar("Invalid amount entered");
+      return false;
     }
 
-    const id = editingItem?.id || Crypto.randomUUID();
-    const now = new Date().toISOString();
+    const selectedCategory = categories.find((c) => c.name === itemCategory);
+    if (!selectedCategory) {
+      showSnackbar("Category not found");
+      return false;
+    }
 
-    if (dialogType === "income") {
-      const income: ExpectedIncome = {
-        id,
-        name: itemName || itemCategory, // Use category name if name is empty
-        category: itemCategory,
-        amount,
-        month: curMonth,
-        is_paid: (editingItem as ExpectedIncome)?.is_paid || false,
-        notes: itemNotes || undefined,
-        created_at: editingItem?.created_at || now,
-        updated_at: now,
-      };
-      const success = await saveIncome(income);
-      if (success) {
-        setIncomes((prev) => {
-          const next = prev.filter((i) => i.id !== id);
-          next.push(income);
-          return next;
-        });
-        showSnackbar(editingItem ? "Income updated!" : "Income added!");
-        setDialogVisible(false);
-      } else {
-        showSnackbar("Failed to save income");
+    try {
+      if (dialogType === "income") {
+        const income: ExpectedIncome = {
+          id: editingItem?.id || Crypto.randomUUID(),
+          name: itemName || itemCategory, // Use category name if name is empty
+          category: itemCategory,
+          amount: amt,
+          month: curMonth,
+          is_paid: (editingItem as ExpectedIncome)?.is_paid || false,
+          notes: itemNotes || undefined,
+          created_at: editingItem?.created_at || new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        const success = await saveIncome(income);
+        if (success) {
+          setIncomes((prev) => {
+            const next = prev.filter((i) => i.id !== income.id);
+            next.push(income);
+            return next;
+          });
+          showSnackbar("Income saved successfully!");
+        } else {
+          showSnackbar("Failed to save income");
+          return false;
+        }
+      } else if (dialogType === "invoice") {
+        const invoice: ExpectedInvoice = {
+          id: editingItem?.id || Crypto.randomUUID(),
+          name: itemName || itemCategory, // Use category name if name is empty
+          category: itemCategory,
+          amount: amt,
+          month: curMonth,
+          is_paid: (editingItem as ExpectedInvoice)?.is_paid || false,
+          notes: itemNotes || undefined,
+          created_at: editingItem?.created_at || new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        const success = await saveInvoice(invoice);
+        if (success) {
+          setInvoices((prev) => {
+            const next = prev.filter((i) => i.id !== invoice.id);
+            next.push(invoice);
+            return next;
+          });
+          showSnackbar("Invoice saved successfully!");
+        } else {
+          showSnackbar("Failed to save invoice");
+          return false;
+        }
+      } else if (dialogType === "budget") {
+        const budget: Budget = {
+          id: editingItem?.id || Crypto.randomUUID(),
+          category: itemCategory,
+          allocated_amount: amt,
+          month: curMonth,
+          notes: itemNotes || undefined,
+          created_at: editingItem?.created_at || new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        const success = await saveBudget(budget);
+        if (success) {
+          setBudgets((prev) => {
+            const next = prev.filter((b) => b.id !== budget.id);
+            next.push(budget);
+            return next;
+          });
+          showSnackbar("Budget saved successfully!");
+        } else {
+          showSnackbar("Failed to save budget");
+          return false;
+        }
       }
-    } else if (dialogType === "invoice") {
-      const invoice: ExpectedInvoice = {
-        id,
-        name: itemName || itemCategory, // Use category name if name is empty
-        category: itemCategory,
-        amount,
-        month: curMonth,
-        is_paid: (editingItem as ExpectedInvoice)?.is_paid || false,
-        notes: itemNotes || undefined,
-        created_at: editingItem?.created_at || now,
-        updated_at: now,
-      };
-      const success = await saveInvoice(invoice);
-      if (success) {
-        setInvoices((prev) => {
-          const next = prev.filter((i) => i.id !== id);
-          next.push(invoice);
-          return next;
-        });
-        showSnackbar(editingItem ? "Invoice updated!" : "Invoice added!");
-        setDialogVisible(false);
-      } else {
-        showSnackbar("Failed to save invoice");
-      }
-    } else if (dialogType === "budget") {
-      const budget: Budget = {
-        id,
-        category: itemCategory,
-        allocated_amount: amount,
-        month: curMonth,
-        notes: itemNotes || undefined,
-        created_at: editingItem?.created_at || now,
-        updated_at: now,
-      };
-      const success = await saveBudget(budget);
-      if (success) {
-        setBudgets((prev) => {
-          const next = prev.filter((b) => b.id !== id);
-          next.push(budget);
-          return next;
-        });
-        showSnackbar(editingItem ? "Budget updated!" : "Budget added!");
-        setDialogVisible(false);
-      } else {
-        showSnackbar("Failed to save budget");
-      }
+      setDialogVisible(false); // Manually close on success
+      return true;
+    } catch (error) {
+      console.error("Error saving item:", error);
+      showSnackbar("Error saving item. Please try again.");
+      return false;
     }
   };
 
@@ -909,7 +930,11 @@ export default function HomeScreen() {
       {/* Add/Edit Dialog */}
       <Dialog
         visible={dialogVisible}
-        onDismiss={() => setDialogVisible(false)}
+        onDismiss={() => {
+          setDialogVisible(false);
+          setCategoryError(false);
+          setAmountError(false);
+        }}
         title={`${editingItem ? "Edit" : "Add"} ${
           dialogType === "income" ? "Income" : dialogType === "invoice" ? "Invoice" : "Budget"
         }`}
@@ -928,23 +953,30 @@ export default function HomeScreen() {
           )}
 
           <SimpleDropdown
-            label="Category"
+            label=""
             value={itemCategory}
-            onValueChange={setItemCategory}
+            onValueChange={(value) => {
+              setItemCategory(value);
+              setCategoryError(false);
+            }}
             data={categories
               .filter((c) => c.is_visible && (
                 (dialogType === "income" && c.type === "income") || 
                 (dialogType !== "income" && c.type === "expense")
               ))
               .map((cat) => ({ id: cat.name, name: cat.name }))}
-            placeholder="Select category"
+            placeholder="Select category *"
             style={styles.input}
+            error={categoryError}
           />
 
           <TextInput
-            label="Amount"
+            label={<Text style={{ color: amountError ? 'red' : AppTheme.colors.textSecondary }}>Amount <Text style={{color: 'red'}}>*</Text></Text>}
             value={itemAmount}
-            onChangeText={setItemAmount}
+            onChangeText={(value) => {
+              setItemAmount(value);
+              setAmountError(false);
+            }}
             keyboardType="decimal-pad"
             placeholder="€0.0"
             style={styles.input}

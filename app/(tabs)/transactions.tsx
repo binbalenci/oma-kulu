@@ -7,12 +7,12 @@ import { SimpleDropdown } from "@/components/ui/SimpleDropdown";
 import { AppTheme } from "@/constants/AppTheme";
 import { useMonth } from "@/lib/month-context";
 import {
-  deleteTransaction,
-  loadCategories,
-  loadIncomes,
-  loadInvoices,
-  loadTransactions,
-  saveTransaction,
+    deleteTransaction,
+    loadCategories,
+    loadIncomes,
+    loadInvoices,
+    loadTransactions,
+    saveTransaction,
 } from "@/lib/storage";
 import type { Category, ExpectedIncome, ExpectedInvoice, Transaction } from "@/lib/types";
 import Ionicons from "@react-native-vector-icons/ionicons";
@@ -62,6 +62,10 @@ export default function TransactionsScreen() {
   const [description, setDescription] = React.useState("");
   const [date, setDate] = React.useState(format(new Date(), "yyyy-MM-dd"));
   const [category, setCategory] = React.useState("General");
+  
+  // Validation error states
+  const [categoryError, setCategoryError] = React.useState(false);
+  const [amountError, setAmountError] = React.useState(false);
 
   // Confirmation dialog states
   const [confirmDialogVisible, setConfirmDialogVisible] = React.useState(false);
@@ -127,10 +131,21 @@ export default function TransactionsScreen() {
   };
 
   const handleSave = async () => {
-    const amt = parseFloat(amount);
-    if (Number.isNaN(amt)) {
-      showSnackbar("Please enter a valid amount");
-      return;
+    // Check for missing required fields
+    const hasEmptyCategory = !category;
+    const hasEmptyAmount = !amount;
+    
+    setCategoryError(hasEmptyCategory);
+    setAmountError(hasEmptyAmount);
+
+    if (hasEmptyCategory || hasEmptyAmount) {
+      return false;
+    }
+
+    const amt = parseFloat(amount.replace(",", "."));
+    if (isNaN(amt)) {
+      showSnackbar("Invalid amount entered");
+      return false;
     }
 
     // Determine if this is an income or expense based on category type
@@ -156,10 +171,11 @@ export default function TransactionsScreen() {
         setTransactions((prev) => [tx, ...prev]);
         showSnackbar("Transaction added!");
       }
-      setDialogVisible(false);
       resetForm();
+      return true;
     } else {
       showSnackbar("Failed to save transaction");
+      return false;
     }
   };
 
@@ -474,16 +490,23 @@ export default function TransactionsScreen() {
       {/* Add/Edit Dialog */}
       <CustomDialog
         visible={dialogVisible}
-        onDismiss={() => setDialogVisible(false)}
+        onDismiss={() => {
+          setDialogVisible(false);
+          setCategoryError(false);
+          setAmountError(false);
+        }}
         title={`${editing ? "Edit" : "Add"} Transaction`}
         onSave={handleSave}
         hasUnsavedChanges={!!(amount || description || category)}
       >
         <View style={styles.dialogContent}>
           <TextInput
-            label="Amount"
+            label={<Text style={{ color: amountError ? 'red' : AppTheme.colors.textSecondary }}>Amount <Text style={{color: 'red'}}>*</Text></Text>}
             value={amount}
-            onChangeText={setAmount}
+            onChangeText={(value) => {
+              setAmount(value);
+              setAmountError(false);
+            }}
             keyboardType="decimal-pad"
             placeholder="€0.0"
             style={styles.input}
@@ -503,14 +526,18 @@ export default function TransactionsScreen() {
             style={styles.input}
           />
           <SimpleDropdown
-            label="Category"
+            label=""
             value={category}
-            onValueChange={setCategory}
+            onValueChange={(value) => {
+              setCategory(value);
+              setCategoryError(false);
+            }}
             data={categories
               .filter((c) => c.is_visible) 
               .map((cat) => ({ id: cat.name, name: cat.name }))}
-            placeholder="Select category"
+            placeholder="Select category *"
             style={styles.input}
+            error={categoryError}
           />
 
           {categories.length > 0 && (

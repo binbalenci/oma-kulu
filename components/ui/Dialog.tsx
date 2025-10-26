@@ -2,20 +2,20 @@ import { AppTheme } from "@/constants/AppTheme";
 import { BlurView } from "expo-blur";
 import React from "react";
 import {
-    Dimensions,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    StyleSheet,
-    TouchableWithoutFeedback,
-    View,
+  Dimensions,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  StyleSheet,
+  TouchableWithoutFeedback,
+  View,
 } from "react-native";
 import { Button, Portal, Text } from "react-native-paper";
 import Animated, {
-    useAnimatedStyle,
-    useSharedValue,
-    withSpring,
-    withTiming,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
 } from "react-native-reanimated";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -25,7 +25,7 @@ interface DialogProps {
   onDismiss: () => void;
   title: string;
   children: React.ReactNode;
-  onSave?: () => void;
+  onSave?: () => Promise<boolean | void> | boolean | void;
   hasUnsavedChanges?: boolean;
   saveText?: string;
   cancelText?: string;
@@ -80,11 +80,15 @@ export function Dialog({
     onDismiss();
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (onSave) {
-      onSave();
+      const result = await onSave();
+      if (result !== false) {
+        onDismiss();
+      }
+    } else {
+      onDismiss();
     }
-    onDismiss();
   };
 
   if (!visible) return null;

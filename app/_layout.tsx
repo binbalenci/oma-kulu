@@ -30,7 +30,7 @@ export const unstable_settings = {
 };
 
 function RootLayoutComponent() {
-  const [unlocked, setUnlocked] = React.useState(false);
+  const [unlocked, setUnlocked] = React.useState(true);
 
   return (
     <SafeAreaProvider>
