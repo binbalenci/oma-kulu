@@ -965,7 +965,7 @@ export default function HomeScreen() {
                 (dialogType === "income" && c.type === "income") || 
                 (dialogType !== "income" && c.type === "expense")
               ))
-              .map((cat) => ({ id: cat.name, name: cat.name }))}
+              .map((cat) => ({ id: cat.name, name: cat.name, emoji: cat.emoji, color: cat.color }))}
             placeholder="Select category *"
             style={styles.input}
             error={categoryError}
@@ -979,8 +979,9 @@ export default function HomeScreen() {
               setAmountError(false);
             }}
             keyboardType="decimal-pad"
-            placeholder="€0.0"
+            placeholder="0.00"
             style={styles.input}
+            left={<TextInput.Affix text="€" />}
           />
 
           <TextInput

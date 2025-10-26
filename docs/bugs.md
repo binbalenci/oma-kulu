@@ -86,19 +86,28 @@ This document tracks all identified issues, categorized by type with analysis, r
   - `app/(tabs)/transactions.tsx` - Updated `handleEdit` to format amounts with 2 decimal places (line 184)
 - **Priority**: MEDIUM - Accuracy in financial data
 
-### 8. Euro Symbol Missing in Input
-- [ ] **Issue**: Shows € symbol in placeholder but not when entering values
-- **Root Cause**: Input formatting doesn't preserve currency symbol
+### 8. Euro Symbol Missing in Input ✅ FIXED
+- [x] **Issue**: Shows € symbol in placeholder but not when entering values
+- **Root Cause**: Input formatting doesn't preserve currency symbol - euro was only in placeholder
 - **Location**: TextInput components for amounts
-- **Hypothesis**: Frontend - need to add currency formatting to inputs
+- **Solution**: Added `TextInput.Affix` with "€" text to the left side of amount inputs, changed placeholder from "€0.0" to "0.00"
+- **Files Modified**: 
+  - `app/(tabs)/index.tsx` - Added euro symbol affix to amount input (line 984)
+  - `app/(tabs)/transactions.tsx` - Added euro symbol affix to amount input (line 513)
 - **Priority**: LOW - UX enhancement
 
-### 9. Navigation Tab Cut Off on Web
-- [ ] **Issue**: Bottom navigation partially cut off on certain screen resolutions
-- **Root Cause**: CSS styling or safe area issues on web platform
-- **Location**: `app/(tabs)/_layout.tsx` or styling
-- **Hypothesis**: Frontend - platform-specific styling issue
-- **Priority**: MEDIUM - Platform compatibility
+### 9. Navigation Tab Cut Off on Web ✅ RESOLVED
+- [x] **Issue**: Bottom navigation partially cut off on certain screen resolutions (Edge on Windows)
+- **Root Cause**: Edge-specific rendering issue, not a code problem
+- **Location**: `app/(tabs)/_layout.tsx` - reviewed, no issues found
+- **Analysis**: 
+  - Code uses standard Expo Router `<Tabs>` component with minimal customization
+  - App properly wrapped in `SafeAreaProvider` at root level
+  - Works correctly on Chrome, Opera, Safari, and Arc on macOS
+  - Only observed on Edge browser on Windows - likely browser-specific quirk
+  - No CSS issues or safe area problems found in codebase
+- **Resolution**: No code changes needed - Edge-specific issue outside our control
+- **Priority**: MEDIUM - Platform compatibility (Edge-specific)
 
 ### 10. Cash Overview Takes Too Much Space
 - [ ] **Issue**: Cash overview section too large in Home tab
@@ -107,18 +116,32 @@ This document tracks all identified issues, categorized by type with analysis, r
 - **Hypothesis**: Frontend - need to optimize layout and spacing
 - **Priority**: LOW - UI optimization
 
-### 11. Duplicate Category Display in Transactions
-- [ ] **Issue**: Category shown on left (badge) and bottom (plain text) - redundant
-- **Root Cause**: Transaction item layout shows category twice
-- **Location**: `app/(tabs)/transactions.tsx:182-225`
-- **Hypothesis**: Frontend - remove redundant category display
+### 11. Duplicate Category Display in Transactions ✅ FIXED
+- [x] **Issue**: Category shown on left (badge) and bottom (plain text) - redundant
+- **Root Cause**: Transaction item layout was displaying category twice - once as a colored badge on the left and once as plain text in the metadata line
+- **Location**: `app/(tabs)/transactions.tsx:223-268`
+- **Solution**: 
+  - Moved category badge from left side to the metadata line (after the date)
+  - Removed redundant category text from metadata line
+  - Category badge now appears inline with the date: "Oct 19 [Badge]"
+  - Removed unnecessary left margin from transaction info since badge is no longer on the left
+- **Files Modified**: 
+  - `app/(tabs)/transactions.tsx` - Restructured transaction item layout (lines 229-245) and updated styles (lines 716-731)
 - **Priority**: LOW - UI cleanup
 
-### 12. Category Dropdown Missing Emoji
-- [ ] **Issue**: Category dropdown should display emoji alongside names
-- **Root Cause**: SimpleDropdown doesn't render emoji from category data
-- **Location**: `components/ui/SimpleDropdown.tsx:70-85`
-- **Hypothesis**: Frontend - need to modify dropdown item rendering
+### 12. Category Dropdown Missing Emoji ✅ FIXED
+- [x] **Issue**: Category dropdown should display emoji alongside names
+- **Root Cause**: SimpleDropdown component wasn't receiving or rendering emoji data from categories
+- **Location**: `components/ui/SimpleDropdown.tsx` and category dropdown usage in dialogs
+- **Solution**: 
+  - Updated `SimpleDropdown` interface to accept optional `emoji` and `color` properties in data items
+  - Modified dropdown to display emoji before category name in both selected value and dropdown list
+  - Updated all category dropdown usages to pass emoji and color data from category objects
+  - Emoji now appears as: "🛒 Grocery" instead of just "Grocery"
+- **Files Modified**: 
+  - `components/ui/SimpleDropdown.tsx` - Added emoji support to interface and rendering (lines 16, 34, 52-59, 95-96)
+  - `app/(tabs)/index.tsx` - Updated category data mapping to include emoji and color (line 968)
+  - `app/(tabs)/transactions.tsx` - Updated category data mapping to include emoji and color (line 540)
 - **Priority**: MEDIUM - UX improvement
 
 ### 13. Dialog Field Order Inconsistency

@@ -7,12 +7,12 @@ import { SimpleDropdown } from "@/components/ui/SimpleDropdown";
 import { AppTheme } from "@/constants/AppTheme";
 import { useMonth } from "@/lib/month-context";
 import {
-    deleteTransaction,
-    loadCategories,
-    loadIncomes,
-    loadInvoices,
-    loadTransactions,
-    saveTransaction,
+  deleteTransaction,
+  loadCategories,
+  loadIncomes,
+  loadInvoices,
+  loadTransactions,
+  saveTransaction,
 } from "@/lib/storage";
 import type { Category, ExpectedIncome, ExpectedInvoice, Transaction } from "@/lib/types";
 import Ionicons from "@react-native-vector-icons/ionicons";
@@ -227,19 +227,21 @@ export default function TransactionsScreen() {
       <Card style={styles.transactionCard}>
         <Card.Content style={styles.transactionContent}>
           <View style={styles.transactionLeft}>
-            <CategoryBadge
-              category={item.category}
-              emoji={categoryInfo?.emoji}
-              color={categoryInfo?.color || AppTheme.colors.primary}
-              size="sm"
-            />
             <View style={styles.transactionInfo}>
               <Text variant="bodyLarge" style={styles.transactionDescription}>
                 {item.description}
               </Text>
-              <Text variant="bodySmall" style={styles.transactionMeta}>
-                {format(new Date(item.date), "MMM dd")} • {item.category}
-              </Text>
+              <View style={styles.transactionMetaRow}>
+                <Text variant="bodySmall" style={styles.transactionMeta}>
+                  {format(new Date(item.date), "MMM dd")}
+                </Text>
+                <CategoryBadge
+                  category={item.category}
+                  emoji={categoryInfo?.emoji}
+                  color={categoryInfo?.color || AppTheme.colors.primary}
+                  size="sm"
+                />
+              </View>
             </View>
           </View>
 
@@ -508,8 +510,9 @@ export default function TransactionsScreen() {
               setAmountError(false);
             }}
             keyboardType="decimal-pad"
-            placeholder="€0.0"
+            placeholder="0.00"
             style={styles.input}
+            left={<TextInput.Affix text="€" />}
           />
           <TextInput
             label="Description"
@@ -534,7 +537,7 @@ export default function TransactionsScreen() {
             }}
             data={categories
               .filter((c) => c.is_visible) 
-              .map((cat) => ({ id: cat.name, name: cat.name }))}
+              .map((cat) => ({ id: cat.name, name: cat.name, emoji: cat.emoji, color: cat.color }))}
             placeholder="Select category *"
             style={styles.input}
             error={categoryError}
@@ -712,15 +715,19 @@ const styles = StyleSheet.create({
   },
   transactionInfo: {
     flex: 1,
-    marginLeft: AppTheme.spacing.md,
   },
   transactionDescription: {
     fontWeight: AppTheme.typography.fontWeight.medium,
     color: AppTheme.colors.textPrimary,
   },
+  transactionMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: AppTheme.spacing.sm,
+    marginTop: 2,
+  },
   transactionMeta: {
     color: AppTheme.colors.textSecondary,
-    marginTop: 2,
   },
   transactionRight: {
     flexDirection: "row",

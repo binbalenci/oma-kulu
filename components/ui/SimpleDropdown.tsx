@@ -13,7 +13,7 @@ interface SimpleDropdownProps {
   label: string | React.ReactNode;
   value: string;
   onValueChange: (value: string) => void;
-  data: { id: string; name: string }[];
+  data: { id: string; name: string; emoji?: string; color?: string }[];
   placeholder?: string;
   style?: any;
   error?: boolean;
@@ -31,7 +31,7 @@ export function SimpleDropdown({
   const [visible, setVisible] = React.useState(false);
   const selectedItem = data.find((item) => item.name === value);
 
-  const handleSelect = (item: { id: string; name: string }) => {
+  const handleSelect = (item: { id: string; name: string; emoji?: string; color?: string }) => {
     onValueChange(item.name);
     setVisible(false);
   };
@@ -49,7 +49,14 @@ export function SimpleDropdown({
       <TouchableOpacity style={styles.dropdown} onPress={() => setVisible(!visible)}>
         <View style={styles.inputWrapper}>
           <Text style={[styles.inputText, !selectedItem && error && styles.errorPlaceholder]} numberOfLines={1} ellipsizeMode="tail">
-            {selectedItem?.name || placeholder}
+            {selectedItem ? (
+              <>
+                {selectedItem.emoji && <Text>{selectedItem.emoji} </Text>}
+                {selectedItem.name}
+              </>
+            ) : (
+              placeholder
+            )}
           </Text>
           <TouchableOpacity 
             style={styles.arrowButton} 
@@ -85,6 +92,7 @@ export function SimpleDropdown({
                       item.name === value && styles.selectedItemText,
                     ]}
                   >
+                    {item.emoji && <Text>{item.emoji} </Text>}
                     {item.name}
                   </Text>
                 </TouchableOpacity>
