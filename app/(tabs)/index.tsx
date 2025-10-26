@@ -943,16 +943,6 @@ export default function HomeScreen() {
         hasUnsavedChanges={!!(itemName || itemAmount || itemCategory || itemNotes)}
       >
         <View style={styles.dialogContent}>
-          {dialogType !== "budget" && (
-            <TextInput
-              label="Name (optional)"
-              value={itemName}
-              onChangeText={setItemName}
-              placeholder={`Uses ${dialogType} category if empty`}
-              style={styles.input}
-            />
-          )}
-
           <SimpleDropdown
             label=""
             value={itemCategory}
@@ -983,6 +973,16 @@ export default function HomeScreen() {
             style={styles.input}
             left={<TextInput.Affix text="€" />}
           />
+
+          {dialogType !== "budget" && (
+            <TextInput
+              label="Name (optional)"
+              value={itemName}
+              onChangeText={setItemName}
+              placeholder={`Uses ${dialogType} category if empty`}
+              style={styles.input}
+            />
+          )}
 
           <TextInput
             label="Notes (optional)"

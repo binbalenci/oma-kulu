@@ -502,6 +502,20 @@ export default function TransactionsScreen() {
         hasUnsavedChanges={!!(amount || description || category)}
       >
         <View style={styles.dialogContent}>
+          <SimpleDropdown
+            label=""
+            value={category}
+            onValueChange={(value) => {
+              setCategory(value);
+              setCategoryError(false);
+            }}
+            data={categories
+              .filter((c) => c.is_visible) 
+              .map((cat) => ({ id: cat.name, name: cat.name, emoji: cat.emoji, color: cat.color }))}
+            placeholder="Select category *"
+            style={styles.input}
+            error={categoryError}
+          />
           <TextInput
             label={<Text style={{ color: amountError ? 'red' : AppTheme.colors.textSecondary }}>Amount <Text style={{color: 'red'}}>*</Text></Text>}
             value={amount}
@@ -527,20 +541,6 @@ export default function TransactionsScreen() {
             onChangeText={setDate}
             placeholder="2025-01-15"
             style={styles.input}
-          />
-          <SimpleDropdown
-            label=""
-            value={category}
-            onValueChange={(value) => {
-              setCategory(value);
-              setCategoryError(false);
-            }}
-            data={categories
-              .filter((c) => c.is_visible) 
-              .map((cat) => ({ id: cat.name, name: cat.name, emoji: cat.emoji, color: cat.color }))}
-            placeholder="Select category *"
-            style={styles.input}
-            error={categoryError}
           />
 
           {categories.length > 0 && (

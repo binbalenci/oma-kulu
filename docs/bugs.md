@@ -144,11 +144,19 @@ This document tracks all identified issues, categorized by type with analysis, r
   - `app/(tabs)/transactions.tsx` - Updated category data mapping to include emoji and color (line 540)
 - **Priority**: MEDIUM - UX improvement
 
-### 13. Dialog Field Order Inconsistency
-- [ ] **Issue**: Dialog fields in different orders across forms
-- **Root Cause**: Inconsistent form layout in different dialogs
-- **Location**: Multiple dialog implementations
-- **Hypothesis**: Frontend - standardize field order
+### 13. Dialog Field Order Inconsistency ✅ FIXED
+- [x] **Issue**: Dialog fields in different orders across forms
+- **Root Cause**: Inconsistent form layout in different dialogs - Home tab started with Name/Category while Transactions tab started with Amount
+- **Location**: `app/(tabs)/index.tsx` and `app/(tabs)/transactions.tsx`
+- **Solution**: Standardized field order across all financial dialogs to follow a logical flow:
+  1. **Category** (required) - What type of transaction
+  2. **Amount** (required) - How much
+  3. **Description/Name** (optional) - Details about the transaction
+  4. **Date** (for transactions only) - When it occurred
+  5. **Notes** (optional) - Additional information
+- **Files Modified**: 
+  - `app/(tabs)/index.tsx` - Reordered fields: Category → Amount → Name → Notes (lines 945-996)
+  - `app/(tabs)/transactions.tsx` - Reordered fields: Category → Amount → Description → Date (lines 504-544)
 - **Priority**: LOW - Consistency
 
 ---
