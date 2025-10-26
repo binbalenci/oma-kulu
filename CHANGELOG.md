@@ -5,6 +5,76 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2025-10-26
+
+### 🐛 Fixed
+
+- **Decimal Input Rounding Issues (#7)**
+  - Fixed decimal values not displaying correctly when editing
+  - Amounts now always show 2 decimal places (e.g., "10.00" instead of "10")
+  - Changed from `String()` to `toFixed(2)` for consistent decimal formatting
+  - Files: `app/(tabs)/index.tsx`, `app/(tabs)/transactions.tsx`
+
+- **Euro Symbol Missing in Input (#8)**
+  - Added persistent euro symbol (€) to amount input fields
+  - Euro symbol now visible while typing, not just in placeholder
+  - Used `TextInput.Affix` for better UX consistency
+  - Files: `app/(tabs)/index.tsx`, `app/(tabs)/transactions.tsx`
+
+- **Navigation Tab Cut Off on Web (#9)**
+  - Resolved Edge browser specific rendering issue
+  - Confirmed no code issues - works correctly on all other browsers
+  - Investigation showed this is browser-specific quirk outside our control
+
+- **Duplicate Category Display in Transactions (#11)**
+  - Removed redundant category text from transaction metadata
+  - Moved category badge to appear inline with date (e.g., "Oct 19 [Badge]")
+  - Cleaner, more compact transaction item layout
+  - Files: `app/(tabs)/transactions.tsx`
+
+- **Category Dropdown Missing Emoji (#12)**
+  - Added emoji support to category dropdown selection
+  - Emojis now display before category names in dropdown list and selected value
+  - Updated SimpleDropdown component to accept and render emoji data
+  - Files: `components/ui/SimpleDropdown.tsx`, `app/(tabs)/index.tsx`, `app/(tabs)/transactions.tsx`
+
+- **Dialog Field Order Inconsistency (#13)**
+  - Standardized field order across all financial dialogs
+  - Consistent flow: Category → Amount → Description/Name → Date → Notes
+  - Improves user experience and muscle memory for data entry
+  - Files: `app/(tabs)/index.tsx`, `app/(tabs)/transactions.tsx`
+
+- **Transaction Tab Income/Expense Separation (#14)**
+  - Split transactions into separate "Income" and "Expenses" sections
+  - Income section shows positive amounts with green trending-up icon
+  - Expenses section shows negative amounts with red trending-down icon
+  - Each section has its own count badge with appropriate colors
+  - Optimized rendering by pre-filtering transactions
+  - Files: `app/(tabs)/transactions.tsx`
+
+- **Expected Transaction Deletion Sync (#17)**
+  - Added bidirectional sync between transactions and expected items
+  - Deleting transactions created from expected income/invoice marks them as unpaid
+  - Added database columns: `source_type` and `source_id` to track relationships
+  - **UX Improvement**: Different icons and dialogs based on transaction origin
+    - Manual transactions: Red delete icon with "Delete Transaction" dialog
+    - From expected items: Orange clock icon with "Move to Pending?" dialog
+  - Files: `lib/types.ts`, `app/(tabs)/index.tsx`, `app/(tabs)/transactions.tsx`
+
+- **Expected Transaction Editing Sync (#18)**
+  - Editing transactions syncs changes back to source expected items
+  - Syncs amount, category, and description when changed
+  - Only syncs if values actually changed to avoid unnecessary updates
+  - Maintains referential integrity across Home and Transactions tabs
+  - Files: `app/(tabs)/transactions.tsx`
+
+### 💬 Changed
+
+- **Text Improvement: Money to Assign (#20)**
+  - Changed label from "Money to Assign" to "Remaining to Budget"
+  - More intuitive and descriptive terminology for users
+  - Files: `app/(tabs)/index.tsx`
+
 ## [1.4.0] - 2025-10-26
 
 ### 🐛 Fixed
