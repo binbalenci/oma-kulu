@@ -137,13 +137,13 @@ const styles = StyleSheet.create({
     borderRadius: AppTheme.borderRadius.md,
     borderWidth: 1,
     borderColor: AppTheme.colors.border,
-    maxHeight: 200,
+    maxHeight: 185,
     zIndex: 9999,
     ...AppTheme.shadows.md,
     elevation: 9999,
   },
   scrollView: {
-    maxHeight: 200,
+    maxHeight: 185,
   },
   dropdownItem: {
     paddingHorizontal: AppTheme.spacing.lg,

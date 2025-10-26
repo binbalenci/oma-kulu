@@ -2,20 +2,20 @@ import { AppTheme } from "@/constants/AppTheme";
 import { BlurView } from "expo-blur";
 import React from "react";
 import {
-  Dimensions,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  StyleSheet,
-  TouchableWithoutFeedback,
-  View,
+    Dimensions,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    StyleSheet,
+    TouchableWithoutFeedback,
+    View,
 } from "react-native";
 import { Button, Portal, Text } from "react-native-paper";
 import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming,
+    useAnimatedStyle,
+    useSharedValue,
+    withSpring,
+    withTiming,
 } from "react-native-reanimated";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -155,11 +155,13 @@ const styles = StyleSheet.create({
     position: "absolute",
     width: "100%",
     height: "100%",
+    zIndex: 1000, // Ensure backdrop is on top
   },
   keyboardAvoidingView: {
     flex: 1,
     justifyContent: "flex-end",
     height: "100%",
+    zIndex: 1001, // Ensure keyboard view is on top of backdrop
   },
   backdropOverlay: {
     ...StyleSheet.absoluteFillObject,
