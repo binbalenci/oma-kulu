@@ -5,6 +5,83 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2025-10-26
+
+### 🐛 Fixed
+
+- **Transaction Income/Expense Type Bug (#1)**
+  - Fixed transaction editing always converting amounts to expenses
+  - Added category type detection to properly handle income vs expense amounts
+  - Income categories now correctly store positive amounts
+  - Expense categories correctly store negative amounts
+  - Files: `app/(tabs)/transactions.tsx`
+
+- **Month Filtering in Transactions Tab (#2)**
+  - Fixed month selector not filtering transactions properly
+  - Added proper date range filtering using `startOfMonth` and `endOfMonth`
+  - Implemented optimized data refresh on month changes
+  - Only month-dependent data (transactions, incomes, invoices) now refreshes
+  - Categories remain cached as they are month-independent
+  - Files: `app/(tabs)/transactions.tsx`, `app/(tabs)/index.tsx`
+
+- **Category Updates Sync with Transactions (#4)**
+  - Fixed category name updates not reflecting in existing transactions
+  - Added foreign key constraints with ON UPDATE CASCADE in Supabase database
+  - Database now automatically updates all related records when category changes
+  - Enhanced Home tab to refresh all data (incomes, invoices, budgets) on focus
+  - Ensures CASCADE updates are immediately visible across all tabs
+  - Database Migration: Added FK constraints to expected_incomes, expected_invoices, budgets, and transactions tables
+
+- **Category Dropdown Selection Issues (#5)**
+  - Fixed dropdown values not being selectable due to z-index conflicts
+  - Fixed bottom navigation showing through dropdown menu
+  - Restored high z-index to SimpleDropdown container (9999)
+  - Added high z-index to Dialog and SimpleDialog parent containers
+  - Dropdown now properly renders above all other UI elements
+  - Files: `components/ui/SimpleDropdown.tsx`, `components/ui/Dialog.tsx`, `components/ui/SimpleDialog.tsx`
+
+- **Form Validation Missing (#6)**
+  - Added comprehensive form validation across all dialogs
+  - Required fields now marked with red asterisk (*)
+  - Save button validates required fields before proceeding
+  - Visual feedback: labels and placeholder text turn red when validation fails
+  - Errors auto-clear when user starts typing
+  - Dialog no longer closes if validation fails
+  - Improved UI consistency by moving category asterisk to placeholder text
+  - Files: `app/(tabs)/index.tsx`, `app/(tabs)/transactions.tsx`, `app/(tabs)/categories.tsx`, `components/ui/Dialog.tsx`, `components/ui/SimpleDropdown.tsx`
+
+### 🎨 Improved
+
+- **Dialog Component Enhancement**
+  - Updated to support async onSave with boolean return value
+  - Allows validation logic to prevent dialog closure
+  - Better error handling and user feedback flow
+
+- **SimpleDropdown Component Enhancement**
+  - Now accepts React.ReactNode labels for flexible styling
+  - Added error prop for visual error states
+  - Placeholder text can be styled based on error state
+  - Improved type safety and flexibility
+
+- **UI/UX Consistency**
+  - Standardized required field indicators across all forms
+  - Consistent validation behavior in all dialogs
+  - Better visual feedback for form errors
+  - Improved dropdown UI alignment with other input fields
+
+### 📊 Technical Improvements
+
+- **Database Schema**
+  - Added foreign key constraints for data integrity
+  - Implemented CASCADE updates for automatic data sync
+  - Better relational data management
+
+- **Code Quality**
+  - All changes pass TypeScript compilation
+  - Zero linting warnings
+  - Improved type safety across components
+  - Better separation of concerns in validation logic
+
 ## [1.3.1] - 2025-10-19
 
 ### 🐛 Fixed

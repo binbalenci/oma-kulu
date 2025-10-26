@@ -55,11 +55,25 @@ This document tracks all identified issues, categorized by type with analysis, r
 - **Files Modified**: `components/ui/SimpleDropdown.tsx`, `components/ui/Dialog.tsx`, `components/ui/SimpleDialog.tsx`
 - **Priority**: HIGH - Prevents category selection
 
-### 6. Form Validation Missing
-- [ ] **Issue**: Add dialog allows saving without amount/category, shows toast but no visual cues
+### 6. Form Validation Missing ✅ FIXED
+- [x] **Issue**: Add dialog allows saving without amount/category, shows toast but no visual cues
 - **Root Cause**: No visual validation indicators in forms
 - **Location**: Multiple dialog components
-- **Hypothesis**: Frontend - need to add visual error states and prevent save
+- **Solution**: 
+  - Added red asterisk (*) to all required fields (Category, Amount, Category Name)
+  - Implemented validation on Save button press - prevents dialog from closing if required fields are empty
+  - Added visual feedback - field labels and placeholder text turn red when validation fails
+  - Auto-clear errors when user starts typing in a field
+  - Updated `Dialog` component to support async onSave with boolean return value
+  - Updated `SimpleDropdown` to accept React.ReactNode labels and error prop
+  - Moved category asterisk to placeholder text for better UI consistency
+- **Files Modified**: 
+  - `app/(tabs)/index.tsx` - Added validation for Category and Amount in Income/Invoice/Budget dialogs
+  - `app/(tabs)/transactions.tsx` - Added validation for Category and Amount
+  - `app/(tabs)/categories.tsx` - Added validation for Category Name
+  - `components/ui/Dialog.tsx` - Updated to handle async onSave with boolean return
+  - `components/ui/SimpleDropdown.tsx` - Updated to accept React.ReactNode labels and error prop
+- **Status**: ✅ FULLY FIXED - validation working with visual feedback across all forms
 - **Priority**: HIGH - Poor UX
 
 ### 7. Decimal Input Rounding Issues
@@ -222,3 +236,4 @@ This document tracks all identified issues, categorized by type with analysis, r
 *Last Updated: $(date)*
 *Total Issues: 20*
 *Critical: 4 | High: 9 | Medium: 4 | Low: 3*
+
