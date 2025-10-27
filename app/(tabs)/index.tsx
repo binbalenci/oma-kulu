@@ -666,70 +666,66 @@ export default function HomeScreen() {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Cash Overview */}
-        <Card style={styles.overviewCard}>
-          <Card.Content>
-            <Text variant="labelMedium" style={styles.overviewLabel}>
-              CASH OVERVIEW
+        {/* Cash Overview - Compact with Dividers */}
+        <View style={styles.overviewCompact}>
+          {/* Expected Income */}
+          <View style={styles.overviewCompactItem}>
+            <View style={styles.overviewItemHeader}>
+              <Ionicons name="trending-up" size={14} color={AppTheme.colors.success} />
+              <Text variant="labelSmall" style={styles.overviewCompactLabel}>
+                Income
+              </Text>
+            </View>
+            <Text variant="bodyMedium" style={styles.positiveAmount}>
+              €{expectedIncome.toFixed(1)}
             </Text>
+          </View>
 
-            {/* Top Row: Expected Income, Expected Expenses, Remaining to Budget */}
-            <View style={styles.overviewTopRow}>
-              <View style={styles.overviewItem}>
-                <Ionicons name="trending-up" size={20} color={AppTheme.colors.success} />
-                <Text variant="bodySmall" style={styles.overviewLabel}>
-                  Expected Income
-                </Text>
-                <Text variant="titleMedium" style={styles.positiveAmount}>
-                  €{expectedIncome.toFixed(1)}
-                </Text>
-              </View>
-              <View style={styles.overviewItem}>
-                <Ionicons name="trending-down" size={20} color={AppTheme.colors.error} />
-                <Text variant="bodySmall" style={styles.overviewLabel}>
-                  Expected Expenses
-                </Text>
-                <Text variant="titleMedium" style={styles.negativeAmount}>
-                  €{expectedExpenses.toFixed(1)}
-                </Text>
-              </View>
-              <View style={styles.overviewItem}>
-                <Ionicons name="add-circle" size={20} color={AppTheme.colors.warning} />
-                <Text variant="bodySmall" style={styles.overviewLabel}>
-                  Remaining to Budget
-                </Text>
-                <Text
-                  variant="titleMedium"
-                  style={[
-                    styles.overviewAmount,
-                    moneyToAssign >= 0 ? styles.positiveAmount : styles.negativeAmount,
-                  ]}
-                >
-                  €{moneyToAssign.toFixed(1)}
-                </Text>
-              </View>
-            </View>
+          <View style={styles.overviewDivider} />
 
-            {/* Bottom Row: In Bank */}
-            <View style={styles.overviewBottomRow}>
-              <View style={styles.overviewItem}>
-                <Ionicons name="wallet" size={20} color={AppTheme.colors.primary} />
-                <Text variant="bodySmall" style={styles.overviewLabel}>
-                  In Bank
-                </Text>
-                <Text
-                  variant="headlineSmall"
-                  style={[
-                    styles.overviewAmount,
-                    actualInBank >= 0 ? styles.positiveAmount : styles.negativeAmount,
-                  ]}
-                >
-                  €{actualInBank.toFixed(1)}
-                </Text>
-              </View>
+          {/* Expected Expenses */}
+          <View style={styles.overviewCompactItem}>
+            <View style={styles.overviewItemHeader}>
+              <Ionicons name="trending-down" size={14} color={AppTheme.colors.error} />
+              <Text variant="labelSmall" style={styles.overviewCompactLabel}>
+                Expenses
+              </Text>
             </View>
-          </Card.Content>
-        </Card>
+            <Text variant="bodyMedium" style={styles.negativeAmount}>
+              €{expectedExpenses.toFixed(1)}
+            </Text>
+          </View>
+
+          <View style={styles.overviewDivider} />
+
+          {/* Remaining to Budget */}
+          <View style={styles.overviewCompactItem}>
+            <View style={styles.overviewItemHeader}>
+              <Ionicons name="add-circle" size={14} color={AppTheme.colors.warning} />
+              <Text variant="labelSmall" style={styles.overviewCompactLabel}>
+                Remaining
+              </Text>
+            </View>
+            <Text variant="bodyMedium" style={styles.neutralAmount}>
+              €{moneyToAssign.toFixed(1)}
+            </Text>
+          </View>
+
+          <View style={styles.overviewDivider} />
+
+          {/* In Bank */}
+          <View style={styles.overviewCompactItem}>
+            <View style={styles.overviewItemHeader}>
+              <Ionicons name="wallet" size={14} color={AppTheme.colors.primary} />
+              <Text variant="labelSmall" style={styles.overviewCompactLabel}>
+                In Bank
+              </Text>
+            </View>
+            <Text variant="bodyMedium" style={styles.neutralAmount}>
+              €{actualInBank.toFixed(1)}
+            </Text>
+          </View>
+        </View>
 
         {/* Copy Previous Month */}
         {allEmpty && (
@@ -1045,40 +1041,46 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: AppTheme.spacing.lg,
   },
-  overviewCard: {
+  overviewCompact: {
+    flexDirection: "row",
+    backgroundColor: AppTheme.colors.card,
+    borderRadius: 12,
+    padding: AppTheme.spacing.md,
     marginBottom: AppTheme.spacing.xl,
+    gap: AppTheme.spacing.md,
     ...AppTheme.shadows.md,
   },
-  overviewLabel: {
-    color: AppTheme.colors.textSecondary,
-    marginBottom: AppTheme.spacing.lg,
-    fontWeight: AppTheme.typography.fontWeight.medium,
-  },
-  overviewTopRow: {
-    flexDirection: "row",
-    gap: AppTheme.spacing.md,
-    marginBottom: AppTheme.spacing.lg,
-  },
-  overviewBottomRow: {
-    flexDirection: "row",
-    paddingTop: AppTheme.spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: AppTheme.colors.border,
-  },
-  overviewItem: {
+  overviewCompactItem: {
     flex: 1,
     alignItems: "center",
-    gap: AppTheme.spacing.xs,
+    gap: 4,
   },
-  overviewAmount: {
-    fontWeight: AppTheme.typography.fontWeight.bold,
-    marginTop: AppTheme.spacing.xs,
+  overviewItemHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  overviewCompactLabel: {
+    color: AppTheme.colors.textSecondary,
+    fontSize: 11,
+    fontWeight: AppTheme.typography.fontWeight.medium,
+  },
+  overviewDivider: {
+    width: 1,
+    backgroundColor: AppTheme.colors.border,
+    marginVertical: AppTheme.spacing.xs,
   },
   positiveAmount: {
     color: AppTheme.colors.success,
+    fontWeight: AppTheme.typography.fontWeight.bold,
   },
   negativeAmount: {
     color: AppTheme.colors.error,
+    fontWeight: AppTheme.typography.fontWeight.bold,
+  },
+  neutralAmount: {
+    color: AppTheme.colors.textPrimary,
+    fontWeight: AppTheme.typography.fontWeight.bold,
   },
   copyCard: {
     marginBottom: AppTheme.spacing.xl,

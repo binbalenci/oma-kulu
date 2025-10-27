@@ -109,11 +109,18 @@ This document tracks all identified issues, categorized by type with analysis, r
 - **Resolution**: No code changes needed - Edge-specific issue outside our control
 - **Priority**: MEDIUM - Platform compatibility (Edge-specific)
 
-### 10. Cash Overview Takes Too Much Space
-- [ ] **Issue**: Cash overview section too large in Home tab
-- **Root Cause**: Layout and spacing design in overview card
-- **Location**: `app/(tabs)/index.tsx:591-653`
-- **Hypothesis**: Frontend - need to optimize layout and spacing
+### 10. Cash Overview Takes Too Much Space ✅ FIXED
+- [x] **Issue**: Cash overview section too large in Home tab
+- **Root Cause**: Layout and spacing design in overview card - taking too much vertical space
+- **Location**: `app/(tabs)/index.tsx:669-728`
+- **Solution**: Redesigned to minimal single-row layout with:
+  - Icons and labels on same line (icon + label horizontally aligned) for space efficiency
+  - Vertical dividers between items (like Reports tab summary section)
+  - Shortened labels (Income/Expenses/Remaining/In Bank)
+  - Neutral dark grey color for "Remaining" and "In Bank" (not green)
+  - Green for Income, Red for Expenses
+  - Reduced vertical space by ~70% while maintaining readability
+- **Files Modified**: `app/(tabs)/index.tsx` (lines 669-728, 1044-1083)
 - **Priority**: LOW - UI optimization
 
 ### 11. Duplicate Category Display in Transactions ✅ FIXED
