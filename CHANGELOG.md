@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2025-01-28
+
+### ✨ Added
+
+- **Reports Tab (#15)**
+  - New Reports tab positioned between Transactions and Categories
+  - Displays monthly category spending breakdown with visual progress indicators
+  - Compact 2-column grid layout optimized for mobile screens
+  - Shows spending amount, budget percentage, and progress status for each category
+  - Rank numbers displayed on the left side of each card for easy scanning
+  - Background color gradients indicate budget status:
+    - Green (0-50%): Well within budget
+    - Amber (50-75%): Approaching budget limit
+    - Orange (75-100%): Near budget limit
+    - Red (>100%): Over budget
+  - Summary stats showing total categories, total spent, and categories with budgets
+  - Month navigation integrated with shared month context across tabs
+  - Files: `app/(tabs)/reports.tsx`, `app/(tabs)/_layout.tsx`, `components/ui/icon-symbol.tsx`
+
+### 🎨 UI/UX Improvements
+
+- **Cash Overview Redesign (#10)**
+  - Redesigned cash overview section for better space efficiency
+  - New minimal single-row horizontal layout with vertical dividers
+  - Icons and labels now on same line for compact mobile experience
+  - Reduced vertical space by ~70% while maintaining readability
+  - Color coding: Green for Income, Red for Expenses, Dark Grey for Remaining/In Bank
+  - Inspired by Reports tab summary section design
+  - Files: `app/(tabs)/index.tsx`
+
 ## [1.5.0] - 2025-10-26
 
 ### 🐛 Fixed
