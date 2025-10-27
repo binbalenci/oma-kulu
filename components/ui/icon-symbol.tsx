@@ -20,6 +20,7 @@ const MAPPING = {
   "chevron.right": "chevron-right",
   "list.bullet": "list",
   "square.grid.2x2": "grid-view",
+  "chart.bar.fill": "bar-chart",
 } as IconMapping;
 
 /**
