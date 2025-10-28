@@ -15,7 +15,6 @@ import {
   loadCategories,
   loadIncomes,
   loadInvoices,
-  loadSettings,
   loadTransactions,
   saveBudget,
   saveIncome,
@@ -29,7 +28,7 @@ import { addMonths, endOfMonth, format, startOfMonth } from "date-fns";
 import * as Crypto from "expo-crypto";
 import { useFocusEffect } from "expo-router";
 import React from "react";
-import { ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
+import { RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import { Button, Card, Checkbox, IconButton, Text, TextInput } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -67,7 +66,6 @@ export default function HomeScreen() {
   const [budgets, setBudgets] = React.useState<Budget[]>([]);
   const [transactions, setTransactions] = React.useState<Transaction[]>([]);
   const [categories, setCategories] = React.useState<Category[]>([]);
-  const [settings, setSettings] = React.useState({ starting_balance: 0 });
 
   // UI states
   const [dialogVisible, setDialogVisible] = React.useState(false);
@@ -91,6 +89,9 @@ export default function HomeScreen() {
   const [confirmDialogVisible, setConfirmDialogVisible] = React.useState(false);
   const [itemToDelete, setItemToDelete] = React.useState<{ id: string; type: string } | null>(null);
 
+  // Pull-to-refresh state
+  const [refreshing, setRefreshing] = React.useState(false);
+
   // Load data on mount
   React.useEffect(() => {
     (async () => {
@@ -98,13 +99,12 @@ export default function HomeScreen() {
       const startTime = Date.now();
       
       try {
-        const [incms, invcs, bdgts, txs, cats, sttngs] = await Promise.all([
+        const [incms, invcs, bdgts, txs, cats] = await Promise.all([
           loadIncomes(),
           loadInvoices(),
           loadBudgets(),
           loadTransactions(),
           loadCategories(),
-          loadSettings(),
         ]);
         
         setIncomes(incms);
@@ -112,9 +112,6 @@ export default function HomeScreen() {
         setBudgets(bdgts);
         setTransactions(txs);
         setCategories(cats);
-        setSettings({
-          starting_balance: sttngs.starting_balance || 0,
-        });
         
         const duration = Date.now() - startTime;
         logger.dataAction("load_budget_data", { 
@@ -160,6 +157,41 @@ export default function HomeScreen() {
       })();
     }, [])
   );
+
+  // Pull-to-refresh handler
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    logger.breadcrumb("Pull-to-refresh triggered", "data_refresh");
+    
+    try {
+      const [cats, txs, incms, invcs, bdgts] = await Promise.all([
+        loadCategories(), 
+        loadTransactions(),
+        loadIncomes(),
+        loadInvoices(),
+        loadBudgets()
+      ]);
+      
+      setCategories(cats);
+      setTransactions(txs);
+      setIncomes(incms);
+      setInvoices(invcs);
+      setBudgets(bdgts);
+      
+      logger.dataAction("pull_to_refresh", { 
+        categoriesCount: cats.length,
+        transactionsCount: txs.length,
+        incomesCount: incms.length,
+        invoicesCount: invcs.length,
+        budgetsCount: bdgts.length
+      });
+    } catch (error) {
+      logger.error(error as Error, { operation: "pull_to_refresh" });
+      showSnackbar("Failed to refresh data");
+    } finally {
+      setRefreshing(false);
+    }
+  }, [showSnackbar]);
 
   const curMonth = monthKey(currentMonth);
   const monthStart = startOfMonth(currentMonth);
@@ -679,7 +711,13 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.content} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         {/* Cash Overview - Compact with Dividers */}
         <View style={styles.overviewCompact}>
           {/* Expected Income */}

@@ -22,7 +22,7 @@ import { endOfMonth, format, startOfMonth } from "date-fns";
 import * as Crypto from "expo-crypto";
 import { useFocusEffect } from "expo-router";
 import React from "react";
-import { FlatList, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
+import { FlatList, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import { Card, Chip, FAB, IconButton, Searchbar, Text, TextInput } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -75,6 +75,9 @@ export default function TransactionsScreen() {
   const [pendingDialogVisible, setPendingDialogVisible] = React.useState(false);
   const [itemToPending, setItemToPending] = React.useState<{ id: string; transaction: Transaction } | null>(null);
 
+  // Pull-to-refresh state
+  const [refreshing, setRefreshing] = React.useState(false);
+
   // Load data when screen gains focus
   useFocusEffect(
     React.useCallback(() => {
@@ -92,6 +95,38 @@ export default function TransactionsScreen() {
       })();
     }, [])
   );
+
+  // Pull-to-refresh handler
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    logger.breadcrumb("Pull-to-refresh triggered", "data_refresh");
+    
+    try {
+      const [txs, incms, invcs, cats] = await Promise.all([
+        loadTransactions(),
+        loadIncomes(),
+        loadInvoices(),
+        loadCategories(),
+      ]);
+      
+      setTransactions(txs);
+      setIncomes(incms);
+      setInvoices(invcs);
+      setCategories(cats);
+      
+      logger.dataAction("pull_to_refresh", { 
+        transactionsCount: txs.length,
+        incomesCount: incms.length,
+        invoicesCount: invcs.length,
+        categoriesCount: cats.length
+      });
+    } catch (error) {
+      logger.error(error as Error, { operation: "pull_to_refresh" });
+      showSnackbar("Failed to refresh data");
+    } finally {
+      setRefreshing(false);
+    }
+  }, [showSnackbar]);
 
   // Filter by current month
   const currentMonthKey = format(currentMonth, "yyyy-MM");
@@ -439,7 +474,13 @@ export default function TransactionsScreen() {
         </View>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.content} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         {/* Search and Filters */}
         <View style={styles.searchSection}>
           <Searchbar
