@@ -1,5 +1,6 @@
 import { AppTheme } from "@/constants/AppTheme";
 import { hasPasscode, setPasscode, verifyPasscode } from "@/lib/passcode";
+import { createSession } from "@/lib/session";
 import Constants from "expo-constants";
 import { Platform } from "expo-modules-core";
 import React from "react";
@@ -46,11 +47,18 @@ export default function PasscodeGate({ onUnlocked }: Props) {
           return;
         }
         await setPasscode(pin);
+        // Create session after successful passcode setup
+        await createSession();
         onUnlocked();
       } else {
         const ok = await verifyPasscode(pin);
-        if (ok) onUnlocked();
-        else setError("Incorrect passcode");
+        if (ok) {
+          // Create session after successful passcode verification
+          await createSession();
+          onUnlocked();
+        } else {
+          setError("Incorrect passcode");
+        }
       }
     } finally {
       setLoading(false);

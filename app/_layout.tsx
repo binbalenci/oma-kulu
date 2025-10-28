@@ -12,6 +12,7 @@ import PasscodeGate from "@/components/passcode-gate";
 import { SnackbarProvider } from "@/components/snackbar-provider";
 import { AppTheme } from "@/constants/AppTheme";
 import { MonthProvider } from "@/lib/month-context";
+import { isSessionValid } from "@/lib/session";
 
 // Initialize Sentry
 Sentry.init({
@@ -31,6 +32,35 @@ export const unstable_settings = {
 
 function RootLayoutComponent() {
   const [unlocked, setUnlocked] = React.useState(false);
+  const [isCheckingSession, setIsCheckingSession] = React.useState(true);
+
+  // Check for valid session on app startup
+  React.useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const hasValidSession = await isSessionValid();
+        if (hasValidSession) {
+          logger.breadcrumb("Valid session found, skipping passcode gate", "session");
+          setUnlocked(true);
+        } else {
+          logger.breadcrumb("No valid session found, showing passcode gate", "session");
+          setUnlocked(false);
+        }
+      } catch (error) {
+        logger.error(error as Error, { operation: "check_session" });
+        setUnlocked(false);
+      } finally {
+        setIsCheckingSession(false);
+      }
+    };
+
+    checkSession();
+  }, []);
+
+  // Show loading state while checking session
+  if (isCheckingSession) {
+    return null; // Or you could show a loading spinner here
+  }
 
   return (
     <SafeAreaProvider>
