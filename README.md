@@ -2,30 +2,26 @@
 
 A beautiful, Apple-standard personal finance management app built with React Native and Expo.
 
-> **Version 1.2.0** - Comprehensive error monitoring and logging with Sentry integration
+> **Version 2.1.0** - Enhanced UX with session management and pull-to-refresh
 
-## 🆕 What's New in 1.2.0
+## 🆕 What's New in 2.1.0
 
-### 🔍 Error Monitoring & Logging
-- **Sentry Integration**: Comprehensive error tracking and performance monitoring
-- **User Journey Tracking**: Complete breadcrumb trail of user interactions
-- **Database Health Monitoring**: Success/failure tracking for all data operations
-- **Performance Analytics**: Automatic detection of slow operations (>3s)
-- **Structured Logging**: Contextual error reporting with operation details
-- **Real-time Alerts**: Instant notification of critical errors and issues
+### 🔐 Session Management
+- **24-Hour Sessions**: No need to re-enter passcode on every app restart
+- **Automatic Validation**: Seamless session checking on app startup
+- **Cross-Platform**: Works on iOS, Android, and Web
+- **Smart Cleanup**: Automatic session expiration and cleanup
 
-### 🛠️ Developer Experience
-- **Comprehensive Logger**: Centralized logging utility with multiple log levels
-- **Error Context**: Rich error information for faster debugging
-- **User Action Tracking**: Detailed tracking of all user interactions
-- **Navigation Monitoring**: Screen navigation and user flow analytics
-- **Production Ready**: Full error monitoring without test code
+### 🔄 Pull-to-Refresh
+- **Universal Refresh**: Pull-to-refresh on all tabs (Home, Transactions, Reports, Categories)
+- **Native Indicators**: Smooth refresh animations with visual feedback
+- **Smart Data Loading**: Each tab refreshes only its relevant data
+- **Error Handling**: User-friendly error messages for failed refreshes
 
-### 🔧 Technical Improvements
-- **Custom Components**: SimpleDropdown with proper scrolling
-- **Code Quality**: Zero TypeScript/ESLint errors
-- **Database Ready**: Emoji field support (requires schema update)
-- **Performance**: Optimized animations and rendering
+### 🔧 Bug Fixes
+- **"In Bank" Calculation**: Fixed to show accurate current month balance
+- **Month Filtering**: Proper filtering of paid transactions only
+- **Code Cleanup**: Removed unused settings loading and improved maintainability
 
 ## ✨ Features
 
@@ -36,6 +32,7 @@ A beautiful, Apple-standard personal finance management app built with React Nat
 - **Expected Incomes & Invoices**: Grouped by category with expandable sections
 - **Smart Budgets**: Gradient progress bars showing spending vs allocated amounts
 - **Quick Copy**: Copy previous month's setup for easy planning
+- **Pull-to-Refresh**: Swipe down to refresh all data
 
 ### 💳 Transactions
 
@@ -44,6 +41,15 @@ A beautiful, Apple-standard personal finance management app built with React Nat
 - **Visual Indicators**: Color-coded amounts (green for income, red for expenses)
 - **Smart Filtering**: Month-specific upcoming items
 - **Easy Entry**: Streamlined transaction creation
+- **Pull-to-Refresh**: Swipe down to refresh transaction data
+
+### 📊 Reports
+
+- **Spending Analysis**: Monthly category breakdown with visual progress indicators
+- **Budget Tracking**: Color-coded progress bars showing budget status
+- **Summary Stats**: Total categories, spending, and budget information
+- **Month Navigation**: Integrated with shared month context
+- **Pull-to-Refresh**: Swipe down to refresh spending data
 
 ### 🏷️ Categories
 
@@ -51,6 +57,7 @@ A beautiful, Apple-standard personal finance management app built with React Nat
 - **Dual Management**: Separate sections for Income and Expense categories
 - **Visual Design**: Custom colors and emojis for each category
 - **Smart Controls**: Toggle visibility and budget eligibility
+- **Pull-to-Refresh**: Swipe down to refresh category data
 - **Drag & Drop**: Reorder categories for personal preference
 
 ## 🎨 Design Philosophy

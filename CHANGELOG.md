@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2025-01-28
+
+### ✨ Added
+
+- **Session Management for Passcode Gate**
+  - 24-hour session persistence to avoid re-entering passcode on every app restart
+  - Automatic session validation on app startup
+  - Session creation after successful passcode verification
+  - Cross-platform support (iOS, Android, Web) using AsyncStorage
+  - Automatic session cleanup when expired
+  - Files: `lib/session.ts`, `app/_layout.tsx`, `components/passcode-gate.tsx`
+
+- **Pull-to-Refresh Functionality**
+  - Added pull-to-refresh to all tabs (Home, Transactions, Reports, Categories)
+  - Native refresh indicators with smooth animations
+  - Comprehensive data reloading for each tab's specific content
+  - Error handling with user feedback via snackbar
+  - Consistent UX pattern across all tabs
+  - Files: `app/(tabs)/index.tsx`, `app/(tabs)/transactions.tsx`, `app/(tabs)/reports.tsx`, `app/(tabs)/categories.tsx`
+
+### 🔧 Fixed
+
+- **"In Bank" Calculation Accuracy (#3)**
+  - Fixed calculation to only include transactions from the selected month
+  - Added status filtering to exclude "upcoming" transactions (only include "paid")
+  - Properly separated income (positive amounts) and expenses (negative amounts)
+  - Removed unnecessary starting balance since it defaults to 0
+  - New calculation: `totalIncome - totalExpenses` for current month paid transactions only
+  - Files: `app/(tabs)/index.tsx` (lines 204-219)
+
+### 🧹 Code Quality
+
+- **Removed Unused Settings Loading**
+  - Cleaned up unused `loadSettings` import and calls in Home tab
+  - Removed hardcoded starting balance state since it's always 0
+  - Improved code maintainability and reduced bundle size
+  - Files: `app/(tabs)/index.tsx`
+
 ## [2.0.0] - 2025-01-28
 
 ### ✨ Added
