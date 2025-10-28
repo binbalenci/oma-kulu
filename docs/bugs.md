@@ -22,11 +22,17 @@ This document tracks all identified issues, categorized by type with analysis, r
 - **Files Modified**: `app/(tabs)/transactions.tsx` (lines 19, 34-50, 77-78, 86-94), `app/(tabs)/index.tsx` (lines 44-62)
 - **Priority**: HIGH - Core feature not working
 
-### 3. "In Bank" Calculation Verification
-- [ ] **Issue**: "In bank" amount might not match actual bank balance
-- **Root Cause**: Calculation uses all transactions: `settings.starting_balance + transactions.reduce((sum, t) => sum + t.amount, 0)`
-- **Location**: `app/(tabs)/index.tsx:156-157`
-- **Hypothesis**: Logic issue - may need to exclude certain transaction types or add date filtering
+### 3. "In Bank" Calculation Verification ✅ FIXED
+- [x] **Issue**: "In bank" amount might not match actual bank balance
+- **Root Cause**: Calculation used all transactions from all months and included "upcoming" transactions: `settings.starting_balance + transactions.reduce((sum, t) => sum + t.amount, 0)`
+- **Location**: `app/(tabs)/index.tsx:204-205`
+- **Solution**: 
+  - Fixed calculation to only include transactions from the selected month
+  - Added status filtering to exclude "upcoming" transactions (only include "paid")
+  - Properly separated income (positive amounts) and expenses (negative amounts)
+  - Removed starting balance since it defaults to 0 and has no UI
+  - New calculation: `totalIncome - totalExpenses` for current month paid transactions only
+- **Files Modified**: `app/(tabs)/index.tsx` (lines 204-219)
 - **Priority**: MEDIUM - Financial accuracy concern
 
 ### 4. Category Updates Don't Reflect in Transactions ✅ FIXED
@@ -314,5 +320,5 @@ This document tracks all identified issues, categorized by type with analysis, r
 
 *Last Updated: $(date)*
 *Total Issues: 20*
-*Critical: 4 | High: 9 | Medium: 4 | Low: 3*
+*Critical: 3 | High: 9 | Medium: 3 | Low: 3*
 

@@ -201,8 +201,22 @@ export default function HomeScreen() {
   const expectedExpenses = currentInvoices.reduce((sum, i) => sum + i.amount, 0);
   const totalAllocated = currentBudgets.reduce((sum, b) => sum + b.allocated_amount, 0);
   const moneyToAssign = expectedIncome - expectedExpenses - totalAllocated;
-  const actualInBank =
-    settings.starting_balance + transactions.reduce((sum, t) => sum + t.amount, 0);
+  
+  // Calculate actual "In Bank" amount for current month (only paid transactions)
+  const monthTransactions = transactions.filter((t) => {
+    const d = new Date(t.date + "T00:00:00");
+    return d >= monthStart && d <= monthEnd && t.status === "paid";
+  });
+  
+  const totalIncome = monthTransactions
+    .filter(t => t.amount > 0)
+    .reduce((sum, t) => sum + t.amount, 0);
+  
+  const totalExpenses = monthTransactions
+    .filter(t => t.amount < 0)
+    .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+  
+  const actualInBank = totalIncome - totalExpenses;
 
   // Check if all sections are empty
   const allEmpty =
