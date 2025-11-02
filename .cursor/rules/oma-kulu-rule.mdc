@@ -172,8 +172,10 @@ logger.breadcrumb("User marked income as paid", "user_action", { itemId });
 - Month key format: `format(date, "yyyy-MM")`
 - Always filter budgets by current month: `budgets.filter((b) => b.month === curMonth)`
 - Calculate "Money to assign": `expectedIncome - expectedExpenses - totalAllocated`
-- Calculate "Actual in bank": `totalIncome - totalExpenses` (only paid transactions for current month)
-- Filter transactions by month and status: only include `status === 'paid'` transactions
+  - Includes ALL invoices/incomes for the month (paid or unpaid) - represents remaining money to allocate
+- Calculate "Actual in bank": `totalIncome - totalExpenses` 
+  - Only includes paid transactions from current month with date <= today (excludes future-dated transactions)
+  - Filters: `status === 'paid'` AND `date >= monthStart` AND `date <= monthEnd` AND `date <= today`
 
 ### Transactions
 

@@ -234,10 +234,13 @@ export default function HomeScreen() {
   const totalAllocated = currentBudgets.reduce((sum, b) => sum + b.allocated_amount, 0);
   const moneyToAssign = expectedIncome - expectedExpenses - totalAllocated;
   
-  // Calculate actual "In Bank" amount for current month (only paid transactions)
+  // Calculate actual "In Bank" amount for current month (only paid transactions up to today)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
   const monthTransactions = transactions.filter((t) => {
     const d = new Date(t.date + "T00:00:00");
-    return d >= monthStart && d <= monthEnd && t.status === "paid";
+    return d >= monthStart && d <= monthEnd && d <= today && t.status === "paid";
   });
   
   const totalIncome = monthTransactions
