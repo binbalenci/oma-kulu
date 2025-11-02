@@ -1,5 +1,5 @@
 ---
-alwaysApply: false
+alwaysApply: true
 ---
 # Oma Kulu - Cursor Development Rules
 
@@ -54,16 +54,50 @@ const handleSave = () => {
 
 ### Data Storage
 
-- Use existing storage functions in `lib/storage.ts`
-- Always save data after state updates using `useEffect`
-- Load data on component mount with proper error handling
+- **Database:** Use Supabase (PostgreSQL) via `lib/database.ts` for all data operations
+- **Compatibility Layer:** `lib/storage.ts` re-exports database functions for backward compatibility - import from either file
+- All data operations are **async** - use async/await or Promise.all for multiple operations
+- Load data on component mount and when month changes (if month-dependent)
+- Save data immediately after state updates using async functions
 
 **Pattern:**
 
 ```typescript
+// Load data on mount/focus
 React.useEffect(() => {
-  saveTransactions(transactions);
-}, [transactions]);
+  (async () => {
+    const [incomes, invoices, budgets] = await Promise.all([
+      loadIncomes(monthKey),
+      loadInvoices(monthKey),
+      loadBudgets(monthKey),
+    ]);
+    setIncomes(incomes);
+    setInvoices(invoices);
+    setBudgets(budgets);
+  })();
+}, [monthKey]);
+
+// Save data after updates
+const handleSave = async () => {
+  const success = await saveIncome(income);
+  if (success) {
+    showSnackbar("Income saved!");
+  }
+};
+```
+
+### Month Context
+
+- Use `MonthProvider` and `useMonth()` hook for synchronized month state across tabs
+- Import: `import { useMonth } from "@/lib/month-context";`
+- All tabs (Home, Transactions, Reports) share the same month state
+- Month changes in one tab automatically sync to others
+
+**Pattern:**
+
+```typescript
+const { currentMonth, setCurrentMonth } = useMonth();
+const monthKey = format(currentMonth, "yyyy-MM");
 ```
 
 ### Navigation
@@ -71,7 +105,7 @@ React.useEffect(() => {
 - Use `expo-router` for navigation
 - Import: `import { useRouter } from "expo-router";`
 - Navigate: `router.push("/(tabs)/categories");`
-- Tab structure: Budget (default), Transactions, Categories
+- **Tab structure:** Home (default), Transactions, Reports, Categories
 
 ### UI Components
 
@@ -86,6 +120,47 @@ React.useEffect(() => {
 - Keep state as close to where it's used as possible
 - Use `React.useCallback` for functions passed as props
 - Use `React.useMemo` for expensive computations
+- Use `useMonth()` hook for month state synchronization across tabs
+
+### Logging & Monitoring
+
+- **Always use the Logger utility** for all logging operations
+- Import: `import logger from "@/app/utils/logger";`
+- Logger integrates with Sentry for error tracking and monitoring
+
+**Logger Methods:**
+
+```typescript
+// Error logging
+logger.error(error, { operation: "save_income", data });
+
+// Navigation tracking
+logger.navigationAction("BudgetScreen", { month: currentMonth });
+
+// User actions
+logger.userAction("mark_paid", { itemId: "123", type: "income" });
+
+// Data operations
+logger.dataAction("load_budgets", { month: "2025-01" });
+
+// Database operations
+logger.databaseError(error, "saveIncome", { income });
+logger.databaseSuccess("saveIncome", { incomeId: "123" });
+
+// Performance warnings
+logger.performanceWarning("loadTransactions", duration, 3000);
+
+// Breadcrumbs for user journey
+logger.breadcrumb("User marked income as paid", "user_action", { itemId });
+```
+
+**Best Practices:**
+
+- Log navigation on every screen load
+- Log user interactions for key actions
+- Log database operations (success and errors)
+- Use structured context objects for all logs
+- Performance warnings automatically trigger for operations > 3 seconds
 
 ---
 
@@ -97,7 +172,8 @@ React.useEffect(() => {
 - Month key format: `format(date, "yyyy-MM")`
 - Always filter budgets by current month: `budgets.filter((b) => b.month === curMonth)`
 - Calculate "Money to assign": `expectedIncome - expectedExpenses - totalAllocated`
-- Calculate "Actual in bank": `startingBalance + sum(all transactions)`
+- Calculate "Actual in bank": `totalIncome - totalExpenses` (only paid transactions for current month)
+- Filter transactions by month and status: only include `status === 'paid'` transactions
 
 ### Transactions
 
@@ -130,19 +206,30 @@ const getProgressColor = (ratio: number) => {
 
 ```
 app/
-  ├── (tabs)/           # Tab screens (budgets, transactions, categories)
+  ├── (tabs)/           # Tab screens (index=Home, transactions, reports, categories)
+  │   ├── _layout.tsx  # Tab layout configuration
+  │   ├── index.tsx     # Home/Budget screen
+  │   ├── transactions.tsx
+  │   ├── reports.tsx
+  │   └── categories.tsx
   ├── _layout.tsx       # Root layout with providers
-  └── modal.tsx         # Modal screens
+  ├── modal.tsx         # Modal screens
+  └── utils/
+      └── logger.ts     # Logger utility (Sentry integration)
 
 components/
   ├── snackbar-provider.tsx  # Global snackbar context
-  ├── passcode-gate.tsx      # Authentication
+  ├── passcode-gate.tsx      # Authentication with session management
   └── ui/                    # Reusable UI components
 
 lib/
-  ├── storage.ts        # AsyncStorage helpers
+  ├── database.ts       # Supabase database operations (PRIMARY)
+  ├── storage.ts        # Compatibility layer (re-exports database functions)
   ├── types.ts          # TypeScript interfaces
-  └── supabase.ts       # Database client
+  ├── supabase.ts       # Supabase client configuration
+  ├── month-context.tsx # Month state provider for tab synchronization
+  ├── session.ts        # Passcode session management (24-hour persistence)
+  └── passcode.ts       # Passcode hashing utilities
 
 docs/
   ├── APP_SPEC.md       # Feature specifications
@@ -186,17 +273,52 @@ docs/
 ### Adding a New Type
 
 1. Add interface to `lib/types.ts`
-2. Create storage helpers in `lib/storage.ts`
-3. Follow naming convention: `load*` and `save*` functions
-4. Use AsyncStorage keys: `storage_*_v1`
+2. Create database functions in `lib/database.ts`:
+   - `load*` function: async function that queries Supabase
+   - `save*` function: async function that upserts to Supabase
+   - `delete*` function: async function that deletes from Supabase
+3. Follow naming convention: `load*`, `save*`, `delete*` functions
+4. Export functions from `lib/database.ts`
+5. Re-export in `lib/storage.ts` for backward compatibility
+6. Handle errors gracefully: return empty arrays/defaults on error
+7. Log operations using `logger.databaseSuccess()` and `logger.databaseError()`
 
 ### Creating a New Screen
 
 1. Add file to `app/(tabs)/` for tab screens
-2. Register in `app/(tabs)/_layout.tsx` if it's a tab
+2. Register in `app/(tabs)/_layout.tsx` if it's a tab (set title, icon, etc.)
 3. Use `useTheme()` for consistent styling
 4. Import and use `useSnackbar()` for notifications
-5. Follow existing screen structure (state, effects, render)
+5. Use `useMonth()` hook if the screen needs month synchronization
+6. Log navigation: `logger.navigationAction("ScreenName", { data })` in `useFocusEffect` or `useEffect`
+7. Implement pull-to-refresh using `RefreshControl` for data reloading
+8. Follow existing screen structure: state, effects (load data), render
+9. Load data on mount and when month changes (if applicable)
+
+**Example:**
+
+```typescript
+export default function MyScreen() {
+  const { currentMonth } = useMonth();
+  const { showSnackbar } = useSnackbar();
+  const [data, setData] = React.useState([]);
+  const [refreshing, setRefreshing] = React.useState(false);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      logger.navigationAction("MyScreen", { month: currentMonth });
+      loadData();
+    }, [currentMonth])
+  );
+
+  const loadData = async () => {
+    const result = await loadMyData();
+    setData(result);
+  };
+
+  // ... render
+}
+```
 
 ---
 
@@ -208,9 +330,12 @@ Before completing any task:
 - [ ] All TypeScript types are properly defined
 - [ ] User feedback is provided via Snackbar where appropriate
 - [ ] Data persists correctly across app restarts
-- [ ] Navigation works as expected
+- [ ] Navigation works as expected (including month synchronization)
 - [ ] UI is consistent with existing screens
 - [ ] Code follows existing patterns
+- [ ] Logger is used for navigation, user actions, and database operations
+- [ ] Async database operations are properly handled with error cases
+- [ ] Month context is used when screens display month-specific data
 
 ---
 
@@ -259,6 +384,29 @@ format(date, "yyyy-MM-dd"); // "2025-01-15"
 theme.colors.primary;
 theme.colors.error;
 theme.colors.secondary;
+```
+
+**Use Month Context:**
+
+```typescript
+const { currentMonth, setCurrentMonth } = useMonth();
+const monthKey = format(currentMonth, "yyyy-MM");
+```
+
+**Log operations:**
+
+```typescript
+logger.navigationAction("ScreenName", { month });
+logger.userAction("action_name", { data });
+logger.databaseSuccess("operation", { context });
+logger.error(error, { operation: "operation_name" });
+```
+
+**Load data from database:**
+
+```typescript
+const data = await loadBudgets(monthKey);
+const success = await saveBudget(budget);
 ```
 
 ---
