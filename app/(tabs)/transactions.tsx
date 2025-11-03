@@ -22,7 +22,7 @@ import { endOfMonth, format, startOfMonth } from "date-fns";
 import * as Crypto from "expo-crypto";
 import { useFocusEffect } from "expo-router";
 import React from "react";
-import { FlatList, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
+import { RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import { Card, Chip, FAB, IconButton, Searchbar, Text, TextInput } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -51,7 +51,9 @@ export default function TransactionsScreen() {
     })();
   }, [currentMonth]);
   const [categories, setCategories] = React.useState<Category[]>([]);
-  const [upcomingExpanded, setUpcomingExpanded] = React.useState(true);
+  const [upcomingExpanded, setUpcomingExpanded] = React.useState(false);
+  const [incomeExpanded, setIncomeExpanded] = React.useState(false);
+  const [expenseExpanded, setExpenseExpanded] = React.useState(true);
 
   // Search and filter states
   const [searchQuery, setSearchQuery] = React.useState("");
@@ -580,12 +582,15 @@ export default function TransactionsScreen() {
           </View>
         )}
 
-        {/* Income Section */}
-        <View style={styles.section}>
+        {/* Incomes Section */}
+        <TouchableOpacity
+          onPress={() => setIncomeExpanded(!incomeExpanded)}
+          style={styles.sectionHeader}
+        >
           <View style={styles.sectionTitle}>
             <Ionicons name="trending-up" size={24} color={AppTheme.colors.success} />
             <Text variant="headlineSmall" style={styles.sectionTitleText}>
-              Income
+              Incomes
             </Text>
             {incomeTransactions.length > 0 && (
               <Chip
@@ -598,31 +603,41 @@ export default function TransactionsScreen() {
               </Chip>
             )}
           </View>
+          <Ionicons
+            name={incomeExpanded ? "chevron-up" : "chevron-down"}
+            size={20}
+            color={AppTheme.colors.textSecondary}
+          />
+        </TouchableOpacity>
 
-          {incomeTransactions.length === 0 ? (
-            <Card style={styles.emptyCard}>
-              <Card.Content style={styles.emptyContent}>
-                <Ionicons name="trending-up" size={48} color={AppTheme.colors.textMuted} />
-                <Text variant="bodyLarge" style={styles.emptyText}>
-                  {searchQuery || selectedCategory
-                    ? "No income transactions match your filters"
-                    : "No income transactions yet"}
-                </Text>
-              </Card.Content>
-            </Card>
-          ) : (
-            <FlatList
-              data={incomeTransactions}
-              keyExtractor={(item) => item.id}
-              renderItem={renderTransactionItem}
-              scrollEnabled={false}
-              style={styles.transactionList}
-            />
-          )}
-        </View>
+        {incomeExpanded && (
+          <View style={styles.transactionSection}>
+            {incomeTransactions.length === 0 ? (
+              <Card style={styles.emptyCard}>
+                <Card.Content style={styles.emptyContent}>
+                  <Ionicons name="trending-up" size={48} color={AppTheme.colors.textMuted} />
+                  <Text variant="bodyLarge" style={styles.emptyText}>
+                    {searchQuery || selectedCategory
+                      ? "No income transactions match your filters"
+                      : "No income transactions yet"}
+                  </Text>
+                </Card.Content>
+              </Card>
+            ) : (
+              <View style={styles.transactionList}>
+                {incomeTransactions.map((item) => (
+                  <View key={item.id}>{renderTransactionItem({ item })}</View>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
 
         {/* Expenses Section */}
-        <View style={styles.section}>
+        <TouchableOpacity
+          onPress={() => setExpenseExpanded(!expenseExpanded)}
+          style={styles.sectionHeader}
+        >
           <View style={styles.sectionTitle}>
             <Ionicons name="trending-down" size={24} color={AppTheme.colors.error} />
             <Text variant="headlineSmall" style={styles.sectionTitleText}>
@@ -639,28 +654,35 @@ export default function TransactionsScreen() {
               </Chip>
             )}
           </View>
+          <Ionicons
+            name={expenseExpanded ? "chevron-up" : "chevron-down"}
+            size={20}
+            color={AppTheme.colors.textSecondary}
+          />
+        </TouchableOpacity>
 
-          {expenseTransactions.length === 0 ? (
-            <Card style={styles.emptyCard}>
-              <Card.Content style={styles.emptyContent}>
-                <Ionicons name="trending-down" size={48} color={AppTheme.colors.textMuted} />
-                <Text variant="bodyLarge" style={styles.emptyText}>
-                  {searchQuery || selectedCategory
-                    ? "No expense transactions match your filters"
-                    : "No expense transactions yet"}
-                </Text>
-              </Card.Content>
-            </Card>
-          ) : (
-            <FlatList
-              data={expenseTransactions}
-              keyExtractor={(item) => item.id}
-              renderItem={renderTransactionItem}
-              scrollEnabled={false}
-              style={styles.transactionList}
-            />
-          )}
-        </View>
+        {expenseExpanded && (
+          <View style={styles.transactionSection}>
+            {expenseTransactions.length === 0 ? (
+              <Card style={styles.emptyCard}>
+                <Card.Content style={styles.emptyContent}>
+                  <Ionicons name="trending-down" size={48} color={AppTheme.colors.textMuted} />
+                  <Text variant="bodyLarge" style={styles.emptyText}>
+                    {searchQuery || selectedCategory
+                      ? "No expense transactions match your filters"
+                      : "No expense transactions yet"}
+                  </Text>
+                </Card.Content>
+              </Card>
+            ) : (
+              <View style={styles.transactionList}>
+                {expenseTransactions.map((item) => (
+                  <View key={item.id}>{renderTransactionItem({ item })}</View>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
       </ScrollView>
 
       <FAB
@@ -854,7 +876,10 @@ const styles = StyleSheet.create({
     marginBottom: AppTheme.spacing.xl,
   },
   upcomingList: {
-    gap: AppTheme.spacing.sm,
+    gap: AppTheme.spacing.md,
+  },
+  transactionSection: {
+    marginBottom: AppTheme.spacing.xl,
   },
   upcomingCard: {
     ...AppTheme.shadows.sm,
@@ -894,7 +919,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   transactionList: {
-    gap: AppTheme.spacing.sm,
+    gap: AppTheme.spacing.md,
   },
   transactionCard: {
     ...AppTheme.shadows.sm,
