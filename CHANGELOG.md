@@ -5,6 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2025-01-29
+
+### 🔧 Fixed
+
+- **"In Bank" Calculation with Future-Dated Transactions**
+  - Fixed calculation to exclude future-dated transactions from "In Bank" amount
+  - Only includes transactions with date <= today, even if marked as "paid"
+  - Prevents future payments from affecting current bank balance calculation
+  - Files: `app/(tabs)/index.tsx`
+
+### 🎨 UI/UX Improvements
+
+- **Transactions Tab Section Consistency**
+  - Unified spacing and layout structure across all sections (Upcoming, Incomes, Expenses)
+  - Consistent spacing between section headers and transaction items
+  - Matching gap spacing between transaction cards across all sections
+  - Improved visual hierarchy with proper white space
+
+- **Collapsible Sections in Transactions Tab**
+  - Made Incomes and Expenses sections collapsible like Upcoming section
+  - All sections now have chevron icons indicating expand/collapse state
+  - Default states: Upcoming and Incomes collapsed, Expenses expanded
+  - Better organization and reduced visual clutter
+
+- **Naming Consistency**
+  - Renamed "Income" section header to "Incomes" for plural consistency
+  - Matches naming pattern used in other parts of the app
+
+### 📚 Documentation
+
+- **Updated Development Rules**
+  - Comprehensive update to `.cursor/rules/oma-kulu-rule.mdc` to reflect current implementation
+  - Added documentation for Month Context, Logger system, and Supabase database patterns
+  - Updated file organization and technical patterns
+  - Clarified "Money to assign" and "Actual in bank" calculation formulas
+
 ## [2.1.0] - 2025-01-28
 
 ### ✨ Added
