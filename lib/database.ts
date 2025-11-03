@@ -5,6 +5,7 @@ import type {
   Category,
   ExpectedIncome,
   ExpectedInvoice,
+  ExpectedSavings,
   Transaction,
 } from "./types";
 
@@ -403,6 +404,179 @@ export async function saveSettings(settings: AppSettings): Promise<boolean> {
   } catch (error) {
     console.error("Error saving settings:", error);
     return false;
+  }
+}
+
+// ============================================================================
+// Expected Savings
+// ============================================================================
+
+export async function loadSavings(month?: string): Promise<ExpectedSavings[]> {
+  try {
+    let query = supabase.from("expected_savings").select("*").order("created_at", { ascending: false });
+
+    if (month) {
+      query = query.eq("month", month);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error("Error loading savings:", error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error("Error loading savings:", error);
+    return [];
+  }
+}
+
+export async function saveSavings(savings: ExpectedSavings): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from("expected_savings")
+      .upsert(savings, { onConflict: "id" });
+
+    if (error) {
+      console.error("Error saving savings:", error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Error saving savings:", error);
+    return false;
+  }
+}
+
+export async function deleteSavings(id: string): Promise<boolean> {
+  try {
+    const { error } = await supabase.from("expected_savings").delete().eq("id", id);
+
+    if (error) {
+      console.error("Error deleting savings:", error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Error deleting savings:", error);
+    return false;
+  }
+}
+
+export async function getSavingsBalance(category: string): Promise<number> {
+  try {
+    // Load all transactions to calculate balance
+    const { data: transactions, error } = await supabase
+      .from("transactions")
+      .select("*")
+      .order("date", { ascending: false });
+
+    if (error) {
+      console.error("Error loading transactions for savings balance:", error);
+      return 0;
+    }
+
+    if (!transactions) {
+      return 0;
+    }
+
+    // Calculate contributions: transactions where source_type = 'savings' and category matches
+    const contributions = transactions
+      .filter((t) => t.source_type === "savings" && t.category === category)
+      .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+
+    // Calculate payments: transactions where uses_savings_category matches and savings_amount_used > 0
+    const payments = transactions
+      .filter((t) => t.uses_savings_category === category && (t.savings_amount_used || 0) > 0)
+      .reduce((sum, t) => sum + (t.savings_amount_used || 0), 0);
+
+    // Balance = contributions - payments, capped at 0
+    const balance = Math.max(0, contributions - payments);
+    return balance;
+  } catch (error) {
+    console.error("Error calculating savings balance:", error);
+    return 0;
+  }
+}
+
+export async function getActiveSavingsCategories(): Promise<
+  Array<{ category: string; balance: number; target?: number }>
+> {
+  try {
+    // Load all savings categories
+    const { data: categories, error: categoriesError } = await supabase
+      .from("categories")
+      .select("name")
+      .eq("type", "saving");
+
+    if (categoriesError || !categories) {
+      console.error("Error loading savings categories:", categoriesError);
+      return [];
+    }
+
+    // Load all transactions
+    const { data: transactions, error: transactionsError } = await supabase
+      .from("transactions")
+      .select("*");
+
+    if (transactionsError) {
+      console.error("Error loading transactions for active savings:", transactionsError);
+      return [];
+    }
+
+    // Load latest target for each category from expected_savings
+    const { data: savingsItems, error: savingsError } = await supabase
+      .from("expected_savings")
+      .select("category, target")
+      .not("target", "is", null)
+      .order("created_at", { ascending: false });
+
+    if (savingsError) {
+      console.error("Error loading savings targets:", savingsError);
+    }
+
+    // Build a map of category -> latest target
+    const targetMap = new Map<string, number>();
+    if (savingsItems) {
+      for (const item of savingsItems) {
+        if (item.target && !targetMap.has(item.category)) {
+          targetMap.set(item.category, item.target);
+        }
+      }
+    }
+
+    // Calculate balance for each category
+    const result: Array<{ category: string; balance: number; target?: number }> = [];
+
+    for (const cat of categories) {
+      const contributions = (transactions || [])
+        .filter((t) => t.source_type === "savings" && t.category === cat.name)
+        .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+
+      const payments = (transactions || [])
+        .filter((t) => t.uses_savings_category === cat.name && (t.savings_amount_used || 0) > 0)
+        .reduce((sum, t) => sum + (t.savings_amount_used || 0), 0);
+
+      const balance = Math.max(0, contributions - payments);
+
+      // Only include categories with balance > 0
+      if (balance > 0) {
+        result.push({
+          category: cat.name,
+          balance,
+          target: targetMap.get(cat.name),
+        });
+      }
+    }
+
+    return result;
+  } catch (error) {
+    console.error("Error getting active savings categories:", error);
+    return [];
   }
 }
 

@@ -1,8 +1,8 @@
 import logger from "@/app/utils/logger";
 import { AppTheme } from "@/constants/AppTheme";
 import { useMonth } from "@/lib/month-context";
-import { loadBudgets, loadCategories, loadTransactions } from "@/lib/storage";
-import type { Budget, Category, Transaction } from "@/lib/types";
+import { getActiveSavingsCategories, loadBudgets, loadCategories, loadSavings, loadTransactions } from "@/lib/storage";
+import type { Budget, Category, ExpectedSavings, Transaction } from "@/lib/types";
 import Ionicons from "@react-native-vector-icons/ionicons";
 import MaterialIcons from "@react-native-vector-icons/material-design-icons";
 import { endOfMonth, format, startOfMonth } from "date-fns";
@@ -25,8 +25,11 @@ export default function ReportsScreen() {
   const [transactions, setTransactions] = React.useState<Transaction[]>([]);
   const [budgets, setBudgets] = React.useState<Budget[]>([]);
   const [categories, setCategories] = React.useState<Category[]>([]);
+  const [savings, setSavings] = React.useState<ExpectedSavings[]>([]);
+  const [activeSavings, setActiveSavings] = React.useState<{category: string; balance: number; target?: number}[]>([]);
   // TEMP: let's set to show all categories for now and when we add more components to this tab then we change it later
   const [showAllCategories, setShowAllCategories] = React.useState(true);
+  const [inactiveSavingsExpanded, setInactiveSavingsExpanded] = React.useState(false);
 
   // Pull-to-refresh state
   const [refreshing, setRefreshing] = React.useState(false);
@@ -37,14 +40,20 @@ export default function ReportsScreen() {
       logger.navigationAction("ReportsScreen", { month: currentMonth });
       
       (async () => {
-        const [txs, cats, bdgts] = await Promise.all([
+        const [txs, cats, bdgts, svgs] = await Promise.all([
           loadTransactions(),
           loadCategories(),
           loadBudgets(),
+          loadSavings(),
         ]);
         setTransactions(txs);
         setCategories(cats);
         setBudgets(bdgts);
+        setSavings(svgs);
+        
+        // Load active savings categories
+        const active = await getActiveSavingsCategories();
+        setActiveSavings(active);
       })();
     }, [currentMonth])
   );
@@ -55,15 +64,21 @@ export default function ReportsScreen() {
     logger.breadcrumb("Pull-to-refresh triggered", "data_refresh");
     
     try {
-      const [txs, cats, bdgts] = await Promise.all([
+      const [txs, cats, bdgts, svgs] = await Promise.all([
         loadTransactions(),
         loadCategories(),
         loadBudgets(),
+        loadSavings(),
       ]);
       
       setTransactions(txs);
       setCategories(cats);
       setBudgets(bdgts);
+      setSavings(svgs);
+      
+      // Load active savings categories
+      const active = await getActiveSavingsCategories();
+      setActiveSavings(active);
       
       logger.dataAction("pull_to_refresh", { 
         transactionsCount: txs.length,
@@ -237,41 +252,183 @@ export default function ReportsScreen() {
           </View>
         </View>
 
-        {categorySpending.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="bar-chart-outline" size={64} color={AppTheme.colors.textMuted} />
-            <Text variant="titleLarge" style={styles.emptyText}>
-              No spending data
-            </Text>
-            <Text variant="bodyMedium" style={styles.emptySubtext}>
-              Add transactions to see your category breakdown
+        {/* Spendings Report */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="bar-chart" size={24} color={AppTheme.colors.primary} />
+            <Text variant="headlineSmall" style={styles.sectionTitleText}>
+              Spendings Report
             </Text>
           </View>
-        ) : (
-          <>
-            {/* Category Grid */}
-            <View style={styles.gridContainer}>
-              {displayedCategories.map((item, index) => renderCategoryCard(item, index))}
-            </View>
 
-            {/* Show More Button */}
-            {categorySpending.length > 6 && (
-              <TouchableOpacity
-                style={styles.showMoreButton}
-                onPress={() => setShowAllCategories(!showAllCategories)}
-              >
-                <Text style={styles.showMoreText}>
-                  {showAllCategories ? "Show Less" : `Show All ${categorySpending.length} Categories`}
-                </Text>
-                <Ionicons
-                  name={showAllCategories ? "chevron-up" : "chevron-down"}
-                  size={20}
-                  color={AppTheme.colors.primary}
-                />
-              </TouchableOpacity>
-            )}
-          </>
-        )}
+          {categorySpending.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="bar-chart-outline" size={64} color={AppTheme.colors.textMuted} />
+              <Text variant="titleLarge" style={styles.emptyText}>
+                No spending data
+              </Text>
+              <Text variant="bodyMedium" style={styles.emptySubtext}>
+                Add transactions to see your category breakdown
+              </Text>
+            </View>
+          ) : (
+            <>
+              {/* Category Grid */}
+              <View style={styles.gridContainer}>
+                {displayedCategories.map((item, index) => renderCategoryCard(item, index))}
+              </View>
+
+              {/* Show More Button */}
+              {categorySpending.length > 6 && (
+                <TouchableOpacity
+                  style={styles.showMoreButton}
+                  onPress={() => setShowAllCategories(!showAllCategories)}
+                >
+                  <Text style={styles.showMoreText}>
+                    {showAllCategories ? "Show Less" : `Show All ${categorySpending.length} Categories`}
+                  </Text>
+                  <Ionicons
+                    name={showAllCategories ? "chevron-up" : "chevron-down"}
+                    size={20}
+                    color={AppTheme.colors.primary}
+                  />
+                </TouchableOpacity>
+              )}
+            </>
+          )}
+        </View>
+
+        {/* Savings Tracking */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="wallet" size={24} color={AppTheme.colors.secondary} />
+            <Text variant="headlineSmall" style={styles.sectionTitleText}>
+              Savings Tracking
+            </Text>
+          </View>
+
+          {activeSavings.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="wallet-outline" size={64} color={AppTheme.colors.textMuted} />
+              <Text variant="titleLarge" style={styles.emptyText}>
+                No active savings
+              </Text>
+              <Text variant="bodyMedium" style={styles.emptySubtext}>
+                Add savings contributions to see your progress
+              </Text>
+            </View>
+          ) : (
+            <>
+              {/* Active Savings */}
+              <View style={styles.gridContainer}>
+                {activeSavings
+                  .sort((a, b) => b.balance - a.balance)
+                  .map((item) => {
+                    const categoryInfo = getCategoryInfo(item.category);
+                    const currentMonthSavings = savings.filter(s => s.category === item.category && s.month === curMonth);
+                    const monthlyContributions = currentMonthSavings.reduce((sum, s) => sum + s.amount, 0);
+                    const monthlyPayments = monthTransactions
+                      .filter(t => t.uses_savings_category === item.category && (t.savings_amount_used || 0) > 0)
+                      .reduce((sum, t) => sum + (t.savings_amount_used || 0), 0);
+                    const progress = item.target && item.target > 0 ? item.balance / item.target : 0;
+
+                    return (
+                      <View key={item.category} style={styles.categoryCardWrapper}>
+                        <View style={[styles.categoryCard, { borderColor: AppTheme.colors.secondary }]}>
+                          <View style={styles.cardContent}>
+                            <View style={styles.cardMainRow}>
+                              <View style={[styles.cardIcon, { backgroundColor: categoryInfo?.color || AppTheme.colors.secondary }]}>
+                                {categoryInfo?.emoji ? (
+                                  <Text style={styles.cardEmoji}>{categoryInfo.emoji}</Text>
+                                ) : (
+                                  <MaterialIcons name="folder" size={16} color={AppTheme.colors.textInverse} />
+                                )}
+                              </View>
+                              <Text style={styles.cardName} numberOfLines={1}>{item.category}</Text>
+                            </View>
+                            <View style={styles.cardBottomRow}>
+                              <View>
+                                <Text style={styles.cardAmount}>€{item.balance.toFixed(1)}</Text>
+                                {item.target && item.target > 0 && (
+                                  <Text style={styles.cardSubtext}>Target: €{item.target.toFixed(1)}</Text>
+                                )}
+                                <Text style={styles.cardSubtext}>
+                                  Contributions: €{monthlyContributions.toFixed(1)} | Payments: €{monthlyPayments.toFixed(1)}
+                                </Text>
+                              </View>
+                              {item.target && item.target > 0 && (
+                                <View style={styles.percentageBadge}>
+                                  <Text style={[styles.percentageText, progress > 1 && styles.percentageOver]}>
+                                    {Math.round(progress * 100)}%
+                                  </Text>
+                                </View>
+                              )}
+                            </View>
+                            {item.target && item.target > 0 && (
+                              <View style={styles.progressBarContainer}>
+                                <View style={[styles.progressBar, { width: `${Math.min(100, progress * 100)}%` }]} />
+                              </View>
+                            )}
+                          </View>
+                        </View>
+                      </View>
+                    );
+                  })}
+              </View>
+            </>
+          )}
+
+          {/* Inactive Savings */}
+          {(() => {
+            const allSavingsCategories = categories.filter(c => c.type === 'saving');
+            const inactiveCategories = allSavingsCategories.filter(cat => 
+              !activeSavings.some(active => active.category === cat.name)
+            );
+
+            if (inactiveCategories.length === 0) return null;
+
+            return (
+              <>
+                <TouchableOpacity
+                  onPress={() => setInactiveSavingsExpanded(!inactiveSavingsExpanded)}
+                  style={styles.sectionHeader}
+                >
+                  <Text variant="bodyLarge" style={styles.sectionTitleText}>
+                    Inactive Savings ({inactiveCategories.length})
+                  </Text>
+                  <Ionicons
+                    name={inactiveSavingsExpanded ? "chevron-up" : "chevron-down"}
+                    size={20}
+                    color={AppTheme.colors.textSecondary}
+                  />
+                </TouchableOpacity>
+                {inactiveSavingsExpanded && (
+                  <View style={styles.gridContainer}>
+                    {inactiveCategories.map((cat) => (
+                      <View key={cat.name} style={styles.categoryCardWrapper}>
+                        <View style={[styles.categoryCard, { opacity: 0.6 }]}>
+                          <View style={styles.cardContent}>
+                            <View style={styles.cardMainRow}>
+                              <View style={[styles.cardIcon, { backgroundColor: cat.color || AppTheme.colors.textMuted }]}>
+                                {cat.emoji ? (
+                                  <Text style={styles.cardEmoji}>{cat.emoji}</Text>
+                                ) : (
+                                  <MaterialIcons name="folder" size={16} color={AppTheme.colors.textInverse} />
+                                )}
+                              </View>
+                              <Text style={styles.cardName} numberOfLines={1}>{cat.name}</Text>
+                            </View>
+                            <Text style={styles.cardAmount}>Balance: €0</Text>
+                          </View>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </>
+            );
+          })()}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -448,5 +605,36 @@ const styles = StyleSheet.create({
     fontWeight: AppTheme.typography.fontWeight.medium,
     color: AppTheme.colors.primary,
     marginRight: AppTheme.spacing.xs,
+  },
+  section: {
+    marginBottom: AppTheme.spacing.xl,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: AppTheme.spacing.lg,
+    gap: AppTheme.spacing.sm,
+  },
+  sectionTitleText: {
+    fontWeight: AppTheme.typography.fontWeight.semibold,
+    color: AppTheme.colors.textPrimary,
+  },
+  cardSubtext: {
+    fontSize: AppTheme.typography.fontSize.xs,
+    color: AppTheme.colors.textSecondary,
+    marginTop: 2,
+  },
+  progressBarContainer: {
+    height: 4,
+    backgroundColor: AppTheme.colors.backgroundSecondary,
+    borderRadius: 2,
+    marginTop: AppTheme.spacing.sm,
+    overflow: "hidden",
+  },
+  progressBar: {
+    height: "100%",
+    backgroundColor: AppTheme.colors.secondary,
+    borderRadius: 2,
   },
 });

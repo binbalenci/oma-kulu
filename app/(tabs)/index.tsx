@@ -10,18 +10,29 @@ import {
   deleteBudget,
   deleteIncome,
   deleteInvoice,
+  deleteSavings,
   deleteTransaction,
+  getSavingsBalance,
   loadBudgets,
   loadCategories,
   loadIncomes,
   loadInvoices,
+  loadSavings,
   loadTransactions,
   saveBudget,
   saveIncome,
   saveInvoice,
+  saveSavings,
   saveTransaction,
 } from "@/lib/storage";
-import type { Budget, Category, ExpectedIncome, ExpectedInvoice, Transaction } from "@/lib/types";
+import type {
+  Budget,
+  Category,
+  ExpectedIncome,
+  ExpectedInvoice,
+  ExpectedSavings,
+  Transaction,
+} from "@/lib/types";
 import Ionicons from "@react-native-vector-icons/ionicons";
 import MaterialIcons from "@react-native-vector-icons/material-design-icons";
 import { addMonths, endOfMonth, format, startOfMonth } from "date-fns";
@@ -46,16 +57,28 @@ export default function HomeScreen() {
     
     // Refetch only month-dependent data when month changes
     (async () => {
-      const [incms, invcs, bdgts, txs] = await Promise.all([
+      const [incms, invcs, bdgts, svgs, txs, cats] = await Promise.all([
         loadIncomes(),      // needed for expected incomes by month
         loadInvoices(),     // needed for expected invoices by month
         loadBudgets(),      // needed for budgets by month
+        loadSavings(),      // needed for expected savings by month
         loadTransactions(), // needed for "in bank" calc and spent amounts
+        loadCategories(),   // needed for savings balance calculation
       ]);
       setIncomes(incms);
       setInvoices(invcs);
       setBudgets(bdgts);
+      setSavings(svgs);
       setTransactions(txs);
+      setCategories(cats);
+      
+      // Calculate savings balances for all savings categories
+      const savingCategories = cats.filter(c => c.type === 'saving');
+      const balances: Record<string, number> = {};
+      for (const cat of savingCategories) {
+        balances[cat.name] = await getSavingsBalance(cat.name);
+      }
+      setSavingsBalances(balances);
       // Categories and settings don't need refresh - they're month-independent
     })();
   }, [currentMonth]);
@@ -64,19 +87,25 @@ export default function HomeScreen() {
   const [incomes, setIncomes] = React.useState<ExpectedIncome[]>([]);
   const [invoices, setInvoices] = React.useState<ExpectedInvoice[]>([]);
   const [budgets, setBudgets] = React.useState<Budget[]>([]);
+  const [savings, setSavings] = React.useState<ExpectedSavings[]>([]);
   const [transactions, setTransactions] = React.useState<Transaction[]>([]);
   const [categories, setCategories] = React.useState<Category[]>([]);
+  const [savingsBalances, setSavingsBalances] = React.useState<Record<string, number>>({});
 
   // UI states
   const [dialogVisible, setDialogVisible] = React.useState(false);
-  const [dialogType, setDialogType] = React.useState<"income" | "invoice" | "budget">("income");
+  const [dialogType, setDialogType] = React.useState<"income" | "invoice" | "budget" | "saving">("income");
   const [editingItem, setEditingItem] = React.useState<
-    ExpectedIncome | ExpectedInvoice | Budget | null
+    ExpectedIncome | ExpectedInvoice | Budget | ExpectedSavings | null
   >(null);
+  const [itemTarget, setItemTarget] = React.useState("");
   const [itemName, setItemName] = React.useState("");
   const [itemCategory, setItemCategory] = React.useState("");
   const [itemAmount, setItemAmount] = React.useState("");
   const [itemNotes, setItemNotes] = React.useState("");
+  const [invoiceUseSavings, setInvoiceUseSavings] = React.useState<string | null>(null);
+  // Map to store savings preference per invoice ID
+  const invoiceSavingsMap = React.useRef<Record<string, string>>({});
   
   // Validation error states
   const [categoryError, setCategoryError] = React.useState(false);
@@ -99,10 +128,11 @@ export default function HomeScreen() {
       const startTime = Date.now();
       
       try {
-        const [incms, invcs, bdgts, txs, cats] = await Promise.all([
+        const [incms, invcs, bdgts, svgs, txs, cats] = await Promise.all([
           loadIncomes(),
           loadInvoices(),
           loadBudgets(),
+          loadSavings(),
           loadTransactions(),
           loadCategories(),
         ]);
@@ -110,8 +140,17 @@ export default function HomeScreen() {
         setIncomes(incms);
         setInvoices(invcs);
         setBudgets(bdgts);
+        setSavings(svgs);
         setTransactions(txs);
         setCategories(cats);
+        
+        // Calculate savings balances
+        const savingCategories = cats.filter(c => c.type === 'saving');
+        const balances: Record<string, number> = {};
+        for (const cat of savingCategories) {
+          balances[cat.name] = await getSavingsBalance(cat.name);
+        }
+        setSavingsBalances(balances);
         
         const duration = Date.now() - startTime;
         logger.dataAction("load_budget_data", { 
@@ -135,18 +174,28 @@ export default function HomeScreen() {
     React.useCallback(() => {
       (async () => {
         logger.breadcrumb("Refreshing home screen data on focus", "data_refresh");
-        const [cats, txs, incms, invcs, bdgts] = await Promise.all([
+        const [cats, txs, incms, invcs, bdgts, svgs] = await Promise.all([
           loadCategories(), 
           loadTransactions(),
           loadIncomes(),    // ✅ Reload incomes (may have CASCADE updates)
           loadInvoices(),   // ✅ Reload invoices (may have CASCADE updates) 
-          loadBudgets()     // ✅ Reload budgets (may have CASCADE updates)
+          loadBudgets(),    // ✅ Reload budgets (may have CASCADE updates)
+          loadSavings()     // ✅ Reload savings (may have CASCADE updates)
         ]);
         setCategories(cats);
         setTransactions(txs);
         setIncomes(incms);      // ✅ Update incomes with fresh CASCADE data
         setInvoices(invcs);     // ✅ Update invoices with fresh CASCADE data
         setBudgets(bdgts);      // ✅ Update budgets with fresh CASCADE data
+        setSavings(svgs);       // ✅ Update savings with fresh CASCADE data
+        
+        // Calculate savings balances
+        const savingCategories = cats.filter(c => c.type === 'saving');
+        const balances: Record<string, number> = {};
+        for (const cat of savingCategories) {
+          balances[cat.name] = await getSavingsBalance(cat.name);
+        }
+        setSavingsBalances(balances);
         logger.dataAction("refresh_home_focus", { 
           categoriesCount: cats.length,
           transactionsCount: txs.length,
@@ -164,12 +213,13 @@ export default function HomeScreen() {
     logger.breadcrumb("Pull-to-refresh triggered", "data_refresh");
     
     try {
-      const [cats, txs, incms, invcs, bdgts] = await Promise.all([
+      const [cats, txs, incms, invcs, bdgts, svgs] = await Promise.all([
         loadCategories(), 
         loadTransactions(),
         loadIncomes(),
         loadInvoices(),
-        loadBudgets()
+        loadBudgets(),
+        loadSavings()
       ]);
       
       setCategories(cats);
@@ -177,6 +227,15 @@ export default function HomeScreen() {
       setIncomes(incms);
       setInvoices(invcs);
       setBudgets(bdgts);
+      setSavings(svgs);
+      
+      // Calculate savings balances
+      const savingCategories = cats.filter(c => c.type === 'saving');
+      const balances: Record<string, number> = {};
+      for (const cat of savingCategories) {
+        balances[cat.name] = await getSavingsBalance(cat.name);
+      }
+      setSavingsBalances(balances);
       
       logger.dataAction("pull_to_refresh", { 
         categoriesCount: cats.length,
@@ -201,6 +260,7 @@ export default function HomeScreen() {
   const currentIncomes = incomes.filter((i) => i.month === curMonth);
   const currentInvoices = invoices.filter((i) => i.month === curMonth);
   const currentBudgets = budgets.filter((b) => b.month === curMonth);
+  const currentSavings = savings.filter((s) => s.month === curMonth);
 
   // Debug: Log what data we're working with
   React.useEffect(() => {
@@ -232,7 +292,8 @@ export default function HomeScreen() {
   const expectedIncome = currentIncomes.reduce((sum, i) => sum + i.amount, 0);
   const expectedExpenses = currentInvoices.reduce((sum, i) => sum + i.amount, 0);
   const totalAllocated = currentBudgets.reduce((sum, b) => sum + b.allocated_amount, 0);
-  const moneyToAssign = expectedIncome - expectedExpenses - totalAllocated;
+  const totalSavings = currentSavings.reduce((sum, s) => sum + s.amount, 0);
+  const moneyToAssign = expectedIncome - expectedExpenses - totalAllocated - totalSavings;
   
   // Calculate actual "In Bank" amount for current month (only paid transactions up to today)
   const today = new Date();
@@ -243,15 +304,25 @@ export default function HomeScreen() {
     return d >= monthStart && d <= monthEnd && d <= today && t.status === "paid";
   });
   
+  // Calculate income portion (excluding savings contributions)
   const totalIncome = monthTransactions
-    .filter(t => t.amount > 0)
+    .filter(t => t.amount > 0 && t.source_type !== 'savings')
     .reduce((sum, t) => sum + t.amount, 0);
   
+  // Calculate expense portion (only count portion NOT covered by savings)
   const totalExpenses = monthTransactions
     .filter(t => t.amount < 0)
-    .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+    .reduce((sum, t) => {
+      const amount = Math.abs(t.amount);
+      const savingsUsed = t.savings_amount_used || 0;
+      // Only count portion from income (not covered by savings)
+      return sum + (amount - savingsUsed);
+    }, 0);
   
   const actualInBank = totalIncome - totalExpenses;
+  
+  // Calculate total savings balances
+  const totalSavingsBalance = Object.values(savingsBalances).reduce((sum, b) => sum + b, 0);
 
   // Check if all sections are empty
   const allEmpty =
@@ -281,35 +352,52 @@ export default function HomeScreen() {
     {}
   );
 
-  const openAddDialog = (type: "income" | "invoice" | "budget") => {
+  const openAddDialog = (type: "income" | "invoice" | "budget" | "saving") => {
     setDialogType(type);
     setEditingItem(null);
     setItemName("");
     setItemCategory("");
     setItemAmount("");
     setItemNotes("");
+    setItemTarget("");
+    setInvoiceUseSavings(null);
     setDialogVisible(true);
   };
 
-  const openEditDialog = (type: "income" | "invoice" | "budget", item: any) => {
+  const openEditDialog = (type: "income" | "invoice" | "budget" | "saving", item: any) => {
     setDialogType(type);
     setEditingItem(item);
-    setItemName(type === "budget" ? "" : item.name === item.category ? "" : item.name);
+    setItemName(type === "budget" || type === "saving" ? "" : item.name === item.category ? "" : item.name);
     setItemCategory(item.category);
     const amountValue = type === "budget" ? item.allocated_amount : item.amount;
     setItemAmount(Number(amountValue).toFixed(2));
     setItemNotes(item.notes || "");
+    if (type === "saving") {
+      // Check if there's an existing target for this category (from other months)
+      const existingSavings = savings.find(s => s.category === item.category && s.target);
+      const targetValue = item.target || existingSavings?.target;
+      setItemTarget(targetValue ? Number(targetValue).toFixed(2) : "");
+    } else {
+      setItemTarget("");
+    }
+    // Load savings preference for invoices
+    if (type === "invoice") {
+      setInvoiceUseSavings(invoiceSavingsMap.current[item.id] || null);
+    } else {
+      setInvoiceUseSavings(null);
+    }
     setDialogVisible(true);
   };
 
-  const togglePaid = async (type: "income" | "invoice", item: ExpectedIncome | ExpectedInvoice) => {
+  const togglePaid = async (type: "income" | "invoice" | "saving", item: ExpectedIncome | ExpectedInvoice | ExpectedSavings) => {
     if (item.is_paid) {
       // Unmark as paid - delete the associated transaction
       const relatedTx = transactions.find(
         (t) =>
-          t.description === item.name &&
+          (type === "saving" ? t.source_type === "savings" : t.source_type === type) &&
+          t.source_id === item.id &&
           t.category === item.category &&
-          Math.abs(t.amount) === item.amount &&
+          Math.abs(t.amount) === (type === "saving" ? (item as ExpectedSavings).amount : (item as ExpectedIncome | ExpectedInvoice).amount) &&
           t.status === "paid"
       );
 
@@ -329,27 +417,54 @@ export default function HomeScreen() {
           setIncomes((prev) => prev.map((i) => (i.id === item.id ? { ...i, is_paid: false } : i)));
           showSnackbar("Unmarked as paid!");
         }
-      } else {
+      } else if (type === "invoice") {
         const success = await saveInvoice(updatedItem as ExpectedInvoice);
         if (success) {
           setInvoices((prev) => prev.map((i) => (i.id === item.id ? { ...i, is_paid: false } : i)));
+          showSnackbar("Unmarked as paid!");
+        }
+      } else if (type === "saving") {
+        const success = await saveSavings(updatedItem as ExpectedSavings);
+        if (success) {
+          setSavings((prev) => prev.map((s) => (s.id === item.id ? { ...s, is_paid: false } : s)));
+          // Update savings balance
+          const balance = await getSavingsBalance((item as ExpectedSavings).category);
+          setSavingsBalances((prev) => ({ ...prev, [(item as ExpectedSavings).category]: balance }));
           showSnackbar("Unmarked as paid!");
         }
       }
       return;
     }
 
+    // Calculate savings usage for invoices
+    let savingsAmountUsed = 0;
+    let useSavingsCategory: string | undefined = undefined;
+    if (type === "invoice") {
+      const invoiceItem = item as ExpectedInvoice;
+      // Check if this invoice has a savings preference stored
+      const savingsCategory = invoiceSavingsMap.current[invoiceItem.id];
+      if (savingsCategory && savingsBalances[savingsCategory]) {
+        const availableBalance = savingsBalances[savingsCategory];
+        const transactionAmount = invoiceItem.amount;
+        // Use up to the available balance, capped at transaction amount
+        savingsAmountUsed = Math.min(availableBalance, transactionAmount);
+        useSavingsCategory = savingsCategory;
+      }
+    }
+
     // Mark as paid - create transaction
     const tx: Transaction = {
       id: Crypto.randomUUID(),
       amount: type === "income" ? item.amount : -item.amount,
-      description: item.name,
+      description: type === "saving" ? (item as ExpectedSavings).category : (item as ExpectedIncome | ExpectedInvoice).name,
       date: format(new Date(), "yyyy-MM-dd"),
       category: item.category,
       status: "paid",
       created_at: new Date().toISOString(),
-      source_type: type,
+      source_type: type === "saving" ? "savings" : type,
       source_id: item.id,
+      uses_savings_category: useSavingsCategory,
+      savings_amount_used: savingsAmountUsed > 0 ? savingsAmountUsed : undefined,
     };
 
     const txSuccess = await saveTransaction(tx);
@@ -359,6 +474,12 @@ export default function HomeScreen() {
     }
 
     setTransactions((prev) => [tx, ...prev]);
+    
+    // Update savings balance if savings were used
+    if (savingsAmountUsed > 0 && useSavingsCategory) {
+      const balance = await getSavingsBalance(useSavingsCategory);
+      setSavingsBalances((prev) => ({ ...prev, [useSavingsCategory!]: balance }));
+    }
 
     // Mark as paid
     const updatedItem = { ...item, is_paid: true, updated_at: new Date().toISOString() };
@@ -371,13 +492,24 @@ export default function HomeScreen() {
       } else {
         showSnackbar("Failed to update income");
       }
-    } else {
+    } else if (type === "invoice") {
       const success = await saveInvoice(updatedItem as ExpectedInvoice);
       if (success) {
         setInvoices((prev) => prev.map((i) => (i.id === item.id ? { ...i, is_paid: true } : i)));
         showSnackbar("Marked as paid!");
       } else {
         showSnackbar("Failed to update invoice");
+      }
+    } else if (type === "saving") {
+      const success = await saveSavings(updatedItem as ExpectedSavings);
+      if (success) {
+        setSavings((prev) => prev.map((s) => (s.id === item.id ? { ...s, is_paid: true } : s)));
+        // Update savings balance
+        const balance = await getSavingsBalance((item as ExpectedSavings).category);
+        setSavingsBalances((prev) => ({ ...prev, [(item as ExpectedSavings).category]: balance }));
+        showSnackbar("Marked as paid!");
+      } else {
+        showSnackbar("Failed to update savings");
       }
     }
   };
@@ -450,6 +582,12 @@ export default function HomeScreen() {
             next.push(invoice);
             return next;
           });
+          // Store savings preference in a map (invoice id -> savings category)
+          if (invoiceUseSavings) {
+            invoiceSavingsMap.current[invoice.id] = invoiceUseSavings;
+          } else {
+            delete invoiceSavingsMap.current[invoice.id];
+          }
           showSnackbar("Invoice saved successfully!");
         } else {
           showSnackbar("Failed to save invoice");
@@ -477,6 +615,34 @@ export default function HomeScreen() {
           showSnackbar("Failed to save budget");
           return false;
         }
+      } else if (dialogType === "saving") {
+        const targetValue = itemTarget ? parseFloat(itemTarget.replace(",", ".")) : undefined;
+        const saving: ExpectedSavings = {
+          id: editingItem?.id || Crypto.randomUUID(),
+          category: itemCategory,
+          amount: amt,
+          month: curMonth,
+          target: targetValue && !isNaN(targetValue) ? targetValue : undefined,
+          is_paid: (editingItem as ExpectedSavings)?.is_paid || false,
+          notes: itemNotes || undefined,
+          created_at: editingItem?.created_at || new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        const success = await saveSavings(saving);
+        if (success) {
+          setSavings((prev) => {
+            const next = prev.filter((s) => s.id !== saving.id);
+            next.push(saving);
+            return next;
+          });
+          // Update savings balance for this category
+          const balance = await getSavingsBalance(saving.category);
+          setSavingsBalances((prev) => ({ ...prev, [saving.category]: balance }));
+          showSnackbar("Savings saved successfully!");
+        } else {
+          showSnackbar("Failed to save savings");
+          return false;
+        }
       }
       setDialogVisible(false); // Manually close on success
       return true;
@@ -487,7 +653,7 @@ export default function HomeScreen() {
     }
   };
 
-  const handleDeleteItem = (type: "income" | "invoice" | "budget", id: string) => {
+  const handleDeleteItem = (type: "income" | "invoice" | "budget" | "saving", id: string) => {
     setItemToDelete({ id, type });
     setConfirmDialogVisible(true);
   };
@@ -513,6 +679,12 @@ export default function HomeScreen() {
       if (success) {
         setBudgets((prev) => prev.filter((b) => b.id !== itemToDelete.id));
         showSnackbar("Budget deleted!");
+      }
+    } else if (itemToDelete.type === "saving") {
+      success = await deleteSavings(itemToDelete.id);
+      if (success) {
+        setSavings((prev) => prev.filter((s) => s.id !== itemToDelete.id));
+        showSnackbar("Savings deleted!");
       }
     }
     if (!success) {
@@ -721,64 +893,86 @@ export default function HomeScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {/* Cash Overview - Compact with Dividers */}
+        {/* Cash Overview - Two Row Layout */}
         <View style={styles.overviewCompact}>
-          {/* Expected Income */}
-          <View style={styles.overviewCompactItem}>
-            <View style={styles.overviewItemHeader}>
-              <Ionicons name="trending-up" size={14} color={AppTheme.colors.success} />
-              <Text variant="labelSmall" style={styles.overviewCompactLabel}>
-                Income
+          {/* Row 1: Income, Expenses, Remaining */}
+          <View style={styles.overviewRow}>
+            {/* Expected Income */}
+            <View style={styles.overviewCompactItem}>
+              <View style={styles.overviewItemHeader}>
+                <Ionicons name="trending-up" size={14} color={AppTheme.colors.success} />
+                <Text variant="labelSmall" style={styles.overviewCompactLabel}>
+                  Income
+                </Text>
+              </View>
+              <Text variant="bodyMedium" style={styles.positiveAmount}>
+                €{expectedIncome.toFixed(1)}
               </Text>
             </View>
-            <Text variant="bodyMedium" style={styles.positiveAmount}>
-              €{expectedIncome.toFixed(1)}
-            </Text>
+
+            <View style={styles.overviewDivider} />
+
+            {/* Expected Expenses */}
+            <View style={styles.overviewCompactItem}>
+              <View style={styles.overviewItemHeader}>
+                <Ionicons name="trending-down" size={14} color={AppTheme.colors.error} />
+                <Text variant="labelSmall" style={styles.overviewCompactLabel}>
+                  Expenses
+                </Text>
+              </View>
+              <Text variant="bodyMedium" style={styles.negativeAmount}>
+                €{expectedExpenses.toFixed(1)}
+              </Text>
+            </View>
+
+            <View style={styles.overviewDivider} />
+
+            {/* Remaining to Budget */}
+            <View style={styles.overviewCompactItem}>
+              <View style={styles.overviewItemHeader}>
+                <Ionicons name="add-circle" size={14} color={AppTheme.colors.warning} />
+                <Text variant="labelSmall" style={styles.overviewCompactLabel}>
+                  Remaining
+                </Text>
+              </View>
+              <Text variant="bodyMedium" style={styles.neutralAmount}>
+                €{moneyToAssign.toFixed(1)}
+              </Text>
+            </View>
           </View>
 
-          <View style={styles.overviewDivider} />
+          {/* Row Divider */}
+          <View style={styles.overviewRowDivider} />
 
-          {/* Expected Expenses */}
-          <View style={styles.overviewCompactItem}>
-            <View style={styles.overviewItemHeader}>
-              <Ionicons name="trending-down" size={14} color={AppTheme.colors.error} />
-              <Text variant="labelSmall" style={styles.overviewCompactLabel}>
-                Expenses
+          {/* Row 2: In Bank, Savings Balances */}
+          <View style={styles.overviewRow}>
+            {/* In Bank */}
+            <View style={styles.overviewCompactItem}>
+              <View style={styles.overviewItemHeader}>
+                <Ionicons name="wallet" size={14} color={AppTheme.colors.primary} />
+                <Text variant="labelSmall" style={styles.overviewCompactLabel}>
+                  In Bank
+                </Text>
+              </View>
+              <Text variant="bodyMedium" style={styles.neutralAmount}>
+                €{actualInBank.toFixed(1)}
               </Text>
             </View>
-            <Text variant="bodyMedium" style={styles.negativeAmount}>
-              €{expectedExpenses.toFixed(1)}
-            </Text>
-          </View>
 
-          <View style={styles.overviewDivider} />
+            <View style={styles.overviewDivider} />
 
-          {/* Remaining to Budget */}
-          <View style={styles.overviewCompactItem}>
-            <View style={styles.overviewItemHeader}>
-              <Ionicons name="add-circle" size={14} color={AppTheme.colors.warning} />
-              <Text variant="labelSmall" style={styles.overviewCompactLabel}>
-                Remaining
+            {/* Savings Balances */}
+            <View style={styles.overviewCompactItem}>
+              <View style={styles.overviewItemHeader}>
+                <Ionicons name="wallet-outline" size={14} color={AppTheme.colors.secondary} />
+                <Text variant="labelSmall" style={styles.overviewCompactLabel}>
+                  Savings
+                </Text>
+              </View>
+              <Text variant="bodyMedium" style={styles.neutralAmount}>
+                €{totalSavingsBalance.toFixed(1)}
               </Text>
             </View>
-            <Text variant="bodyMedium" style={styles.neutralAmount}>
-              €{moneyToAssign.toFixed(1)}
-            </Text>
-          </View>
-
-          <View style={styles.overviewDivider} />
-
-          {/* In Bank */}
-          <View style={styles.overviewCompactItem}>
-            <View style={styles.overviewItemHeader}>
-              <Ionicons name="wallet" size={14} color={AppTheme.colors.primary} />
-              <Text variant="labelSmall" style={styles.overviewCompactLabel}>
-                In Bank
-              </Text>
-            </View>
-            <Text variant="bodyMedium" style={styles.neutralAmount}>
-              €{actualInBank.toFixed(1)}
-            </Text>
           </View>
         </View>
 
@@ -979,6 +1173,116 @@ export default function HomeScreen() {
             </View>
           )}
         </View>
+
+        {/* Savings */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionTitle}>
+              <Ionicons name="wallet" size={24} color={AppTheme.colors.secondary} />
+              <Text variant="headlineSmall" style={styles.sectionTitleText}>
+                Savings
+              </Text>
+            </View>
+            <Button
+              mode="contained"
+              onPress={() => openAddDialog("saving")}
+              style={styles.addButton}
+              icon="plus"
+            >
+              Add Savings
+            </Button>
+          </View>
+
+          {currentSavings.length === 0 ? (
+            <Card style={styles.emptyCard}>
+              <Card.Content style={styles.emptyContent}>
+                <Ionicons
+                  name="wallet-outline"
+                  size={48}
+                  color={AppTheme.colors.textMuted}
+                />
+                <Text variant="bodyLarge" style={styles.emptyText}>
+                  No savings yet. Tap + to add one.
+                </Text>
+              </Card.Content>
+            </Card>
+          ) : (
+            <View style={styles.budgetList}>
+              {currentSavings.map((saving) => {
+                const categoryInfo = getCategoryInfo(saving.category);
+                const balance = savingsBalances[saving.category] || 0;
+                const progress = saving.target && saving.target > 0 ? balance / saving.target : 0;
+
+                return (
+                  <Card key={saving.id} style={styles.budgetCard}>
+                    <Card.Content>
+                      <View style={styles.budgetHeader}>
+                        <View style={styles.budgetInfo}>
+                          <View
+                            style={[
+                              styles.budgetIcon,
+                              { backgroundColor: categoryInfo?.color || AppTheme.colors.secondary },
+                            ]}
+                          >
+                            {categoryInfo?.emoji ? (
+                              <Text style={styles.budgetEmoji}>{categoryInfo.emoji}</Text>
+                            ) : (
+                              <MaterialIcons
+                                name="folder"
+                                size={20}
+                                color={AppTheme.colors.textInverse}
+                              />
+                            )}
+                          </View>
+                          <View>
+                            <Text variant="titleMedium" style={styles.budgetCategory}>
+                              {saving.category}
+                            </Text>
+                            <Text variant="bodySmall" style={styles.budgetNotes}>
+                              Balance: €{balance.toFixed(1)}
+                              {saving.target && saving.target > 0 && ` | Target: €${saving.target.toFixed(1)}`}
+                              {" | Monthly: €" + saving.amount.toFixed(1)}
+                            </Text>
+                            {saving.notes && (
+                              <Text variant="bodySmall" style={styles.budgetNotes}>
+                                {saving.notes}
+                              </Text>
+                            )}
+                          </View>
+                        </View>
+                        <View style={styles.budgetActions}>
+                          <Checkbox
+                            status={saving.is_paid ? "checked" : "unchecked"}
+                            onPress={() => togglePaid("saving", saving)}
+                            color={AppTheme.colors.success}
+                          />
+                          <IconButton
+                            icon="pencil"
+                            size={16}
+                            onPress={() => openEditDialog("saving", saving)}
+                          />
+                          <IconButton
+                            icon="delete"
+                            size={16}
+                            onPress={() => handleDeleteItem("saving", saving.id)}
+                          />
+                        </View>
+                      </View>
+                      {saving.target && saving.target > 0 && (
+                        <GradientProgressBar
+                          progress={progress}
+                          allocated={saving.target}
+                          spent={balance}
+                          height={12}
+                        />
+                      )}
+                    </Card.Content>
+                  </Card>
+                );
+              })}
+            </View>
+          )}
+        </View>
       </ScrollView>
 
       {/* Add/Edit Dialog */}
@@ -990,10 +1294,10 @@ export default function HomeScreen() {
           setAmountError(false);
         }}
         title={`${editingItem ? "Edit" : "Add"} ${
-          dialogType === "income" ? "Income" : dialogType === "invoice" ? "Invoice" : "Budget"
+          dialogType === "income" ? "Income" : dialogType === "invoice" ? "Invoice" : dialogType === "saving" ? "Savings" : "Budget"
         }`}
         onSave={handleSaveItem}
-        hasUnsavedChanges={!!(itemName || itemAmount || itemCategory || itemNotes)}
+        hasUnsavedChanges={!!(itemName || itemAmount || itemCategory || itemNotes || itemTarget || invoiceUseSavings)}
       >
         <View style={styles.dialogContent}>
           <SimpleDropdown
@@ -1006,13 +1310,57 @@ export default function HomeScreen() {
             data={categories
               .filter((c) => c.is_visible && (
                 (dialogType === "income" && c.type === "income") || 
-                (dialogType !== "income" && c.type === "expense")
+                (dialogType === "saving" && c.type === "saving") ||
+                (dialogType !== "income" && dialogType !== "saving" && c.type === "expense")
               ))
               .map((cat) => ({ id: cat.name, name: cat.name, emoji: cat.emoji, color: cat.color }))}
             placeholder="Select category *"
             style={styles.input}
             error={categoryError}
           />
+
+          {dialogType === "saving" && (
+            <TextInput
+              label="Target (optional)"
+              value={itemTarget}
+              onChangeText={setItemTarget}
+              keyboardType="decimal-pad"
+              placeholder="0.00"
+              style={styles.input}
+              left={<TextInput.Affix text="€" />}
+            />
+          )}
+
+          {/* Use Savings dropdown - only show for invoice dialog */}
+          {dialogType === "invoice" && (() => {
+            const availableSavings = Object.entries(savingsBalances)
+              .filter(([_, balance]) => balance > 0)
+              .map(([catName, balance]) => ({
+                id: catName,
+                name: `${catName} (€${balance.toFixed(1)})`,
+                emoji: categories.find(c => c.name === catName)?.emoji,
+                color: categories.find(c => c.name === catName)?.color,
+              }));
+            
+            if (availableSavings.length > 0) {
+              return (
+                <SimpleDropdown
+                  label="Use Savings (optional)"
+                  value={invoiceUseSavings || ""}
+                  onValueChange={(value) => {
+                    setInvoiceUseSavings(value || null);
+                  }}
+                  data={[
+                    { id: "", name: "None", emoji: undefined, color: undefined },
+                    ...availableSavings,
+                  ]}
+                  placeholder="None"
+                  style={styles.input}
+                />
+              );
+            }
+            return null;
+          })()}
 
           <TextInput
             label={<Text style={{ color: amountError ? 'red' : AppTheme.colors.textSecondary }}>Amount <Text style={{color: 'red'}}>*</Text></Text>}
@@ -1027,7 +1375,7 @@ export default function HomeScreen() {
             left={<TextInput.Affix text="€" />}
           />
 
-          {dialogType !== "budget" && (
+          {dialogType !== "budget" && dialogType !== "saving" && (
             <TextInput
               label="Name (optional)"
               value={itemName}
@@ -1097,13 +1445,19 @@ const styles = StyleSheet.create({
     padding: AppTheme.spacing.lg,
   },
   overviewCompact: {
-    flexDirection: "row",
     backgroundColor: AppTheme.colors.card,
     borderRadius: 12,
     padding: AppTheme.spacing.md,
     marginBottom: AppTheme.spacing.xl,
-    gap: AppTheme.spacing.md,
     ...AppTheme.shadows.md,
+  },
+  overviewRow: {
+    flexDirection: "row",
+  },
+  overviewRowDivider: {
+    height: 1,
+    backgroundColor: AppTheme.colors.border,
+    marginVertical: AppTheme.spacing.sm,
   },
   overviewCompactItem: {
     flex: 1,

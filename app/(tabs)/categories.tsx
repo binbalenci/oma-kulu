@@ -36,7 +36,7 @@ export default function CategoriesScreen() {
     logger.navigationAction("CategoriesScreen");
   }, []);
   const [emojiPickerVisible, setEmojiPickerVisible] = React.useState(false);
-  const [selectedType, setSelectedType] = React.useState<"income" | "expense">("expense");
+  const [selectedType, setSelectedType] = React.useState<"income" | "expense" | "saving">("expense");
 
   // Confirmation dialog states
   const [confirmDialogVisible, setConfirmDialogVisible] = React.useState(false);
@@ -89,6 +89,11 @@ export default function CategoriesScreen() {
 
   const expenseCategories = items
     .filter((c) => c.type === "expense")
+    .filter((c) => c.name.toLowerCase().includes(query.toLowerCase()))
+    .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
+
+  const savingCategories = items
+    .filter((c) => c.type === "saving")
     .filter((c) => c.name.toLowerCase().includes(query.toLowerCase()))
     .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
 
@@ -211,15 +216,15 @@ export default function CategoriesScreen() {
   const renderCategorySection = (
     title: string,
     categories: Category[],
-    type: "income" | "expense"
+    type: "income" | "expense" | "saving"
   ) => (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
         <View style={styles.sectionTitle}>
           <Ionicons
-            name={type === "income" ? "trending-up" : "trending-down"}
+            name={type === "income" ? "trending-up" : type === "expense" ? "trending-down" : "wallet"}
             size={24}
-            color={type === "income" ? AppTheme.colors.success : AppTheme.colors.error}
+            color={type === "income" ? AppTheme.colors.success : type === "expense" ? AppTheme.colors.error : AppTheme.colors.primary}
           />
           <Text variant="headlineSmall" style={styles.sectionTitleText}>
             {title}
@@ -250,7 +255,7 @@ export default function CategoriesScreen() {
         <Card style={styles.emptyCard}>
           <Card.Content style={styles.emptyContent}>
             <Ionicons
-              name={type === "income" ? "trending-up-outline" : "trending-down-outline"}
+              name={type === "income" ? "trending-up-outline" : type === "expense" ? "trending-down-outline" : "wallet-outline"}
               size={48}
               color={AppTheme.colors.textMuted}
             />
@@ -307,6 +312,9 @@ export default function CategoriesScreen() {
 
         {/* Expense Categories */}
         {renderCategorySection("Expense Categories", expenseCategories, "expense")}
+
+        {/* Saving Categories */}
+        {renderCategorySection("Saving Categories", savingCategories, "saving")}
       </ScrollView>
 
       {/* Add/Edit Dialog */}
@@ -377,6 +385,28 @@ export default function CategoriesScreen() {
                   ]}
                 >
                   Income
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.typeButton, selectedType === "saving" && styles.typeButtonSelected]}
+                onPress={() => setSelectedType("saving")}
+              >
+                <Ionicons
+                  name="wallet"
+                  size={20}
+                  color={
+                    selectedType === "saving"
+                      ? AppTheme.colors.textInverse
+                      : AppTheme.colors.primary
+                  }
+                />
+                <Text
+                  style={[
+                    styles.typeButtonText,
+                    selectedType === "saving" && styles.typeButtonTextSelected,
+                  ]}
+                >
+                  Saving
                 </Text>
               </TouchableOpacity>
             </View>

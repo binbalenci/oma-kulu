@@ -8,15 +8,17 @@ import { AppTheme } from "@/constants/AppTheme";
 import { useMonth } from "@/lib/month-context";
 import {
   deleteTransaction,
+  getSavingsBalance,
   loadCategories,
   loadIncomes,
   loadInvoices,
+  loadSavings,
   loadTransactions,
   saveIncome,
   saveInvoice,
   saveTransaction,
 } from "@/lib/storage";
-import type { Category, ExpectedIncome, ExpectedInvoice, Transaction } from "@/lib/types";
+import type { Category, ExpectedIncome, ExpectedInvoice, ExpectedSavings, Transaction } from "@/lib/types";
 import Ionicons from "@react-native-vector-icons/ionicons";
 import { endOfMonth, format, startOfMonth } from "date-fns";
 import * as Crypto from "expo-crypto";
@@ -32,6 +34,8 @@ export default function TransactionsScreen() {
   const [transactions, setTransactions] = React.useState<Transaction[]>([]);
   const [incomes, setIncomes] = React.useState<ExpectedIncome[]>([]);
   const [invoices, setInvoices] = React.useState<ExpectedInvoice[]>([]);
+  const [savings, setSavings] = React.useState<ExpectedSavings[]>([]);
+  const [savingsBalances, setSavingsBalances] = React.useState<Record<string, number>>({});
 
   // Log navigation and refetch month-specific data when month changes
   React.useEffect(() => {
@@ -39,19 +43,32 @@ export default function TransactionsScreen() {
     
     // Refetch only month-dependent data when month changes
     (async () => {
-      const [txs, incms, invcs] = await Promise.all([
+      const [txs, incms, invcs, svgs, cats] = await Promise.all([
         loadTransactions(), // needed for recent transactions
         loadIncomes(),      // needed for upcoming incomes  
         loadInvoices(),     // needed for upcoming invoices
+        loadSavings(),      // needed for savings items
+        loadCategories(),   // needed for savings balance calculation
       ]);
       setTransactions(txs);
       setIncomes(incms);
       setInvoices(invcs);
+      setSavings(svgs);
+      setCategories(cats);
+      
+      // Calculate savings balances
+      const savingCategories = cats.filter(c => c.type === 'saving');
+      const balances: Record<string, number> = {};
+      for (const cat of savingCategories) {
+        balances[cat.name] = await getSavingsBalance(cat.name);
+      }
+      setSavingsBalances(balances);
       // Categories don't need refresh - they're month-independent
     })();
   }, [currentMonth]);
   const [categories, setCategories] = React.useState<Category[]>([]);
   const [upcomingExpanded, setUpcomingExpanded] = React.useState(false);
+  const [savingsExpanded, setSavingsExpanded] = React.useState(false);
   const [incomeExpanded, setIncomeExpanded] = React.useState(false);
   const [expenseExpanded, setExpenseExpanded] = React.useState(true);
 
@@ -66,6 +83,7 @@ export default function TransactionsScreen() {
   const [description, setDescription] = React.useState("");
   const [date, setDate] = React.useState(format(new Date(), "yyyy-MM-dd"));
   const [category, setCategory] = React.useState("General");
+  const [useSavingsCategory, setUseSavingsCategory] = React.useState<string | null>(null);
   
   // Validation error states
   const [categoryError, setCategoryError] = React.useState(false);
@@ -84,16 +102,26 @@ export default function TransactionsScreen() {
   useFocusEffect(
     React.useCallback(() => {
       (async () => {
-        const [txs, incms, invcs, cats] = await Promise.all([
+        const [txs, incms, invcs, svgs, cats] = await Promise.all([
           loadTransactions(),
           loadIncomes(),
           loadInvoices(),
+          loadSavings(),
           loadCategories(),
         ]);
         setTransactions(txs);
         setIncomes(incms);
         setInvoices(invcs);
+        setSavings(svgs);
         setCategories(cats);
+        
+        // Calculate savings balances
+        const savingCategories = cats.filter(c => c.type === 'saving');
+        const balances: Record<string, number> = {};
+        for (const cat of savingCategories) {
+          balances[cat.name] = await getSavingsBalance(cat.name);
+        }
+        setSavingsBalances(balances);
       })();
     }, [])
   );
@@ -104,17 +132,27 @@ export default function TransactionsScreen() {
     logger.breadcrumb("Pull-to-refresh triggered", "data_refresh");
     
     try {
-      const [txs, incms, invcs, cats] = await Promise.all([
+      const [txs, incms, invcs, svgs, cats] = await Promise.all([
         loadTransactions(),
         loadIncomes(),
         loadInvoices(),
+        loadSavings(),
         loadCategories(),
       ]);
       
       setTransactions(txs);
       setIncomes(incms);
       setInvoices(invcs);
+      setSavings(svgs);
       setCategories(cats);
+      
+      // Calculate savings balances
+      const savingCategories = cats.filter(c => c.type === 'saving');
+      const balances: Record<string, number> = {};
+      for (const cat of savingCategories) {
+        balances[cat.name] = await getSavingsBalance(cat.name);
+      }
+      setSavingsBalances(balances);
       
       logger.dataAction("pull_to_refresh", { 
         transactionsCount: txs.length,
@@ -139,6 +177,9 @@ export default function TransactionsScreen() {
   const upcomingFromIncomes = incomes.filter((i) => !i.is_paid && i.month === currentMonthKey);
   const upcomingFromInvoices = invoices.filter((i) => !i.is_paid && i.month === currentMonthKey);
   const upcomingTransactions = transactions.filter((t) => t.status === "upcoming");
+  
+  // Savings items: paid savings for current month
+  const paidSavings = savings.filter((s) => s.is_paid && s.month === currentMonthKey);
 
   // Recent: paid transactions for current month only
   const recentTransactions = transactions
@@ -172,6 +213,7 @@ export default function TransactionsScreen() {
     setDescription("");
     setDate(format(new Date(), "yyyy-MM-dd"));
     setCategory("General");
+    setUseSavingsCategory(null);
     setEditing(null);
   };
 
@@ -197,6 +239,15 @@ export default function TransactionsScreen() {
     const categoryInfo = getCategoryInfo(category);
     const isIncome = categoryInfo?.type === "income";
 
+    // Calculate savings usage if selected
+    let savingsAmountUsed = 0;
+    if (useSavingsCategory && !isIncome && savingsBalances[useSavingsCategory]) {
+      const availableBalance = savingsBalances[useSavingsCategory];
+      const transactionAmount = Math.abs(amt);
+      // Use up to the available balance, capped at transaction amount
+      savingsAmountUsed = Math.min(availableBalance, transactionAmount);
+    }
+
     const tx: Transaction = {
       id: editing?.id || Crypto.randomUUID(),
       amount: isIncome ? Math.abs(amt) : -Math.abs(amt), // Positive for income, negative for expense
@@ -208,10 +259,18 @@ export default function TransactionsScreen() {
       // Preserve source fields when editing
       source_type: editing?.source_type,
       source_id: editing?.source_id,
+      // Savings usage fields
+      uses_savings_category: useSavingsCategory || undefined,
+      savings_amount_used: savingsAmountUsed > 0 ? savingsAmountUsed : undefined,
     };
 
     const success = await saveTransaction(tx);
     if (success) {
+      // Update savings balance if savings were used
+      if (savingsAmountUsed > 0 && useSavingsCategory) {
+        const balance = await getSavingsBalance(useSavingsCategory);
+        setSavingsBalances((prev) => ({ ...prev, [useSavingsCategory]: balance }));
+      }
       if (editing) {
         setTransactions((prev) => prev.map((t) => (t.id === tx.id ? tx : t)));
         
@@ -271,6 +330,7 @@ export default function TransactionsScreen() {
     setDescription(t.description);
     setDate(t.date);
     setCategory(t.category);
+    setUseSavingsCategory(t.uses_savings_category || null);
     setDialogVisible(true);
   };
 
@@ -374,6 +434,14 @@ export default function TransactionsScreen() {
 
           <View style={styles.transactionRight}>
             {formatAmount(item.amount)}
+            {item.uses_savings_category && item.savings_amount_used && item.savings_amount_used > 0 && (
+              <TouchableOpacity style={styles.savingsBadge}>
+                <Ionicons name="wallet" size={14} color={AppTheme.colors.secondary} />
+                <Text variant="bodySmall" style={styles.savingsBadgeText}>
+                  €{item.savings_amount_used.toFixed(1)} from {item.uses_savings_category}
+                </Text>
+              </TouchableOpacity>
+            )}
             <View style={styles.transactionActions}>
               <IconButton
                 icon="pencil"
@@ -396,8 +464,8 @@ export default function TransactionsScreen() {
   };
 
   const renderUpcomingItem = (
-    item: ExpectedIncome | ExpectedInvoice | Transaction,
-    type: "income" | "invoice" | "transaction"
+    item: ExpectedIncome | ExpectedInvoice | ExpectedSavings | Transaction,
+    type: "income" | "invoice" | "transaction" | "saving"
   ) => {
     const categoryInfo = getCategoryInfo(item.category);
     const isIncome = type === "income" || (type === "transaction" && item.amount > 0);
@@ -415,7 +483,11 @@ export default function TransactionsScreen() {
             />
             <View style={styles.upcomingInfo}>
               <Text variant="bodyLarge" style={styles.upcomingDescription}>
-                {"name" in item ? item.name : item.description}
+                {type === "saving" 
+                  ? (item as ExpectedSavings).category 
+                  : "name" in item 
+                    ? item.name 
+                    : (item as Transaction).description}
               </Text>
               <Text variant="bodySmall" style={styles.upcomingMeta}>
                 {item.category} •{" "}
@@ -423,6 +495,8 @@ export default function TransactionsScreen() {
                   ? "Expected Income"
                   : type === "invoice"
                   ? "Expected Invoice"
+                  : type === "saving"
+                  ? "Savings"
                   : "Upcoming"}
               </Text>
             </View>
@@ -582,6 +656,53 @@ export default function TransactionsScreen() {
           </View>
         )}
 
+        {/* Savings Section */}
+        <TouchableOpacity
+          onPress={() => setSavingsExpanded(!savingsExpanded)}
+          style={styles.sectionHeader}
+        >
+          <View style={styles.sectionTitle}>
+            <Ionicons name="wallet" size={24} color={AppTheme.colors.secondary} />
+            <Text variant="headlineSmall" style={styles.sectionTitleText}>
+              Savings
+            </Text>
+            {paidSavings.length > 0 && (
+              <Chip
+                mode="flat"
+                compact
+                style={[styles.countChip, { backgroundColor: AppTheme.colors.secondary }]}
+                textStyle={{ color: AppTheme.colors.textInverse }}
+              >
+                {paidSavings.length}
+              </Chip>
+            )}
+          </View>
+          <Ionicons
+            name={savingsExpanded ? "chevron-up" : "chevron-down"}
+            size={20}
+            color={AppTheme.colors.textSecondary}
+          />
+        </TouchableOpacity>
+
+        {savingsExpanded && (
+          <View style={styles.upcomingSection}>
+            {paidSavings.length === 0 ? (
+              <Card style={styles.emptyCard}>
+                <Card.Content style={styles.emptyContent}>
+                  <Ionicons name="wallet-outline" size={48} color={AppTheme.colors.textMuted} />
+                  <Text variant="bodyLarge" style={styles.emptyText}>
+                    No paid savings items this month
+                  </Text>
+                </Card.Content>
+              </Card>
+            ) : (
+              <View style={styles.upcomingList}>
+                {paidSavings.map((saving) => renderUpcomingItem(saving, "saving"))}
+              </View>
+            )}
+          </View>
+        )}
+
         {/* Incomes Section */}
         <TouchableOpacity
           onPress={() => setIncomeExpanded(!incomeExpanded)}
@@ -704,7 +825,7 @@ export default function TransactionsScreen() {
         }}
         title={`${editing ? "Edit" : "Add"} Transaction`}
         onSave={handleSave}
-        hasUnsavedChanges={!!(amount || description || category)}
+        hasUnsavedChanges={!!(amount || description || category || useSavingsCategory)}
       >
         <View style={styles.dialogContent}>
           <SimpleDropdown
@@ -721,6 +842,40 @@ export default function TransactionsScreen() {
             style={styles.input}
             error={categoryError}
           />
+          
+          {/* Use Savings dropdown - only show for expense categories */}
+          {(() => {
+            const selectedCategoryInfo = categories.find(c => c.name === category);
+            const isExpenseCategory = selectedCategoryInfo?.type === "expense";
+            const availableSavings = Object.entries(savingsBalances)
+              .filter(([_, balance]) => balance > 0)
+              .map(([catName, balance]) => ({
+                id: catName,
+                name: `${catName} (€${balance.toFixed(1)})`,
+                emoji: categories.find(c => c.name === catName)?.emoji,
+                color: categories.find(c => c.name === catName)?.color,
+              }));
+            
+            if (isExpenseCategory && availableSavings.length > 0) {
+              return (
+                <SimpleDropdown
+                  label="Use Savings (optional)"
+                  value={useSavingsCategory || ""}
+                  onValueChange={(value) => {
+                    setUseSavingsCategory(value || null);
+                  }}
+                  data={[
+                    { id: "", name: "None", emoji: undefined, color: undefined },
+                    ...availableSavings,
+                  ]}
+                  placeholder="None"
+                  style={styles.input}
+                />
+              );
+            }
+            return null;
+          })()}
+          
           <TextInput
             label={<Text style={{ color: amountError ? 'red' : AppTheme.colors.textSecondary }}>Amount <Text style={{color: 'red'}}>*</Text></Text>}
             value={amount}
@@ -1003,5 +1158,20 @@ const styles = StyleSheet.create({
   },
   categoryChip: {
     marginRight: AppTheme.spacing.sm,
+  },
+  savingsBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: AppTheme.colors.backgroundSecondary,
+    borderRadius: 4,
+    alignSelf: "flex-start",
+  },
+  savingsBadgeText: {
+    color: AppTheme.colors.secondary,
+    fontSize: 12,
   },
 });
