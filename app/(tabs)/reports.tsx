@@ -1,4 +1,5 @@
 import logger from "@/app/utils/logger";
+import { BreakdownSection, DetailPopup } from "@/components/ui/DetailPopup";
 import { AppTheme } from "@/constants/AppTheme";
 import { useMonth } from "@/lib/month-context";
 import { getActiveSavingsCategories, loadBudgets, loadCategories, loadSavings, loadTransactions } from "@/lib/storage";
@@ -30,6 +31,12 @@ export default function ReportsScreen() {
   // TEMP: let's set to show all categories for now and when we add more components to this tab then we change it later
   const [showAllCategories, setShowAllCategories] = React.useState(true);
   const [inactiveSavingsExpanded, setInactiveSavingsExpanded] = React.useState(false);
+  
+  // Detail popup states
+  const [showCategoryDetail, setShowCategoryDetail] = React.useState(false);
+  const [selectedCategory, setSelectedCategory] = React.useState<string | null>(null);
+  const [showSavingsDetail, setShowSavingsDetail] = React.useState(false);
+  const [selectedSavingsCategory, setSelectedSavingsCategory] = React.useState<string | null>(null);
 
   // Pull-to-refresh state
   const [refreshing, setRefreshing] = React.useState(false);
@@ -147,7 +154,15 @@ export default function ReportsScreen() {
     const colors = hasBudget ? getProgressColors(progress) : ['rgba(156, 163, 175, 0.08)', 'rgba(156, 163, 175, 0.04)'] as const;
 
     return (
-      <View key={item.category} style={styles.categoryCardWrapper}>
+      <TouchableOpacity 
+        key={item.category} 
+        style={styles.categoryCardWrapper}
+        onPress={() => {
+          setSelectedCategory(item.category);
+          setShowCategoryDetail(true);
+        }}
+        activeOpacity={0.7}
+      >
         {/* Background gradient/fill based on progress */}
         <LinearGradient
           colors={colors}
@@ -164,6 +179,9 @@ export default function ReportsScreen() {
 
             {/* Right section: Main content */}
             <View style={styles.cardContent}>
+              {/* Info icon - positioned absolutely in top right */}
+              <Ionicons name="information-circle-outline" size={14} color={AppTheme.colors.textSecondary} style={styles.infoIconAbsolute} />
+              
               {/* Icon and Name */}
               <View style={styles.cardMainRow}>
                 <View style={[styles.cardIcon, { backgroundColor: categoryInfo?.color || AppTheme.colors.primary }]}>
@@ -190,7 +208,7 @@ export default function ReportsScreen() {
             </View>
           </View>
         </LinearGradient>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -333,9 +351,20 @@ export default function ReportsScreen() {
                     const progress = item.target && item.target > 0 ? item.balance / item.target : 0;
 
                     return (
-                      <View key={item.category} style={styles.categoryCardWrapper}>
+                      <TouchableOpacity 
+                        key={item.category} 
+                        style={styles.categoryCardWrapper}
+                        onPress={() => {
+                          setSelectedSavingsCategory(item.category);
+                          setShowSavingsDetail(true);
+                        }}
+                        activeOpacity={0.7}
+                      >
                         <View style={[styles.categoryCard, { borderColor: AppTheme.colors.secondary }]}>
                           <View style={styles.cardContent}>
+                            {/* Info icon - positioned absolutely in top right */}
+                            <Ionicons name="information-circle-outline" size={14} color={AppTheme.colors.textSecondary} style={styles.infoIconAbsolute} />
+                            
                             <View style={styles.cardMainRow}>
                               <View style={[styles.cardIcon, { backgroundColor: categoryInfo?.color || AppTheme.colors.secondary }]}>
                                 {categoryInfo?.emoji ? (
@@ -371,7 +400,7 @@ export default function ReportsScreen() {
                             )}
                           </View>
                         </View>
-                      </View>
+                      </TouchableOpacity>
                     );
                   })}
               </View>
@@ -430,6 +459,95 @@ export default function ReportsScreen() {
           })()}
         </View>
       </ScrollView>
+
+      {/* Category Detail Popup */}
+      {selectedCategory && (
+        <DetailPopup
+          visible={showCategoryDetail}
+          onDismiss={() => {
+            setShowCategoryDetail(false);
+            setSelectedCategory(null);
+          }}
+          title={`${selectedCategory} Breakdown`}
+        >
+          <BreakdownSection
+            title="Transactions"
+            amount={monthTransactions
+              .filter(t => t.category === selectedCategory && t.amount < 0)
+              .reduce((sum, t) => sum + Math.abs(t.amount), 0)}
+            items={monthTransactions
+              .filter(t => t.category === selectedCategory && t.amount < 0)
+              .map(t => ({
+                label: t.description || selectedCategory,
+                amount: -Math.abs(t.amount),
+                description: t.category,
+                date: t.date,
+              }))}
+            color={AppTheme.colors.error}
+          />
+        </DetailPopup>
+      )}
+
+      {/* Savings Detail Popup */}
+      {selectedSavingsCategory && (() => {
+        const savingsItem = activeSavings.find(s => s.category === selectedSavingsCategory);
+        if (!savingsItem) return null;
+
+        // Get all savings transactions (contributions)
+        const contributions = transactions
+          .filter(t => t.source_type === 'savings' && t.category === selectedSavingsCategory)
+          .map(t => ({
+            label: t.description || selectedSavingsCategory,
+            amount: Math.abs(t.amount),
+            description: t.category,
+            date: t.date,
+          }));
+
+        // Get all payments from savings
+        const payments = transactions
+          .filter(t => t.uses_savings_category === selectedSavingsCategory && (t.savings_amount_used || 0) > 0)
+          .map(t => ({
+            label: t.description || t.category,
+            amount: -(t.savings_amount_used || 0),
+            description: `${t.category} (from savings)`,
+            date: t.date,
+          }));
+
+        const totalContributions = contributions.reduce((sum, c) => sum + c.amount, 0);
+        const totalPayments = payments.reduce((sum, p) => sum + Math.abs(p.amount), 0);
+
+        return (
+          <DetailPopup
+            visible={showSavingsDetail}
+            onDismiss={() => {
+              setShowSavingsDetail(false);
+              setSelectedSavingsCategory(null);
+            }}
+            title={`${selectedSavingsCategory} Savings Breakdown`}
+          >
+            <BreakdownSection
+              title="Contributions"
+              amount={totalContributions}
+              items={contributions}
+              color={AppTheme.colors.success || "#4caf50"}
+            />
+            <BreakdownSection
+              title="Payments"
+              amount={totalPayments}
+              items={payments}
+              color={AppTheme.colors.error}
+            />
+            {savingsItem.target && savingsItem.target > 0 && (
+              <View style={{ marginTop: AppTheme.spacing.lg, paddingTop: AppTheme.spacing.md, borderTopWidth: 1, borderTopColor: AppTheme.colors.border }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: AppTheme.spacing.md }}>
+                  <Text variant="bodyLarge" style={{ color: AppTheme.colors.textSecondary }}>Target</Text>
+                  <Text variant="titleMedium" style={{ fontWeight: AppTheme.typography.fontWeight.bold }}>€{savingsItem.target.toFixed(2)}</Text>
+                </View>
+              </View>
+            )}
+          </DetailPopup>
+        );
+      })()}
     </SafeAreaView>
   );
 }
@@ -545,6 +663,7 @@ const styles = StyleSheet.create({
   },
   cardContent: {
     flex: 1,
+    position: "relative",
   },
   cardMainRow: {
     flexDirection: "row",
@@ -567,6 +686,16 @@ const styles = StyleSheet.create({
     fontSize: AppTheme.typography.fontSize.sm,
     fontWeight: AppTheme.typography.fontWeight.semibold,
     color: AppTheme.colors.textPrimary,
+    marginRight: 4,
+  },
+  infoIcon: {
+    marginLeft: 4,
+  },
+  infoIconAbsolute: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    zIndex: 1,
   },
   cardBottomRow: {
     flexDirection: "row",
