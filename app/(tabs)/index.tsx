@@ -42,7 +42,7 @@ import { addMonths, endOfMonth, format, startOfMonth } from "date-fns";
 import * as Crypto from "expo-crypto";
 import { useFocusEffect } from "expo-router";
 import React from "react";
-import { RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
+import { Platform, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import { Button, Card, IconButton, Text, TextInput } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -1096,14 +1096,25 @@ export default function HomeScreen() {
                 Expected Incomes
               </Text>
             </View>
-            <Button
-              mode="contained"
-              onPress={() => openAddDialog("income")}
-              style={styles.addButton}
-              icon="plus"
-            >
-              Add Income
-            </Button>
+            {Platform.OS === "web" ? (
+              <Button
+                mode="contained"
+                onPress={() => openAddDialog("income")}
+                style={styles.addButton}
+                icon="plus"
+              >
+                Add Income
+              </Button>
+            ) : (
+              <IconButton
+                icon="plus"
+                mode="contained"
+                onPress={() => openAddDialog("income")}
+                iconColor={AppTheme.colors.textInverse}
+                containerColor={AppTheme.colors.primary}
+                size={24}
+              />
+            )}
           </View>
 
           {isLoadingData ? (
@@ -1135,14 +1146,25 @@ export default function HomeScreen() {
                 Expected Invoices
               </Text>
             </View>
-            <Button
-              mode="contained"
-              onPress={() => openAddDialog("invoice")}
-              style={styles.addButton}
-              icon="plus"
-            >
-              Add Invoice
-            </Button>
+            {Platform.OS === "web" ? (
+              <Button
+                mode="contained"
+                onPress={() => openAddDialog("invoice")}
+                style={styles.addButton}
+                icon="plus"
+              >
+                Add Invoice
+              </Button>
+            ) : (
+              <IconButton
+                icon="plus"
+                mode="contained"
+                onPress={() => openAddDialog("invoice")}
+                iconColor={AppTheme.colors.textInverse}
+                containerColor={AppTheme.colors.primary}
+                size={24}
+              />
+            )}
           </View>
 
           {isLoadingData ? (
@@ -1178,14 +1200,25 @@ export default function HomeScreen() {
                 Budgets
               </Text>
             </View>
-            <Button
-              mode="contained"
-              onPress={() => openAddDialog("budget")}
-              style={styles.addButton}
-              icon="plus"
-            >
-              Add Budget
-            </Button>
+            {Platform.OS === "web" ? (
+              <Button
+                mode="contained"
+                onPress={() => openAddDialog("budget")}
+                style={styles.addButton}
+                icon="plus"
+              >
+                Add Budget
+              </Button>
+            ) : (
+              <IconButton
+                icon="plus"
+                mode="contained"
+                onPress={() => openAddDialog("budget")}
+                iconColor={AppTheme.colors.textInverse}
+                containerColor={AppTheme.colors.primary}
+                size={24}
+              />
+            )}
           </View>
 
           {isLoadingData ? (
@@ -1274,14 +1307,25 @@ export default function HomeScreen() {
                 Savings
               </Text>
             </View>
-            <Button
-              mode="contained"
-              onPress={() => openAddDialog("saving")}
-              style={styles.addButton}
-              icon="plus"
-            >
-              Add Savings
-            </Button>
+            {Platform.OS === "web" ? (
+              <Button
+                mode="contained"
+                onPress={() => openAddDialog("saving")}
+                style={styles.addButton}
+                icon="plus"
+              >
+                Add Savings
+              </Button>
+            ) : (
+              <IconButton
+                icon="plus"
+                mode="contained"
+                onPress={() => openAddDialog("saving")}
+                iconColor={AppTheme.colors.textInverse}
+                containerColor={AppTheme.colors.primary}
+                size={24}
+              />
+            )}
           </View>
 
           {isLoadingData ? (
