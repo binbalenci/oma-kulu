@@ -1,6 +1,7 @@
 import logger from "@/app/utils/logger";
 import { useSnackbar } from "@/components/snackbar-provider";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { CustomCheckbox } from "@/components/ui/CustomCheckbox";
 import { Dialog } from "@/components/ui/Dialog";
 import { GradientProgressBar } from "@/components/ui/GradientProgressBar";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
@@ -41,7 +42,7 @@ import * as Crypto from "expo-crypto";
 import { useFocusEffect } from "expo-router";
 import React from "react";
 import { RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
-import { Button, Card, Checkbox, IconButton, Text, TextInput } from "react-native-paper";
+import { Button, Card, IconButton, Text, TextInput } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 function monthKey(d: Date): string {
@@ -821,7 +822,7 @@ export default function HomeScreen() {
           <View style={styles.categoryItems}>
             {items.map((item) => (
               <View key={item.id} style={styles.itemRow}>
-                <Checkbox
+                <CustomCheckbox
                   status={item.is_paid ? "checked" : "unchecked"}
                   onPress={() => togglePaid(type, item)}
                 />
@@ -1288,7 +1289,7 @@ export default function HomeScreen() {
                           </View>
                         </View>
                         <View style={styles.budgetActions}>
-                          <Checkbox
+                          <CustomCheckbox
                             status={saving.is_paid ? "checked" : "unchecked"}
                             onPress={() => togglePaid("saving", saving)}
                             color={AppTheme.colors.success}
