@@ -14,20 +14,63 @@ import { AppTheme } from "@/constants/AppTheme";
 import { MonthProvider } from "@/lib/month-context";
 import { isSessionValid } from "@/lib/session";
 
-// Initialize Sentry
-Sentry.init({
-  dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
-  sendDefaultPii: true,
-  tracesSampleRate: 0.1,
-  replaysSessionSampleRate: 0.1,
-  replaysOnErrorSampleRate: 1.0,
-  integrations: [
-    Sentry.mobileReplayIntegration(),
-  ],
-});
+/**
+ * Initialize Sentry error monitoring and performance tracking
+ *
+ * This function configures Sentry with optimal settings for mobile app monitoring:
+ * - Error tracking with detailed context and breadcrumbs
+ * - Performance monitoring for user interactions
+ * - Session replay for debugging user issues
+ * - Mobile-specific integrations and optimizations
+ */
+function initializeSentry() {
+  // Core Sentry Configuration
+  Sentry.init({
+    // Data Source Name - identifies this app in Sentry dashboard
+    dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
 
-// Set up logger environment
-logger.setEnvironment(__DEV__ ? 'development' : 'production');
+    // Privacy & Data Collection Settings
+    // Send Personally Identifiable Information (device info, user context)
+    sendDefaultPii: true,
+
+    // Performance Monitoring
+    // Sample rate for tracing (10% of interactions are monitored for performance)
+    tracesSampleRate: 0.1,
+
+    // Session Replay Configuration
+    // Sample rate for session replays (10% of sessions recorded)
+    replaysSessionSampleRate: 0.1,
+    // Always capture replays when errors occur (100% of error sessions)
+    replaysOnErrorSampleRate: 1.0,
+
+    // Integrations - Mobile-specific features
+    integrations: [
+      // Mobile replay integration for session recording and debugging
+      Sentry.mobileReplayIntegration(),
+    ],
+
+    // Development & Debugging
+    // Enable console logs to be captured and sent to Sentry
+    enableLogs: true,
+  });
+}
+
+/**
+ * Initialize application monitoring and logging environment
+ *
+ * Sets up the logging system with appropriate environment context
+ * for development vs production error reporting and analytics.
+ */
+function initializeMonitoring() {
+  // Initialize Sentry error monitoring first
+  initializeSentry();
+
+  // Configure logger environment for consistent tagging
+  logger.setEnvironment(__DEV__ ? 'development' : 'production');
+}
+
+// Initialize monitoring on module load
+initializeMonitoring();
 
 export const unstable_settings = {
   anchor: "(tabs)",
