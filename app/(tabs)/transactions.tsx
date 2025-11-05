@@ -3,20 +3,21 @@ import { useSnackbar } from "@/components/snackbar-provider";
 import { CategoryBadge } from "@/components/ui/CategoryBadge";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Dialog as CustomDialog } from "@/components/ui/Dialog";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { SimpleDropdown } from "@/components/ui/SimpleDropdown";
 import { AppTheme } from "@/constants/AppTheme";
 import { useMonth } from "@/lib/month-context";
 import {
-  deleteTransaction,
-  getSavingsBalance,
-  loadCategories,
-  loadIncomes,
-  loadInvoices,
-  loadSavings,
-  loadTransactions,
-  saveIncome,
-  saveInvoice,
-  saveTransaction,
+    deleteTransaction,
+    getSavingsBalance,
+    loadCategories,
+    loadIncomes,
+    loadInvoices,
+    loadSavings,
+    loadTransactions,
+    saveIncome,
+    saveInvoice,
+    saveTransaction,
 } from "@/lib/storage";
 import type { Category, ExpectedIncome, ExpectedInvoice, ExpectedSavings, Transaction } from "@/lib/types";
 import Ionicons from "@react-native-vector-icons/ionicons";
@@ -98,30 +99,38 @@ export default function TransactionsScreen() {
   // Pull-to-refresh state
   const [refreshing, setRefreshing] = React.useState(false);
 
+  // Data loading state
+  const [isLoadingData, setIsLoadingData] = React.useState(true);
+
   // Load data when screen gains focus
   useFocusEffect(
     React.useCallback(() => {
       (async () => {
-        const [txs, incms, invcs, svgs, cats] = await Promise.all([
-          loadTransactions(),
-          loadIncomes(),
-          loadInvoices(),
-          loadSavings(),
-          loadCategories(),
-        ]);
-        setTransactions(txs);
-        setIncomes(incms);
-        setInvoices(invcs);
-        setSavings(svgs);
-        setCategories(cats);
-        
-        // Calculate savings balances
-        const savingCategories = cats.filter(c => c.type === 'saving');
-        const balances: Record<string, number> = {};
-        for (const cat of savingCategories) {
-          balances[cat.name] = await getSavingsBalance(cat.name);
+        setIsLoadingData(true);
+        try {
+          const [txs, incms, invcs, svgs, cats] = await Promise.all([
+            loadTransactions(),
+            loadIncomes(),
+            loadInvoices(),
+            loadSavings(),
+            loadCategories(),
+          ]);
+          setTransactions(txs);
+          setIncomes(incms);
+          setInvoices(invcs);
+          setSavings(svgs);
+          setCategories(cats);
+
+          // Calculate savings balances
+          const savingCategories = cats.filter(c => c.type === 'saving');
+          const balances: Record<string, number> = {};
+          for (const cat of savingCategories) {
+            balances[cat.name] = await getSavingsBalance(cat.name);
+          }
+          setSavingsBalances(balances);
+        } finally {
+          setIsLoadingData(false);
         }
-        setSavingsBalances(balances);
       })();
     }, [])
   );
@@ -637,7 +646,9 @@ export default function TransactionsScreen() {
 
         {upcomingExpanded && (
           <View style={styles.upcomingSection}>
-            {totalUpcoming === 0 ? (
+            {isLoadingData ? (
+              <LoadingSpinner message="Loading upcoming items..." />
+            ) : totalUpcoming === 0 ? (
               <Card style={styles.emptyCard}>
                 <Card.Content style={styles.emptyContent}>
                   <Ionicons name="time-outline" size={48} color={AppTheme.colors.textMuted} />
@@ -686,7 +697,9 @@ export default function TransactionsScreen() {
 
         {savingsExpanded && (
           <View style={styles.upcomingSection}>
-            {paidSavings.length === 0 ? (
+            {isLoadingData ? (
+              <LoadingSpinner message="Loading savings..." />
+            ) : paidSavings.length === 0 ? (
               <Card style={styles.emptyCard}>
                 <Card.Content style={styles.emptyContent}>
                   <Ionicons name="wallet-outline" size={48} color={AppTheme.colors.textMuted} />
@@ -733,7 +746,9 @@ export default function TransactionsScreen() {
 
         {incomeExpanded && (
           <View style={styles.transactionSection}>
-            {incomeTransactions.length === 0 ? (
+            {isLoadingData ? (
+              <LoadingSpinner message="Loading income transactions..." />
+            ) : incomeTransactions.length === 0 ? (
               <Card style={styles.emptyCard}>
                 <Card.Content style={styles.emptyContent}>
                   <Ionicons name="trending-up" size={48} color={AppTheme.colors.textMuted} />
@@ -784,7 +799,9 @@ export default function TransactionsScreen() {
 
         {expenseExpanded && (
           <View style={styles.transactionSection}>
-            {expenseTransactions.length === 0 ? (
+            {isLoadingData ? (
+              <LoadingSpinner message="Loading expense transactions..." />
+            ) : expenseTransactions.length === 0 ? (
               <Card style={styles.emptyCard}>
                 <Card.Content style={styles.emptyContent}>
                   <Ionicons name="trending-down" size={48} color={AppTheme.colors.textMuted} />

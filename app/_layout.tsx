@@ -10,6 +10,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import logger from "@/app/utils/logger";
 import PasscodeGate from "@/components/passcode-gate";
 import { SnackbarProvider } from "@/components/snackbar-provider";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { AppTheme } from "@/constants/AppTheme";
 import { MonthProvider } from "@/lib/month-context";
 import { isSessionValid } from "@/lib/session";
@@ -84,7 +85,14 @@ function RootLayoutComponent() {
   React.useEffect(() => {
     const checkSession = async () => {
       try {
-        const hasValidSession = await isSessionValid();
+        // Add timeout to prevent infinite loading
+        const sessionCheckPromise = isSessionValid();
+        const timeoutPromise = new Promise<boolean>((_, reject) =>
+          setTimeout(() => reject(new Error('Session check timeout')), 5000)
+        );
+
+        const hasValidSession = await Promise.race([sessionCheckPromise, timeoutPromise]);
+
         if (hasValidSession) {
           logger.breadcrumb("Valid session found, skipping passcode gate", "session");
           setUnlocked(true);
@@ -105,7 +113,17 @@ function RootLayoutComponent() {
 
   // Show loading state while checking session
   if (isCheckingSession) {
-    return null; // Or you could show a loading spinner here
+    return (
+      <SafeAreaProvider>
+        <PaperProvider theme={AppTheme}>
+          <LoadingSpinner
+            fullScreen
+            message="Loading your budget..."
+            color={AppTheme.colors.primary}
+          />
+        </PaperProvider>
+      </SafeAreaProvider>
+    );
   }
 
   return (

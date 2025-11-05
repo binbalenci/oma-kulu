@@ -3,6 +3,7 @@ import { useSnackbar } from "@/components/snackbar-provider";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Dialog } from "@/components/ui/Dialog";
 import { GradientProgressBar } from "@/components/ui/GradientProgressBar";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { SimpleDropdown } from "@/components/ui/SimpleDropdown";
 import { AppTheme } from "@/constants/AppTheme";
 import { useMonth } from "@/lib/month-context";
@@ -51,35 +52,40 @@ export default function HomeScreen() {
   const { showSnackbar } = useSnackbar();
   const { currentMonth, setCurrentMonth } = useMonth();
 
-  // Log navigation and refetch month-specific data when month changes  
+  // Log navigation and refetch month-specific data when month changes
   React.useEffect(() => {
     logger.navigationAction("BudgetScreen", { month: currentMonth });
-    
+
     // Refetch only month-dependent data when month changes
     (async () => {
-      const [incms, invcs, bdgts, svgs, txs, cats] = await Promise.all([
-        loadIncomes(),      // needed for expected incomes by month
-        loadInvoices(),     // needed for expected invoices by month
-        loadBudgets(),      // needed for budgets by month
-        loadSavings(),      // needed for expected savings by month
-        loadTransactions(), // needed for "in bank" calc and spent amounts
-        loadCategories(),   // needed for savings balance calculation
-      ]);
-      setIncomes(incms);
-      setInvoices(invcs);
-      setBudgets(bdgts);
-      setSavings(svgs);
-      setTransactions(txs);
-      setCategories(cats);
-      
-      // Calculate savings balances for all savings categories
-      const savingCategories = cats.filter(c => c.type === 'saving');
-      const balances: Record<string, number> = {};
-      for (const cat of savingCategories) {
-        balances[cat.name] = await getSavingsBalance(cat.name);
+      setIsLoadingData(true);
+      try {
+        const [incms, invcs, bdgts, svgs, txs, cats] = await Promise.all([
+          loadIncomes(),      // needed for expected incomes by month
+          loadInvoices(),     // needed for expected invoices by month
+          loadBudgets(),      // needed for budgets by month
+          loadSavings(),      // needed for expected savings by month
+          loadTransactions(), // needed for "in bank" calc and spent amounts
+          loadCategories(),   // needed for savings balance calculation
+        ]);
+        setIncomes(incms);
+        setInvoices(invcs);
+        setBudgets(bdgts);
+        setSavings(svgs);
+        setTransactions(txs);
+        setCategories(cats);
+
+        // Calculate savings balances for all savings categories
+        const savingCategories = cats.filter(c => c.type === 'saving');
+        const balances: Record<string, number> = {};
+        for (const cat of savingCategories) {
+          balances[cat.name] = await getSavingsBalance(cat.name);
+        }
+        setSavingsBalances(balances);
+        // Categories and settings don't need refresh - they're month-independent
+      } finally {
+        setIsLoadingData(false);
       }
-      setSavingsBalances(balances);
-      // Categories and settings don't need refresh - they're month-independent
     })();
   }, [currentMonth]);
 
@@ -120,6 +126,9 @@ export default function HomeScreen() {
 
   // Pull-to-refresh state
   const [refreshing, setRefreshing] = React.useState(false);
+
+  // Data loading state
+  const [isLoadingData, setIsLoadingData] = React.useState(true);
 
   // Load data on mount
   React.useEffect(() => {
@@ -905,9 +914,13 @@ export default function HomeScreen() {
                   Income
                 </Text>
               </View>
-              <Text variant="bodyMedium" style={styles.positiveAmount}>
-                €{expectedIncome.toFixed(1)}
-              </Text>
+              {isLoadingData ? (
+                <LoadingSpinner size="small" />
+              ) : (
+                <Text variant="bodyMedium" style={styles.positiveAmount}>
+                  €{expectedIncome.toFixed(1)}
+                </Text>
+              )}
             </View>
 
             <View style={styles.overviewDivider} />
@@ -920,9 +933,13 @@ export default function HomeScreen() {
                   Expenses
                 </Text>
               </View>
-              <Text variant="bodyMedium" style={styles.negativeAmount}>
-                €{expectedExpenses.toFixed(1)}
-              </Text>
+              {isLoadingData ? (
+                <LoadingSpinner size="small" />
+              ) : (
+                <Text variant="bodyMedium" style={styles.negativeAmount}>
+                  €{expectedExpenses.toFixed(1)}
+                </Text>
+              )}
             </View>
 
             <View style={styles.overviewDivider} />
@@ -935,9 +952,13 @@ export default function HomeScreen() {
                   Remaining
                 </Text>
               </View>
-              <Text variant="bodyMedium" style={styles.neutralAmount}>
-                €{moneyToAssign.toFixed(1)}
-              </Text>
+              {isLoadingData ? (
+                <LoadingSpinner size="small" />
+              ) : (
+                <Text variant="bodyMedium" style={styles.neutralAmount}>
+                  €{moneyToAssign.toFixed(1)}
+                </Text>
+              )}
             </View>
           </View>
 
@@ -954,9 +975,13 @@ export default function HomeScreen() {
                   In Bank
                 </Text>
               </View>
-              <Text variant="bodyMedium" style={styles.neutralAmount}>
-                €{actualInBank.toFixed(1)}
-              </Text>
+              {isLoadingData ? (
+                <LoadingSpinner size="small" />
+              ) : (
+                <Text variant="bodyMedium" style={styles.neutralAmount}>
+                  €{actualInBank.toFixed(1)}
+                </Text>
+              )}
             </View>
 
             <View style={styles.overviewDivider} />
@@ -969,9 +994,13 @@ export default function HomeScreen() {
                   Savings
                 </Text>
               </View>
-              <Text variant="bodyMedium" style={styles.neutralAmount}>
-                €{totalSavingsBalance.toFixed(1)}
-              </Text>
+              {isLoadingData ? (
+                <LoadingSpinner size="small" />
+              ) : (
+                <Text variant="bodyMedium" style={styles.neutralAmount}>
+                  €{totalSavingsBalance.toFixed(1)}
+                </Text>
+              )}
             </View>
           </View>
         </View>
@@ -1021,7 +1050,9 @@ export default function HomeScreen() {
             </Button>
           </View>
 
-          {Object.keys(incomesByCategory).length === 0 ? (
+          {isLoadingData ? (
+            <LoadingSpinner message="Loading incomes..." />
+          ) : Object.keys(incomesByCategory).length === 0 ? (
             <Card style={styles.emptyCard}>
               <Card.Content style={styles.emptyContent}>
                 <Ionicons name="trending-up-outline" size={48} color={AppTheme.colors.textMuted} />
@@ -1058,7 +1089,9 @@ export default function HomeScreen() {
             </Button>
           </View>
 
-          {Object.keys(invoicesByCategory).length === 0 ? (
+          {isLoadingData ? (
+            <LoadingSpinner message="Loading invoices..." />
+          ) : Object.keys(invoicesByCategory).length === 0 ? (
             <Card style={styles.emptyCard}>
               <Card.Content style={styles.emptyContent}>
                 <Ionicons
@@ -1099,7 +1132,9 @@ export default function HomeScreen() {
             </Button>
           </View>
 
-          {currentBudgets.length === 0 ? (
+          {isLoadingData ? (
+            <LoadingSpinner message="Loading budgets..." />
+          ) : currentBudgets.length === 0 ? (
             <Card style={styles.emptyCard}>
               <Card.Content style={styles.emptyContent}>
                 <Ionicons name="pie-chart-outline" size={48} color={AppTheme.colors.textMuted} />
@@ -1193,7 +1228,9 @@ export default function HomeScreen() {
             </Button>
           </View>
 
-          {currentSavings.length === 0 ? (
+          {isLoadingData ? (
+            <LoadingSpinner message="Loading savings..." />
+          ) : currentSavings.length === 0 ? (
             <Card style={styles.emptyCard}>
               <Card.Content style={styles.emptyContent}>
                 <Ionicons
