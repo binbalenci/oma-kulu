@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] - 2025-11-05
+
+### ✨ Major Features
+
+- **Major version bump to 3.0.0**
+  - Major architectural improvements and new features
+  - Enhanced error monitoring and logging system
+  - Performance optimizations and code quality improvements
+  - Updated Sentry initialization with comprehensive comments
+
+- **💰 Savings System**
+  - **Complete Savings Management**: Add monthly contributions to savings categories for future expenses (car insurance, car service, travel funds, etc.)
+  - **Savings Balance Tracking**: Automatically calculates savings balances from transaction history with contributions minus payments
+  - **Flexible Savings Usage**: Use savings to pay for expenses (partially or fully) through transaction dialogs or expected invoice dialogs
+  - **Savings Targets**: Set optional target amounts for savings categories that persist across months
+  - **Progress Tracking**: Visual progress bars showing savings progress toward targets
+  - **Two-Row Cash Overview**: Updated Home tab with Income/Expenses/Remaining on top row, In Bank/Savings Balances on bottom row
+  - **Enhanced Calculations**: "Remaining to assign" now includes savings allocations, "In Bank" calculation excludes savings contributions and accounts for savings-covered expenses
+  - **Savings Section in Transactions**: New collapsible section showing paid savings contributions
+  - **Savings Indicators**: Transactions show when savings were used with amount breakdown
+  - **Reports Integration**: New "Savings Tracking" section showing active savings with balances, targets, and monthly activity
+  - **Database Schema**: Added `expected_savings` table, enhanced `transactions` and `categories` tables with savings support
+  - **Type Safety**: Full TypeScript support for all savings-related data structures
+  - Files: `lib/types.ts`, `lib/database.ts`, `lib/storage.ts`, `app/(tabs)/index.tsx`, `app/(tabs)/transactions.tsx`, `app/(tabs)/reports.tsx`, `app/(tabs)/categories.tsx`, `docs/db.sql`, `docs/migrations/001_add_savings_feature.sql`
+
 ## [2.2.0] - 2025-01-29
 
 ### 🔧 Fixed
