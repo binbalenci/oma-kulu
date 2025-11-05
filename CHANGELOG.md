@@ -5,6 +5,59 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.0] - 2025-11-05
+
+### ✨ New Features
+
+- **📊 DetailPopup Component**
+  - New reusable popup component for viewing detailed breakdowns and calculations
+  - Vertical math-style calculation view for financial calculations
+  - Breakdown sections with alternating row colors (zig-zag) for better readability
+  - Two-line item format: Name on first line, "Date - Category" on second line
+  - Available in Home tab (Cash Overview) and Reports tab (Category & Savings cards)
+  - Files: `components/ui/DetailPopup.tsx`
+
+- **🔍 Enhanced Cash Overview**
+  - All Cash Overview sections now have info icons (ℹ️) and are clickable
+  - **Income Detail**: Shows breakdown of all expected income items
+  - **Expense Detail**: Shows breakdown of all expected expense items
+  - **Remaining Detail**: Shows calculation breakdown (Income - Expenses - Allocated - Savings)
+  - **In Bank Detail**: Shows calculation breakdown (Paid Income - Paid Expenses from income)
+  - **Savings Detail**: Shows breakdown of all savings category balances
+  - Files: `app/(tabs)/index.tsx`
+
+- **📈 Enhanced Reports Tab**
+  - Category cards now have info icons and are clickable
+  - Shows transaction breakdown for each category in the current month
+  - Savings cards now have info icons and are clickable
+  - Shows contributions and payments breakdown for each savings category
+  - Displays savings target if set
+  - Files: `app/(tabs)/reports.tsx`
+
+### 🔧 Technical Improvements
+
+- **Database Schema Migration**
+  - Migrated from category name-based foreign keys to category ID (UUID) foreign keys
+  - Added `category_id` columns to all referencing tables (budgets, expected_incomes, expected_invoices, expected_savings, transactions)
+  - Added proper foreign key constraints with `ON DELETE RESTRICT`
+  - Maintains backward compatibility with `category` text fields
+  - Fixed category save/update logic to prevent foreign key violations
+  - Improved referential integrity and allows category name/type changes
+  - Files: `lib/database.ts`, `lib/types.ts`, `docs/migrations/003_use_category_id_foreign_keys.sql`
+
+- **UI/UX Enhancements**
+  - Platform-specific Add buttons: Full button with text on web, icon-only on mobile
+  - Info icons positioned in top-right corner of cards
+  - Improved visual hierarchy with better spacing and colors
+  - Files: `app/(tabs)/index.tsx`
+
+### 🐛 Bug Fixes
+
+- Fixed category creation/update to properly handle duplicate (name, type) combinations
+- Fixed category update to preserve existing IDs (prevents foreign key violations)
+- Fixed expense amount display to consistently show "-" prefix in detail popups
+- Files: `lib/database.ts`, `app/(tabs)/index.tsx`, `app/(tabs)/reports.tsx`
+
 ## [3.0.0] - 2025-11-05
 
 ### ✨ Major Features
