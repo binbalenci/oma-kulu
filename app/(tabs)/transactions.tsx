@@ -248,6 +248,13 @@ export default function TransactionsScreen() {
     const categoryInfo = getCategoryInfo(category);
     const isIncome = categoryInfo?.type === "income";
 
+    // Find category_id from category name
+    const categoryObj = categories.find((c) => c.name === category);
+    // Find uses_savings_category_id if using savings
+    const usesSavingsCategoryObj = useSavingsCategory 
+      ? categories.find((c) => c.name === useSavingsCategory && c.type === "saving")
+      : undefined;
+
     // Calculate savings usage if selected
     let savingsAmountUsed = 0;
     if (useSavingsCategory && !isIncome && savingsBalances[useSavingsCategory]) {
@@ -263,6 +270,7 @@ export default function TransactionsScreen() {
       description,
       date,
       category,
+      category_id: categoryObj?.id,
       status: "paid", // Only allow paid transactions
       created_at: editing?.created_at || new Date().toISOString(),
       // Preserve source fields when editing
@@ -270,6 +278,7 @@ export default function TransactionsScreen() {
       source_id: editing?.source_id,
       // Savings usage fields
       uses_savings_category: useSavingsCategory || undefined,
+      uses_savings_category_id: usesSavingsCategoryObj?.id,
       savings_amount_used: savingsAmountUsed > 0 ? savingsAmountUsed : undefined,
     };
 

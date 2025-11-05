@@ -12,14 +12,14 @@ import * as Crypto from "expo-crypto";
 import React from "react";
 import { FlatList, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import {
-    Button,
-    Card,
-    Chip,
-    IconButton,
-    Searchbar,
-    Switch,
-    Text,
-    TextInput,
+  Button,
+  Card,
+  Chip,
+  IconButton,
+  Searchbar,
+  Switch,
+  Text,
+  TextInput,
 } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -154,7 +154,9 @@ export default function CategoriesScreen() {
       return true;
     } else {
       logger.databaseError("Failed to save category", "save_category", { categoryId: category.id });
-      showSnackbar("Failed to save category");
+      // Check if it's a duplicate error
+      const isDuplicate = !editing && items.some(c => c.name === category.name && c.type === category.type);
+      showSnackbar(isDuplicate ? "Category with this name and type already exists" : "Failed to save category");
       return false;
     }
   };

@@ -462,6 +462,14 @@ export default function HomeScreen() {
       }
     }
 
+    // Find category_id for transaction
+    const categoryType = type === "income" ? "income" : type === "saving" ? "saving" : "expense";
+    const categoryObj = categories.find((c) => c.name === item.category && c.type === categoryType);
+    // Find uses_savings_category_id if using savings
+    const usesSavingsCategoryObj = useSavingsCategory 
+      ? categories.find((c) => c.name === useSavingsCategory && c.type === "saving")
+      : undefined;
+
     // Mark as paid - create transaction
     const tx: Transaction = {
       id: Crypto.randomUUID(),
@@ -469,11 +477,13 @@ export default function HomeScreen() {
       description: type === "saving" ? (item as ExpectedSavings).category : (item as ExpectedIncome | ExpectedInvoice).name,
       date: format(new Date(), "yyyy-MM-dd"),
       category: item.category,
+      category_id: categoryObj?.id,
       status: "paid",
       created_at: new Date().toISOString(),
       source_type: type === "saving" ? "savings" : type,
       source_id: item.id,
       uses_savings_category: useSavingsCategory,
+      uses_savings_category_id: usesSavingsCategoryObj?.id,
       savings_amount_used: savingsAmountUsed > 0 ? savingsAmountUsed : undefined,
     };
 
@@ -550,10 +560,13 @@ export default function HomeScreen() {
 
     try {
       if (dialogType === "income") {
+        // Find category_id from category name
+        const categoryObj = categories.find((c) => c.name === itemCategory && c.type === "income");
         const income: ExpectedIncome = {
           id: editingItem?.id || Crypto.randomUUID(),
           name: itemName || itemCategory, // Use category name if name is empty
           category: itemCategory,
+          category_id: categoryObj?.id,
           amount: amt,
           month: curMonth,
           is_paid: (editingItem as ExpectedIncome)?.is_paid || false,
@@ -574,10 +587,13 @@ export default function HomeScreen() {
           return false;
         }
       } else if (dialogType === "invoice") {
+        // Find category_id from category name
+        const categoryObj = categories.find((c) => c.name === itemCategory && c.type === "expense");
         const invoice: ExpectedInvoice = {
           id: editingItem?.id || Crypto.randomUUID(),
           name: itemName || itemCategory, // Use category name if name is empty
           category: itemCategory,
+          category_id: categoryObj?.id,
           amount: amt,
           month: curMonth,
           is_paid: (editingItem as ExpectedInvoice)?.is_paid || false,
@@ -604,9 +620,12 @@ export default function HomeScreen() {
           return false;
         }
       } else if (dialogType === "budget") {
+        // Find category_id from category name
+        const categoryObj = categories.find((c) => c.name === itemCategory && c.type === "expense");
         const budget: Budget = {
           id: editingItem?.id || Crypto.randomUUID(),
           category: itemCategory,
+          category_id: categoryObj?.id,
           allocated_amount: amt,
           month: curMonth,
           notes: itemNotes || undefined,
@@ -626,10 +645,13 @@ export default function HomeScreen() {
           return false;
         }
       } else if (dialogType === "saving") {
+        // Find category_id from category name
+        const categoryObj = categories.find((c) => c.name === itemCategory && c.type === "saving");
         const targetValue = itemTarget ? parseFloat(itemTarget.replace(",", ".")) : undefined;
         const saving: ExpectedSavings = {
           id: editingItem?.id || Crypto.randomUUID(),
           category: itemCategory,
+          category_id: categoryObj?.id,
           amount: amt,
           month: curMonth,
           target: targetValue && !isNaN(targetValue) ? targetValue : undefined,
@@ -713,7 +735,7 @@ export default function HomeScreen() {
 
     let count = 0;
 
-    // Copy incomes
+    // Copy incomes (category_id is preserved from previous month)
     for (const income of prevIncomes) {
       const newIncome = { ...income, id: Crypto.randomUUID(), month: curMonth, is_paid: false };
       const success = await saveIncome(newIncome);
@@ -723,7 +745,7 @@ export default function HomeScreen() {
       }
     }
 
-    // Copy invoices
+    // Copy invoices (category_id is preserved from previous month)
     for (const invoice of prevInvoices) {
       const newInvoice = { ...invoice, id: Crypto.randomUUID(), month: curMonth, is_paid: false };
       const success = await saveInvoice(newInvoice);
@@ -733,7 +755,7 @@ export default function HomeScreen() {
       }
     }
 
-    // Copy budgets
+    // Copy budgets (category_id is preserved from previous month)
     for (const budget of prevBudgets) {
       const newBudget = { ...budget, id: Crypto.randomUUID(), month: curMonth };
       const success = await saveBudget(newBudget);

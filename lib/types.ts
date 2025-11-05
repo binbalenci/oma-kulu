@@ -1,7 +1,8 @@
 export interface ExpectedIncome {
   id: string;
   name: string;
-  category: string;
+  category: string; // Category name (for backward compatibility/display)
+  category_id?: string; // Category UUID (foreign key) - optional, will be looked up from category name if not provided
   amount: number;
   month: string; // YYYY-MM
   is_paid: boolean;
@@ -13,7 +14,8 @@ export interface ExpectedIncome {
 export interface ExpectedInvoice {
   id: string;
   name: string;
-  category: string;
+  category: string; // Category name (for backward compatibility/display)
+  category_id?: string; // Category UUID (foreign key) - optional, will be looked up from category name if not provided
   amount: number;
   month: string; // YYYY-MM
   is_paid: boolean;
@@ -24,7 +26,8 @@ export interface ExpectedInvoice {
 
 export interface Budget {
   id: string;
-  category: string;
+  category: string; // Category name (for backward compatibility/display)
+  category_id?: string; // Category UUID (foreign key) - optional, will be looked up from category name if not provided
   allocated_amount: number;
   month: string; // YYYY-MM
   notes?: string;
@@ -34,7 +37,8 @@ export interface Budget {
 
 export interface ExpectedSavings {
   id: string;
-  category: string;
+  category: string; // Category name (for backward compatibility/display)
+  category_id?: string; // Category UUID (foreign key) - optional, will be looked up from category name if not provided
   amount: number;
   month: string; // YYYY-MM
   target?: number; // Optional target amount (persists across months)
@@ -49,12 +53,14 @@ export interface Transaction {
   amount: number;
   description: string;
   date: string; // ISO date string (YYYY-MM-DD)
-  category: string;
+  category: string; // Category name (for backward compatibility/display)
+  category_id?: string; // Category UUID (foreign key) - optional, will be looked up from category name if not provided
   status: 'upcoming' | 'paid';
   created_at: string; // ISO timestamp
   source_type?: 'income' | 'invoice' | 'savings'; // Type of expected item this transaction was created from
   source_id?: string; // ID of the expected income/invoice/savings item
-  uses_savings_category?: string; // Category name if using savings
+  uses_savings_category?: string; // Category name if using savings (for backward compatibility)
+  uses_savings_category_id?: string; // Category UUID if using savings (foreign key)
   savings_amount_used?: number; // Amount used from savings balance
 }
 
