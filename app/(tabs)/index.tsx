@@ -2,6 +2,7 @@ import logger from "@/app/utils/logger";
 import { useSnackbar } from "@/components/snackbar-provider";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { CustomCheckbox } from "@/components/ui/CustomCheckbox";
+import { BreakdownSection, CalculationView, DetailPopup } from "@/components/ui/DetailPopup";
 import { Dialog } from "@/components/ui/Dialog";
 import { GradientProgressBar } from "@/components/ui/GradientProgressBar";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
@@ -98,6 +99,13 @@ export default function HomeScreen() {
   const [transactions, setTransactions] = React.useState<Transaction[]>([]);
   const [categories, setCategories] = React.useState<Category[]>([]);
   const [savingsBalances, setSavingsBalances] = React.useState<Record<string, number>>({});
+  
+  // Detail popup states
+  const [showInBankDetail, setShowInBankDetail] = React.useState(false);
+  const [showIncomeDetail, setShowIncomeDetail] = React.useState(false);
+  const [showExpenseDetail, setShowExpenseDetail] = React.useState(false);
+  const [showRemainingDetail, setShowRemainingDetail] = React.useState(false);
+  const [showSavingsDetail, setShowSavingsDetail] = React.useState(false);
 
   // UI states
   const [dialogVisible, setDialogVisible] = React.useState(false);
@@ -930,12 +938,17 @@ export default function HomeScreen() {
           {/* Row 1: Income, Expenses, Remaining */}
           <View style={styles.overviewRow}>
             {/* Expected Income */}
-            <View style={styles.overviewCompactItem}>
+            <TouchableOpacity 
+              style={styles.overviewCompactItem}
+              onPress={() => setShowIncomeDetail(true)}
+              activeOpacity={0.7}
+            >
               <View style={styles.overviewItemHeader}>
                 <Ionicons name="trending-up" size={14} color={AppTheme.colors.success} />
                 <Text variant="labelSmall" style={styles.overviewCompactLabel}>
                   Income
                 </Text>
+                <Ionicons name="information-circle-outline" size={14} color={AppTheme.colors.textSecondary} style={styles.infoIcon} />
               </View>
               {isLoadingData ? (
                 <LoadingSpinner size="small" />
@@ -944,36 +957,46 @@ export default function HomeScreen() {
                   €{expectedIncome.toFixed(1)}
                 </Text>
               )}
-            </View>
+            </TouchableOpacity>
 
             <View style={styles.overviewDivider} />
 
             {/* Expected Expenses */}
-            <View style={styles.overviewCompactItem}>
+            <TouchableOpacity 
+              style={styles.overviewCompactItem}
+              onPress={() => setShowExpenseDetail(true)}
+              activeOpacity={0.7}
+            >
               <View style={styles.overviewItemHeader}>
                 <Ionicons name="trending-down" size={14} color={AppTheme.colors.error} />
                 <Text variant="labelSmall" style={styles.overviewCompactLabel}>
                   Expenses
                 </Text>
+                <Ionicons name="information-circle-outline" size={14} color={AppTheme.colors.textSecondary} style={styles.infoIcon} />
               </View>
               {isLoadingData ? (
                 <LoadingSpinner size="small" />
               ) : (
                 <Text variant="bodyMedium" style={styles.negativeAmount}>
-                  €{expectedExpenses.toFixed(1)}
+                  -€{expectedExpenses.toFixed(1)}
                 </Text>
               )}
-            </View>
+            </TouchableOpacity>
 
             <View style={styles.overviewDivider} />
 
             {/* Remaining to Budget */}
-            <View style={styles.overviewCompactItem}>
+            <TouchableOpacity 
+              style={styles.overviewCompactItem}
+              onPress={() => setShowRemainingDetail(true)}
+              activeOpacity={0.7}
+            >
               <View style={styles.overviewItemHeader}>
                 <Ionicons name="add-circle" size={14} color={AppTheme.colors.warning} />
                 <Text variant="labelSmall" style={styles.overviewCompactLabel}>
                   Remaining
                 </Text>
+                <Ionicons name="information-circle-outline" size={14} color={AppTheme.colors.textSecondary} style={styles.infoIcon} />
               </View>
               {isLoadingData ? (
                 <LoadingSpinner size="small" />
@@ -982,7 +1005,7 @@ export default function HomeScreen() {
                   €{moneyToAssign.toFixed(1)}
                 </Text>
               )}
-            </View>
+            </TouchableOpacity>
           </View>
 
           {/* Row Divider */}
@@ -991,12 +1014,17 @@ export default function HomeScreen() {
           {/* Row 2: In Bank, Savings Balances */}
           <View style={styles.overviewRow}>
             {/* In Bank */}
-            <View style={styles.overviewCompactItem}>
+            <TouchableOpacity 
+              style={styles.overviewCompactItem}
+              onPress={() => setShowInBankDetail(true)}
+              activeOpacity={0.7}
+            >
               <View style={styles.overviewItemHeader}>
                 <Ionicons name="wallet" size={14} color={AppTheme.colors.primary} />
                 <Text variant="labelSmall" style={styles.overviewCompactLabel}>
                   In Bank
                 </Text>
+                <Ionicons name="information-circle-outline" size={14} color={AppTheme.colors.textSecondary} style={styles.infoIcon} />
               </View>
               {isLoadingData ? (
                 <LoadingSpinner size="small" />
@@ -1005,17 +1033,22 @@ export default function HomeScreen() {
                   €{actualInBank.toFixed(1)}
                 </Text>
               )}
-            </View>
+            </TouchableOpacity>
 
             <View style={styles.overviewDivider} />
 
             {/* Savings Balances */}
-            <View style={styles.overviewCompactItem}>
+            <TouchableOpacity 
+              style={styles.overviewCompactItem}
+              onPress={() => setShowSavingsDetail(true)}
+              activeOpacity={0.7}
+            >
               <View style={styles.overviewItemHeader}>
                 <Ionicons name="wallet-outline" size={14} color={AppTheme.colors.secondary} />
                 <Text variant="labelSmall" style={styles.overviewCompactLabel}>
                   Savings
                 </Text>
+                <Ionicons name="information-circle-outline" size={14} color={AppTheme.colors.textSecondary} style={styles.infoIcon} />
               </View>
               {isLoadingData ? (
                 <LoadingSpinner size="small" />
@@ -1024,7 +1057,7 @@ export default function HomeScreen() {
                   €{totalSavingsBalance.toFixed(1)}
                 </Text>
               )}
-            </View>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -1457,6 +1490,101 @@ export default function HomeScreen() {
         </View>
       </Dialog>
 
+      {/* Income Detail Popup */}
+      <DetailPopup
+        visible={showIncomeDetail}
+        onDismiss={() => setShowIncomeDetail(false)}
+        title="Expected Income Breakdown"
+      >
+        <BreakdownSection
+          title="Expected Income"
+          amount={expectedIncome}
+          items={currentIncomes.map(income => ({
+            label: income.name || income.category,
+            amount: income.amount,
+            description: income.category,
+            date: income.created_at ? format(new Date(income.created_at), "MMM dd") : undefined,
+          }))}
+          color={AppTheme.colors.success || "#4caf50"}
+        />
+      </DetailPopup>
+
+      {/* Expense Detail Popup */}
+      <DetailPopup
+        visible={showExpenseDetail}
+        onDismiss={() => setShowExpenseDetail(false)}
+        title="Expected Expenses Breakdown"
+      >
+        <BreakdownSection
+          title="Expected Expenses"
+          amount={expectedExpenses}
+          items={currentInvoices.map(invoice => ({
+            label: invoice.name || invoice.category,
+            amount: -invoice.amount, // Negative for expenses
+            description: invoice.category,
+            date: invoice.created_at ? format(new Date(invoice.created_at), "MMM dd") : undefined,
+          }))}
+          color={AppTheme.colors.error}
+        />
+      </DetailPopup>
+
+      {/* Remaining Detail Popup */}
+      <DetailPopup
+        visible={showRemainingDetail}
+        onDismiss={() => setShowRemainingDetail(false)}
+        title="Remaining Amount Calculation"
+      >
+        <CalculationView
+          steps={[
+            { label: "Expected Income", amount: expectedIncome },
+            { label: "Expected Expenses", amount: -expectedExpenses },
+            { label: "Total Allocated", amount: -totalAllocated },
+            { label: "Total Savings", amount: -totalSavings },
+          ]}
+          result={{
+            label: "Remaining to Assign",
+            amount: moneyToAssign,
+          }}
+        />
+      </DetailPopup>
+
+      {/* In Bank Detail Popup */}
+      <DetailPopup
+        visible={showInBankDetail}
+        onDismiss={() => setShowInBankDetail(false)}
+        title="In Bank Calculation"
+      >
+        <CalculationView
+          steps={[
+            { label: "Total Income (paid)", amount: totalIncome },
+            { label: "Total Expenses (from income)", amount: -totalExpenses },
+          ]}
+          result={{
+            label: "In Bank",
+            amount: actualInBank,
+          }}
+        />
+      </DetailPopup>
+
+      {/* Savings Detail Popup */}
+      <DetailPopup
+        visible={showSavingsDetail}
+        onDismiss={() => setShowSavingsDetail(false)}
+        title="Total Savings Breakdown"
+      >
+        <BreakdownSection
+          title="Savings Balances"
+          amount={totalSavingsBalance}
+          items={Object.entries(savingsBalances)
+            .filter(([_, balance]) => balance > 0)
+            .map(([category, balance]) => ({
+              label: category,
+              amount: balance,
+            }))}
+          color={AppTheme.colors.secondary}
+        />
+      </DetailPopup>
+
       {/* Confirmation Dialog */}
       <ConfirmDialog
         visible={confirmDialogVisible}
@@ -1523,6 +1651,9 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     gap: 4,
+  },
+  infoIcon: {
+    marginLeft: 4,
   },
   overviewItemHeader: {
     flexDirection: "row",
