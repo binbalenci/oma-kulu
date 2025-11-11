@@ -26,7 +26,7 @@ import * as Crypto from "expo-crypto";
 import { useFocusEffect } from "expo-router";
 import React from "react";
 import { RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
-import { Card, Chip, FAB, IconButton, Searchbar, Text, TextInput } from "react-native-paper";
+import { Card, Chip, FAB, IconButton, Menu, Searchbar, Text, TextInput } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function TransactionsScreen() {
@@ -76,6 +76,9 @@ export default function TransactionsScreen() {
   // Search and filter states
   const [searchQuery, setSearchQuery] = React.useState("");
   const [selectedCategory, setSelectedCategory] = React.useState<string | null>(null);
+  
+  // Menu state for transaction actions
+  const [openMenuId, setOpenMenuId] = React.useState<string | null>(null);
 
   // Form states
   const [dialogVisible, setDialogVisible] = React.useState(false);
@@ -427,9 +430,11 @@ export default function TransactionsScreen() {
 
   const renderTransactionItem = (item: Transaction) => {
     const categoryInfo = getCategoryInfo(item.category);
+    const isMenuOpen = openMenuId === item.id;
+    const isLinkedTransaction = item.source_type && item.source_id;
 
     return (
-      <Card style={styles.transactionCard}>
+      <Card style={[styles.transactionCard, isLinkedTransaction && styles.linkedTransactionCard]}>
         <Card.Content style={styles.transactionContent}>
           <View style={styles.transactionLeft}>
             <View style={styles.transactionInfo}>
@@ -453,7 +458,38 @@ export default function TransactionsScreen() {
           </View>
 
           <View style={styles.transactionRight}>
-            {formatAmount(item.amount)}
+            <View style={styles.amountAndMenuRow}>
+              {formatAmount(item.amount)}
+              <Menu
+                visible={isMenuOpen}
+                onDismiss={() => setOpenMenuId(null)}
+                anchor={
+                  <IconButton
+                    icon="dots-vertical"
+                    size={20}
+                    onPress={() => setOpenMenuId(item.id)}
+                    style={styles.menuButton}
+                  />
+                }
+              >
+                <Menu.Item
+                  leadingIcon="pencil"
+                  onPress={() => {
+                    setOpenMenuId(null);
+                    handleEdit(item);
+                  }}
+                  title="Edit"
+                />
+                <Menu.Item
+                  leadingIcon={item.source_type && item.source_id ? "clock-outline" : "delete"}
+                  onPress={() => {
+                    setOpenMenuId(null);
+                    handleDelete(item);
+                  }}
+                  title={item.source_type && item.source_id ? "Move to Pending" : "Delete"}
+                />
+              </Menu>
+            </View>
             {item.uses_savings_category && item.savings_amount_used && item.savings_amount_used > 0 ? (
               <TouchableOpacity style={styles.savingsBadge}>
                 <Ionicons name="wallet" size={14} color={AppTheme.colors.secondary} />
@@ -462,21 +498,6 @@ export default function TransactionsScreen() {
                 </Text>
               </TouchableOpacity>
             ) : null}
-            <View style={styles.transactionActions}>
-              <IconButton
-                icon="pencil"
-                size={20}
-                onPress={() => handleEdit(item)}
-                style={styles.actionButton}
-              />
-              <IconButton
-                icon={item.source_type && item.source_id ? "clock-outline" : "delete"}
-                size={20}
-                onPress={() => handleDelete(item)}
-                style={[styles.actionButton, styles.deleteButton]}
-                iconColor={item.source_type && item.source_id ? AppTheme.colors.warning : undefined}
-              />
-            </View>
           </View>
         </Card.Content>
       </Card>
@@ -1111,6 +1132,11 @@ const styles = StyleSheet.create({
     ...AppTheme.shadows.sm,
     marginBottom: AppTheme.spacing.md,
   },
+  linkedTransactionCard: {
+    backgroundColor: "#FFF8F0",
+    borderLeftWidth: 4,
+    borderLeftColor: AppTheme.colors.warning,
+  },
   transactionContent: {
     flexDirection: "row",
     alignItems: "center",
@@ -1143,19 +1169,17 @@ const styles = StyleSheet.create({
   transactionRight: {
     alignItems: "flex-end",
   },
-  transactionActions: {
+  amountAndMenuRow: {
     flexDirection: "row",
-    marginTop: AppTheme.spacing.md,
-  },
-  deleteButton: {
-    marginLeft: AppTheme.spacing.xs,
-  },
-  actionButton: {
-    margin: 0,
+    alignItems: "center",
+    gap: AppTheme.spacing.xs,
   },
   amountText: {
     fontWeight: AppTheme.typography.fontWeight.semibold,
     fontSize: AppTheme.typography.fontSize.lg,
+  },
+  menuButton: {
+    margin: 0,
   },
   emptyCard: {
     ...AppTheme.shadows.sm,
