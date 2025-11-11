@@ -5,6 +5,50 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.1] - 2025-11-11
+
+### 🐛 Bug Fixes
+
+- **React Native Text Node Error in Transactions Tab**
+  - Fixed "Unexpected text node: . A text node cannot be a child of a <View>" error
+  - Error occurred when expanding Incomes and Expenses sections
+  - **Root Cause #1**: Extra `<View style={styles.amountContainer}>` wrapper around the amount Text component caused React Native to misinterpret the decimal point from `.toFixed(1)` as a separate text node during re-renders
+  - **Root Cause #2**: Using `&&` operator for conditional rendering instead of explicit ternary `? : null` 
+  - **Solutions Applied**:
+    1. Removed the unnecessary View wrapper, making the Text component a direct child of `transactionRight` View
+    2. Changed conditional rendering from `condition && <Component />` to `condition ? <Component /> : null` for the savings badge
+  - **Systematic Testing**: Reverted changes one-by-one to identify which were essential:
+    - ✅ **Essential**: Removing View wrapper (primary fix)
+    - ✅ **Essential**: Using ternary operator with explicit `null` instead of `&&`
+    - ❌ Not needed: React.memo optimization
+    - ❌ Not needed: Pre-computed amount string variable
+    - ❌ Not needed: Section-prefixed keys
+  - **Technical Note**: React Native can misinterpret structural nesting during component re-renders as text nodes when:
+    1. Views are unnecessarily nested
+    2. Conditional rendering with `&&` operator can return falsy values (like `0`) that React Native tries to render as text
+    3. Template literals containing punctuation are used in nested structures
+  - **Best Practice**: Always use explicit ternary operators (`condition ? <Component /> : null`) instead of `&&` operator for conditional rendering in React Native to avoid rendering falsy values as text nodes
+  - Files: `app/(tabs)/transactions.tsx`
+
+### 🎨 UI/UX Improvements
+
+- **Transaction Item Actions Menu**
+  - Replaced inline Edit and Delete buttons with a 3-dot menu (⋮)
+  - Menu displays actions with icons and descriptive text:
+    - **Edit** - Modify transaction details
+    - **Delete** - Remove transaction permanently
+    - **Move to Pending** - For linked transactions (created from expected items)
+  - Improved layout: Amount and menu button are now centrally aligned on the same line
+  - Cleaner, more compact transaction card design
+  - Files: `app/(tabs)/transactions.tsx`
+
+- **Visual Distinction for Linked Transactions**
+  - Transactions created from expected items (incomes/invoices/savings) now have distinct styling
+  - Applied combination approach: Light orange background tint (#FFF8F0) + 4px orange left border
+  - Makes it easy to identify which transactions can be moved back to pending vs permanently deleted
+  - Linked transactions have `source_type` and `source_id` properties set
+  - Files: `app/(tabs)/transactions.tsx`
+
 ## [3.1.0] - 2025-11-05
 
 ### ✨ New Features
