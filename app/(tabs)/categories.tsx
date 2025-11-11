@@ -97,7 +97,7 @@ export default function CategoriesScreen() {
     .filter((c) => c.name.toLowerCase().includes(query.toLowerCase()))
     .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
 
-  const openEdit = (cat?: Category) => {
+  const openEdit = (cat?: Category, defaultType?: "income" | "expense" | "saving") => {
     if (cat) {
       setEditing(cat);
       setName(cat.name);
@@ -113,7 +113,7 @@ export default function CategoriesScreen() {
       setEmoji("📁");
       setIsVisible(true);
       setBudgetEnabled(true);
-      setSelectedType("expense");
+      setSelectedType(defaultType || "expense");
     }
     setDialogVisible(true);
   };
@@ -243,8 +243,7 @@ export default function CategoriesScreen() {
         <Button
           mode="contained"
           onPress={() => {
-            setSelectedType(type);
-            openEdit();
+            openEdit(undefined, type);
           }}
           style={styles.addButton}
           icon="plus"
