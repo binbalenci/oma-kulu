@@ -425,7 +425,7 @@ export default function TransactionsScreen() {
     );
   };
 
-  const renderTransactionItem = ({ item }: { item: Transaction }) => {
+  const renderTransactionItem = (item: Transaction) => {
     const categoryInfo = getCategoryInfo(item.category);
 
     return (
@@ -440,26 +440,28 @@ export default function TransactionsScreen() {
                 <Text variant="bodySmall" style={styles.transactionMeta}>
                   {format(new Date(item.date), "MMM dd")}
                 </Text>
-                <CategoryBadge
-                  category={item.category}
-                  emoji={categoryInfo?.emoji}
-                  color={categoryInfo?.color || AppTheme.colors.primary}
-                  size="sm"
-                />
+                <View style={styles.categoryBadgeContainer}>
+                  <CategoryBadge
+                    category={item.category}
+                    emoji={categoryInfo?.emoji}
+                    color={categoryInfo?.color || AppTheme.colors.primary}
+                    size="sm"
+                  />
+                </View>
               </View>
             </View>
           </View>
 
           <View style={styles.transactionRight}>
             {formatAmount(item.amount)}
-            {item.uses_savings_category && item.savings_amount_used && item.savings_amount_used > 0 && (
+            {item.uses_savings_category && item.savings_amount_used && item.savings_amount_used > 0 ? (
               <TouchableOpacity style={styles.savingsBadge}>
                 <Ionicons name="wallet" size={14} color={AppTheme.colors.secondary} />
                 <Text variant="bodySmall" style={styles.savingsBadgeText}>
-                  €{item.savings_amount_used.toFixed(1)} from {item.uses_savings_category}
+                  {`€${item.savings_amount_used.toFixed(1)} from ${item.uses_savings_category}`}
                 </Text>
               </TouchableOpacity>
-            )}
+            ) : null}
             <View style={styles.transactionActions}>
               <IconButton
                 icon="pencil"
@@ -471,7 +473,7 @@ export default function TransactionsScreen() {
                 icon={item.source_type && item.source_id ? "clock-outline" : "delete"}
                 size={20}
                 onPress={() => handleDelete(item)}
-                style={styles.actionButton}
+                style={[styles.actionButton, styles.deleteButton]}
                 iconColor={item.source_type && item.source_id ? AppTheme.colors.warning : undefined}
               />
             </View>
@@ -771,7 +773,9 @@ export default function TransactionsScreen() {
             ) : (
               <View style={styles.transactionList}>
                 {incomeTransactions.map((item) => (
-                  <View key={item.id}>{renderTransactionItem({ item })}</View>
+                  <React.Fragment key={item.id}>
+                    {renderTransactionItem(item)}
+                  </React.Fragment>
                 ))}
               </View>
             )}
@@ -824,7 +828,9 @@ export default function TransactionsScreen() {
             ) : (
               <View style={styles.transactionList}>
                 {expenseTransactions.map((item) => (
-                  <View key={item.id}>{renderTransactionItem({ item })}</View>
+                  <React.Fragment key={item.id}>
+                    {renderTransactionItem(item)}
+                  </React.Fragment>
                 ))}
               </View>
             )}
@@ -1100,10 +1106,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   transactionList: {
-    gap: AppTheme.spacing.md,
   },
   transactionCard: {
     ...AppTheme.shadows.sm,
+    marginBottom: AppTheme.spacing.md,
   },
   transactionContent: {
     flexDirection: "row",
@@ -1126,20 +1132,23 @@ const styles = StyleSheet.create({
   transactionMetaRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: AppTheme.spacing.sm,
     marginTop: 2,
+  },
+  categoryBadgeContainer: {
+    marginLeft: AppTheme.spacing.sm,
   },
   transactionMeta: {
     color: AppTheme.colors.textSecondary,
   },
   transactionRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: AppTheme.spacing.sm,
+    alignItems: "flex-end",
   },
   transactionActions: {
     flexDirection: "row",
-    gap: AppTheme.spacing.xs,
+    marginTop: AppTheme.spacing.md,
+  },
+  deleteButton: {
+    marginLeft: AppTheme.spacing.xs,
   },
   actionButton: {
     margin: 0,
