@@ -62,6 +62,7 @@ export interface Transaction {
   uses_savings_category?: string; // Category name if using savings (for backward compatibility)
   uses_savings_category_id?: string; // Category UUID if using savings (foreign key)
   savings_amount_used?: number; // Amount used from savings balance
+  order_index?: number; // Display order index (lower values appear first)
 }
 
 export interface Category {

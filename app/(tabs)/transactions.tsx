@@ -7,7 +7,7 @@ import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { SimpleDropdown } from "@/components/ui/SimpleDropdown";
 import { AppTheme } from "@/constants/AppTheme";
 import { useMonth } from "@/lib/month-context";
-import { deleteTransaction, getSavingsBalance, loadCategories, loadIncomes, loadInvoices, loadSavings, loadTransactions, saveIncome, saveInvoice, saveTransaction } from "@/lib/storage";
+import { deleteTransaction, getSavingsBalance, loadCategories, loadIncomes, loadInvoices, loadSavings, loadTransactions, saveIncome, saveInvoice, saveTransaction, saveTransactions } from "@/lib/storage";
 import type { Category, ExpectedIncome, ExpectedInvoice, ExpectedSavings, Transaction } from "@/lib/types";
 import Ionicons from "@react-native-vector-icons/ionicons";
 import { endOfMonth, format, startOfMonth } from "date-fns";
@@ -179,7 +179,16 @@ export default function TransactionsScreen() {
       const transactionDate = new Date(t.date + "T00:00:00");
       return transactionDate >= monthStart && transactionDate <= monthEnd;
     })
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    .sort((a, b) => {
+      // First sort by order_index (if available), then by date
+      const aOrder = a.order_index ?? Number.MAX_SAFE_INTEGER;
+      const bOrder = b.order_index ?? Number.MAX_SAFE_INTEGER;
+      if (aOrder !== bOrder) {
+        return aOrder - bOrder; // Lower order_index appears first
+      }
+      // Fallback to date if order_index is the same
+      return new Date(b.date).getTime() - new Date(a.date).getTime();
+    });
 
   // Filter transactions based on search and filters
   const filteredTransactions = recentTransactions.filter((tx) => {
@@ -239,6 +248,19 @@ export default function TransactionsScreen() {
       savingsAmountUsed = Math.min(availableBalance, transactionAmount);
     }
 
+    // Calculate order_index for new transactions (appear at top of their type list)
+    let orderIndex: number | undefined = editing?.order_index;
+    if (!editing) {
+      // For new transactions, find the minimum order_index for transactions of the same type
+      const sameTypeTransactions = transactions.filter((t) => (isIncome && t.amount > 0) || (!isIncome && t.amount < 0));
+      if (sameTypeTransactions.length > 0) {
+        const minOrderIndex = Math.min(...sameTypeTransactions.map((t) => t.order_index ?? 0));
+        orderIndex = minOrderIndex - 1; // Place new transaction before existing ones
+      } else {
+        orderIndex = 0; // First transaction of this type
+      }
+    }
+
     const tx: Transaction = {
       id: editing?.id || Crypto.randomUUID(),
       amount: isIncome ? Math.abs(amt) : -Math.abs(amt), // Positive for income, negative for expense
@@ -255,6 +277,8 @@ export default function TransactionsScreen() {
       uses_savings_category: useSavingsCategory || undefined,
       uses_savings_category_id: usesSavingsCategoryObj?.id,
       savings_amount_used: savingsAmountUsed > 0 ? savingsAmountUsed : undefined,
+      // Order index
+      order_index: orderIndex,
     };
 
     const success = await saveTransaction(tx);
@@ -401,7 +425,7 @@ export default function TransactionsScreen() {
   };
 
   // Move transaction up in the list
-  const handleMoveUp = React.useCallback((transactionId: string, isIncome: boolean) => {
+  const handleMoveUp = React.useCallback(async (transactionId: string, isIncome: boolean) => {
     setTransactions((prev) => {
       // Get the correct filtered list to find the current position
       const relevantList = isIncome ? prev.filter((t) => t.amount > 0) : prev.filter((t) => t.amount < 0);
@@ -413,18 +437,34 @@ export default function TransactionsScreen() {
       const itemToMove = relevantList[currentIndex];
       const itemToSwap = relevantList[currentIndex - 1];
 
+      // Swap order_index values
+      const tempOrderIndex = itemToMove.order_index ?? 0;
+      const updatedItemToMove = { ...itemToMove, order_index: itemToSwap.order_index ?? 0 };
+      const updatedItemToSwap = { ...itemToSwap, order_index: tempOrderIndex };
+
+      // Persist to database
+      (async () => {
+        const success = await saveTransactions([updatedItemToMove, updatedItemToSwap]);
+        if (!success) {
+          logger.error(new Error("Failed to save transaction order"), { operation: "move_transaction_up", transactionId, isIncome });
+          showSnackbar("Failed to save order");
+        } else {
+          logger.databaseSuccess("update_transaction_order", { transactionId, isIncome, direction: "up" });
+        }
+      })();
+
       // Create new array with swapped positions
       return prev.map((t) => {
-        if (t.id === itemToMove.id) return itemToSwap;
-        if (t.id === itemToSwap.id) return itemToMove;
+        if (t.id === itemToMove.id) return updatedItemToMove;
+        if (t.id === itemToSwap.id) return updatedItemToSwap;
         return t;
       });
     });
     logger.userAction("move_transaction_up", { transactionId, isIncome });
-  }, []);
+  }, [showSnackbar]);
 
   // Move transaction down in the list
-  const handleMoveDown = React.useCallback((transactionId: string, isIncome: boolean) => {
+  const handleMoveDown = React.useCallback(async (transactionId: string, isIncome: boolean) => {
     setTransactions((prev) => {
       // Get the correct filtered list to find the current position
       const relevantList = isIncome ? prev.filter((t) => t.amount > 0) : prev.filter((t) => t.amount < 0);
@@ -436,15 +476,31 @@ export default function TransactionsScreen() {
       const itemToMove = relevantList[currentIndex];
       const itemToSwap = relevantList[currentIndex + 1];
 
+      // Swap order_index values
+      const tempOrderIndex = itemToMove.order_index ?? 0;
+      const updatedItemToMove = { ...itemToMove, order_index: itemToSwap.order_index ?? 0 };
+      const updatedItemToSwap = { ...itemToSwap, order_index: tempOrderIndex };
+
+      // Persist to database
+      (async () => {
+        const success = await saveTransactions([updatedItemToMove, updatedItemToSwap]);
+        if (!success) {
+          logger.error(new Error("Failed to save transaction order"), { operation: "move_transaction_down", transactionId, isIncome });
+          showSnackbar("Failed to save order");
+        } else {
+          logger.databaseSuccess("update_transaction_order", { transactionId, isIncome, direction: "down" });
+        }
+      })();
+
       // Create new array with swapped positions
       return prev.map((t) => {
-        if (t.id === itemToMove.id) return itemToSwap;
-        if (t.id === itemToSwap.id) return itemToMove;
+        if (t.id === itemToMove.id) return updatedItemToMove;
+        if (t.id === itemToSwap.id) return updatedItemToSwap;
         return t;
       });
     });
     logger.userAction("move_transaction_down", { transactionId, isIncome });
-  }, []);
+  }, [showSnackbar]);
 
   const renderTransactionItem = (item: Transaction, index: number, totalCount: number, isIncome: boolean) => {
     const categoryInfo = getCategoryInfo(item.category);
