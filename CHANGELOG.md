@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.0] - 2025-01-15
+
+### ✨ New Features
+
+- **Transaction Position/Ordering**
+  - Added ability to reorder transactions within the Incomes and Expenses sections
+  - Up and down arrow buttons on each transaction card allow manual repositioning
+  - Order is persisted to the database and maintained across app restarts
+  - Separate ordering maintained for income transactions (positive amounts) and expense transactions (negative amounts)
+  - Arrows are disabled at boundaries (top item has no up arrow, bottom item has no down arrow)
+  - New transactions are automatically placed at the top of their respective type list
+  - **Technical Implementation**:
+    - Added `order_index` column to `transactions` table in Supabase
+    - Migration initializes existing transactions with order_index based on date
+    - Order is saved immediately when transactions are moved
+  - Files: `app/(tabs)/transactions.tsx`, `lib/database.ts`, `lib/types.ts`
+
 ## [3.1.1] - 2025-11-11
 
 ### 🐛 Bug Fixes
