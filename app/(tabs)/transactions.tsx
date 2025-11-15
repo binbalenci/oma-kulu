@@ -7,18 +7,7 @@ import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { SimpleDropdown } from "@/components/ui/SimpleDropdown";
 import { AppTheme } from "@/constants/AppTheme";
 import { useMonth } from "@/lib/month-context";
-import {
-    deleteTransaction,
-    getSavingsBalance,
-    loadCategories,
-    loadIncomes,
-    loadInvoices,
-    loadSavings,
-    loadTransactions,
-    saveIncome,
-    saveInvoice,
-    saveTransaction,
-} from "@/lib/storage";
+import { deleteTransaction, getSavingsBalance, loadCategories, loadIncomes, loadInvoices, loadSavings, loadTransactions, saveIncome, saveInvoice, saveTransaction } from "@/lib/storage";
 import type { Category, ExpectedIncome, ExpectedInvoice, ExpectedSavings, Transaction } from "@/lib/types";
 import Ionicons from "@react-native-vector-icons/ionicons";
 import { endOfMonth, format, startOfMonth } from "date-fns";
@@ -41,24 +30,24 @@ export default function TransactionsScreen() {
   // Log navigation and refetch month-specific data when month changes
   React.useEffect(() => {
     logger.navigationAction("TransactionsScreen", { month: currentMonth });
-    
+
     // Refetch only month-dependent data when month changes
     (async () => {
       const [txs, incms, invcs, svgs, cats] = await Promise.all([
         loadTransactions(), // needed for recent transactions
-        loadIncomes(),      // needed for upcoming incomes  
-        loadInvoices(),     // needed for upcoming invoices
-        loadSavings(),      // needed for savings items
-        loadCategories(),   // needed for savings balance calculation
+        loadIncomes(), // needed for upcoming incomes
+        loadInvoices(), // needed for upcoming invoices
+        loadSavings(), // needed for savings items
+        loadCategories(), // needed for savings balance calculation
       ]);
       setTransactions(txs);
       setIncomes(incms);
       setInvoices(invcs);
       setSavings(svgs);
       setCategories(cats);
-      
+
       // Calculate savings balances
-      const savingCategories = cats.filter(c => c.type === 'saving');
+      const savingCategories = cats.filter((c) => c.type === "saving");
       const balances: Record<string, number> = {};
       for (const cat of savingCategories) {
         balances[cat.name] = await getSavingsBalance(cat.name);
@@ -76,7 +65,7 @@ export default function TransactionsScreen() {
   // Search and filter states
   const [searchQuery, setSearchQuery] = React.useState("");
   const [selectedCategory, setSelectedCategory] = React.useState<string | null>(null);
-  
+
   // Menu state for transaction actions
   const [openMenuId, setOpenMenuId] = React.useState<string | null>(null);
 
@@ -88,7 +77,7 @@ export default function TransactionsScreen() {
   const [date, setDate] = React.useState(format(new Date(), "yyyy-MM-dd"));
   const [category, setCategory] = React.useState("General");
   const [useSavingsCategory, setUseSavingsCategory] = React.useState<string | null>(null);
-  
+
   // Validation error states
   const [categoryError, setCategoryError] = React.useState(false);
   const [amountError, setAmountError] = React.useState(false);
@@ -111,13 +100,7 @@ export default function TransactionsScreen() {
       (async () => {
         setIsLoadingData(true);
         try {
-          const [txs, incms, invcs, svgs, cats] = await Promise.all([
-            loadTransactions(),
-            loadIncomes(),
-            loadInvoices(),
-            loadSavings(),
-            loadCategories(),
-          ]);
+          const [txs, incms, invcs, svgs, cats] = await Promise.all([loadTransactions(), loadIncomes(), loadInvoices(), loadSavings(), loadCategories()]);
           setTransactions(txs);
           setIncomes(incms);
           setInvoices(invcs);
@@ -125,7 +108,7 @@ export default function TransactionsScreen() {
           setCategories(cats);
 
           // Calculate savings balances
-          const savingCategories = cats.filter(c => c.type === 'saving');
+          const savingCategories = cats.filter((c) => c.type === "saving");
           const balances: Record<string, number> = {};
           for (const cat of savingCategories) {
             balances[cat.name] = await getSavingsBalance(cat.name);
@@ -142,35 +125,29 @@ export default function TransactionsScreen() {
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
     logger.breadcrumb("Pull-to-refresh triggered", "data_refresh");
-    
+
     try {
-      const [txs, incms, invcs, svgs, cats] = await Promise.all([
-        loadTransactions(),
-        loadIncomes(),
-        loadInvoices(),
-        loadSavings(),
-        loadCategories(),
-      ]);
-      
+      const [txs, incms, invcs, svgs, cats] = await Promise.all([loadTransactions(), loadIncomes(), loadInvoices(), loadSavings(), loadCategories()]);
+
       setTransactions(txs);
       setIncomes(incms);
       setInvoices(invcs);
       setSavings(svgs);
       setCategories(cats);
-      
+
       // Calculate savings balances
-      const savingCategories = cats.filter(c => c.type === 'saving');
+      const savingCategories = cats.filter((c) => c.type === "saving");
       const balances: Record<string, number> = {};
       for (const cat of savingCategories) {
         balances[cat.name] = await getSavingsBalance(cat.name);
       }
       setSavingsBalances(balances);
-      
-      logger.dataAction("pull_to_refresh", { 
+
+      logger.dataAction("pull_to_refresh", {
         transactionsCount: txs.length,
         incomesCount: incms.length,
         invoicesCount: invcs.length,
-        categoriesCount: cats.length
+        categoriesCount: cats.length,
       });
     } catch (error) {
       logger.error(error as Error, { operation: "pull_to_refresh" });
@@ -189,7 +166,7 @@ export default function TransactionsScreen() {
   const upcomingFromIncomes = incomes.filter((i) => !i.is_paid && i.month === currentMonthKey);
   const upcomingFromInvoices = invoices.filter((i) => !i.is_paid && i.month === currentMonthKey);
   const upcomingTransactions = transactions.filter((t) => t.status === "upcoming");
-  
+
   // Savings items: paid savings for current month
   const paidSavings = savings.filter((s) => s.is_paid && s.month === currentMonthKey);
 
@@ -197,7 +174,7 @@ export default function TransactionsScreen() {
   const recentTransactions = transactions
     .filter((t) => {
       if (t.status !== "paid") return false;
-      
+
       // Filter by current month
       const transactionDate = new Date(t.date + "T00:00:00");
       return transactionDate >= monthStart && transactionDate <= monthEnd;
@@ -206,10 +183,7 @@ export default function TransactionsScreen() {
 
   // Filter transactions based on search and filters
   const filteredTransactions = recentTransactions.filter((tx) => {
-    const matchesSearch =
-      searchQuery === "" ||
-      tx.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      tx.category.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = searchQuery === "" || tx.description.toLowerCase().includes(searchQuery.toLowerCase()) || tx.category.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesCategory = selectedCategory === null || tx.category === selectedCategory;
 
@@ -217,8 +191,8 @@ export default function TransactionsScreen() {
   });
 
   // Separate income and expense transactions
-  const incomeTransactions = filteredTransactions.filter(t => t.amount > 0);
-  const expenseTransactions = filteredTransactions.filter(t => t.amount < 0);
+  const incomeTransactions = filteredTransactions.filter((t) => t.amount > 0);
+  const expenseTransactions = filteredTransactions.filter((t) => t.amount < 0);
 
   const resetForm = () => {
     setAmount("");
@@ -233,7 +207,7 @@ export default function TransactionsScreen() {
     // Check for missing required fields
     const hasEmptyCategory = !category;
     const hasEmptyAmount = !amount;
-    
+
     setCategoryError(hasEmptyCategory);
     setAmountError(hasEmptyAmount);
 
@@ -254,9 +228,7 @@ export default function TransactionsScreen() {
     // Find category_id from category name
     const categoryObj = categories.find((c) => c.name === category);
     // Find uses_savings_category_id if using savings
-    const usesSavingsCategoryObj = useSavingsCategory 
-      ? categories.find((c) => c.name === useSavingsCategory && c.type === "saving")
-      : undefined;
+    const usesSavingsCategoryObj = useSavingsCategory ? categories.find((c) => c.name === useSavingsCategory && c.type === "saving") : undefined;
 
     // Calculate savings usage if selected
     let savingsAmountUsed = 0;
@@ -294,15 +266,15 @@ export default function TransactionsScreen() {
       }
       if (editing) {
         setTransactions((prev) => prev.map((t) => (t.id === tx.id ? tx : t)));
-        
+
         // If transaction was created from an expected item, sync changes back
         if (editing.source_type && editing.source_id) {
           const amountChanged = Math.abs(tx.amount) !== Math.abs(editing.amount);
           const categoryChanged = tx.category !== editing.category;
           const descriptionChanged = tx.description !== editing.description;
-          
+
           if (amountChanged || categoryChanged || descriptionChanged) {
-            if (editing.source_type === 'income') {
+            if (editing.source_type === "income") {
               const sourceIncome = incomes.find((i) => i.id === editing.source_id);
               if (sourceIncome) {
                 const updatedIncome = {
@@ -315,7 +287,7 @@ export default function TransactionsScreen() {
                 await saveIncome(updatedIncome);
                 setIncomes((prev) => prev.map((i) => (i.id === editing.source_id ? updatedIncome : i)));
               }
-            } else if (editing.source_type === 'invoice') {
+            } else if (editing.source_type === "invoice") {
               const sourceInvoice = invoices.find((i) => i.id === editing.source_id);
               if (sourceInvoice) {
                 const updatedInvoice = {
@@ -331,7 +303,7 @@ export default function TransactionsScreen() {
             }
           }
         }
-        
+
         showSnackbar("Transaction updated!");
       } else {
         setTransactions((prev) => [tx, ...prev]);
@@ -385,20 +357,20 @@ export default function TransactionsScreen() {
     if (!itemToPending) return;
 
     const { transaction } = itemToPending;
-    
+
     const success = await deleteTransaction(transaction.id);
     if (success) {
       setTransactions((prev) => prev.filter((t) => t.id !== transaction.id));
-      
+
       // Mark the source expected item as unpaid
-      if (transaction.source_type === 'income') {
+      if (transaction.source_type === "income") {
         const sourceIncome = incomes.find((i) => i.id === transaction.source_id);
         if (sourceIncome) {
           const updatedIncome = { ...sourceIncome, is_paid: false, updated_at: new Date().toISOString() };
           await saveIncome(updatedIncome);
           setIncomes((prev) => prev.map((i) => (i.id === transaction.source_id ? updatedIncome : i)));
         }
-      } else if (transaction.source_type === 'invoice') {
+      } else if (transaction.source_type === "invoice") {
         const sourceInvoice = invoices.find((i) => i.id === transaction.source_id);
         if (sourceInvoice) {
           const updatedInvoice = { ...sourceInvoice, is_paid: false, updated_at: new Date().toISOString() };
@@ -406,7 +378,7 @@ export default function TransactionsScreen() {
           setInvoices((prev) => prev.map((i) => (i.id === transaction.source_id ? updatedInvoice : i)));
         }
       }
-      
+
       showSnackbar("Moved back to pending");
     } else {
       showSnackbar("Failed to move to pending");
@@ -428,14 +400,95 @@ export default function TransactionsScreen() {
     );
   };
 
-  const renderTransactionItem = (item: Transaction) => {
+  // Move transaction up in the list
+  const handleMoveUp = React.useCallback((transactionId: string, isIncome: boolean) => {
+    setTransactions((prev) => {
+      // Get the correct filtered list to find the current position
+      const relevantList = isIncome ? prev.filter((t) => t.amount > 0) : prev.filter((t) => t.amount < 0);
+
+      const currentIndex = relevantList.findIndex((t) => t.id === transactionId);
+      if (currentIndex <= 0) return prev; // Already at the top or not found
+
+      // Swap with previous item in the relevant list
+      const itemToMove = relevantList[currentIndex];
+      const itemToSwap = relevantList[currentIndex - 1];
+
+      // Create new array with swapped positions
+      return prev.map((t) => {
+        if (t.id === itemToMove.id) return itemToSwap;
+        if (t.id === itemToSwap.id) return itemToMove;
+        return t;
+      });
+    });
+    logger.userAction("move_transaction_up", { transactionId, isIncome });
+  }, []);
+
+  // Move transaction down in the list
+  const handleMoveDown = React.useCallback((transactionId: string, isIncome: boolean) => {
+    setTransactions((prev) => {
+      // Get the correct filtered list to find the current position
+      const relevantList = isIncome ? prev.filter((t) => t.amount > 0) : prev.filter((t) => t.amount < 0);
+
+      const currentIndex = relevantList.findIndex((t) => t.id === transactionId);
+      if (currentIndex < 0 || currentIndex >= relevantList.length - 1) return prev; // Already at bottom or not found
+
+      // Swap with next item in the relevant list
+      const itemToMove = relevantList[currentIndex];
+      const itemToSwap = relevantList[currentIndex + 1];
+
+      // Create new array with swapped positions
+      return prev.map((t) => {
+        if (t.id === itemToMove.id) return itemToSwap;
+        if (t.id === itemToSwap.id) return itemToMove;
+        return t;
+      });
+    });
+    logger.userAction("move_transaction_down", { transactionId, isIncome });
+  }, []);
+
+  const renderTransactionItem = (item: Transaction, index: number, totalCount: number, isIncome: boolean) => {
     const categoryInfo = getCategoryInfo(item.category);
     const isMenuOpen = openMenuId === item.id;
     const isLinkedTransaction = item.source_type && item.source_id;
+    const isFirst = index === 0;
+    const isLast = index === totalCount - 1;
 
     return (
       <Card style={[styles.transactionCard, isLinkedTransaction && styles.linkedTransactionCard]}>
         <Card.Content style={styles.transactionContent}>
+          {/* Reorder arrows - takes first part of the row */}
+          <View style={styles.reorderButtons}>
+            <TouchableOpacity
+              onPress={() => handleMoveUp(item.id, isIncome)}
+              disabled={isFirst}
+              style={[styles.reorderButtonContainer, styles.reorderButtonUp]}
+              activeOpacity={isFirst ? 1 : 0.6}
+            >
+              <Ionicons
+                name="chevron-up"
+                size={24}
+                color={isFirst ? AppTheme.colors.borderLight : AppTheme.colors.textSecondary}
+              />
+            </TouchableOpacity>
+            {/* Horizontal divider between arrows */}
+            <View style={styles.horizontalDivider} />
+            <TouchableOpacity
+              onPress={() => handleMoveDown(item.id, isIncome)}
+              disabled={isLast}
+              style={[styles.reorderButtonContainer, styles.reorderButtonDown]}
+              activeOpacity={isLast ? 1 : 0.6}
+            >
+              <Ionicons
+                name="chevron-down"
+                size={24}
+                color={isLast ? AppTheme.colors.borderLight : AppTheme.colors.textSecondary}
+              />
+            </TouchableOpacity>
+          </View>
+
+          {/* Vertical divider */}
+          <View style={styles.verticalDivider} />
+
           <View style={styles.transactionLeft}>
             <View style={styles.transactionInfo}>
               <Text variant="bodyLarge" style={styles.transactionDescription}>
@@ -446,12 +499,7 @@ export default function TransactionsScreen() {
                   {format(new Date(item.date), "MMM dd")}
                 </Text>
                 <View style={styles.categoryBadgeContainer}>
-                  <CategoryBadge
-                    category={item.category}
-                    emoji={categoryInfo?.emoji}
-                    color={categoryInfo?.color || AppTheme.colors.primary}
-                    size="sm"
-                  />
+                  <CategoryBadge category={item.category} emoji={categoryInfo?.emoji} color={categoryInfo?.color || AppTheme.colors.primary} size="sm" />
                 </View>
               </View>
             </View>
@@ -460,18 +508,7 @@ export default function TransactionsScreen() {
           <View style={styles.transactionRight}>
             <View style={styles.amountAndMenuRow}>
               {formatAmount(item.amount)}
-              <Menu
-                visible={isMenuOpen}
-                onDismiss={() => setOpenMenuId(null)}
-                anchor={
-                  <IconButton
-                    icon="dots-vertical"
-                    size={20}
-                    onPress={() => setOpenMenuId(item.id)}
-                    style={styles.menuButton}
-                  />
-                }
-              >
+              <Menu visible={isMenuOpen} onDismiss={() => setOpenMenuId(null)} anchor={<IconButton icon="dots-vertical" size={20} onPress={() => setOpenMenuId(item.id)} style={styles.menuButton} />}>
                 <Menu.Item
                   leadingIcon="pencil"
                   onPress={() => {
@@ -504,10 +541,7 @@ export default function TransactionsScreen() {
     );
   };
 
-  const renderUpcomingItem = (
-    item: ExpectedIncome | ExpectedInvoice | ExpectedSavings | Transaction,
-    type: "income" | "invoice" | "transaction" | "saving"
-  ) => {
+  const renderUpcomingItem = (item: ExpectedIncome | ExpectedInvoice | ExpectedSavings | Transaction, type: "income" | "invoice" | "transaction" | "saving") => {
     const categoryInfo = getCategoryInfo(item.category);
     const isIncome = type === "income" || (type === "transaction" && item.amount > 0);
     const amount = "amount" in item ? item.amount : (item as Transaction).amount;
@@ -516,41 +550,20 @@ export default function TransactionsScreen() {
       <Card key={`${type}-${item.id}`} style={styles.upcomingCard}>
         <Card.Content style={styles.upcomingContent}>
           <View style={styles.upcomingLeft}>
-            <CategoryBadge
-              category={item.category}
-              emoji={categoryInfo?.emoji}
-              color={categoryInfo?.color || AppTheme.colors.primary}
-              size="sm"
-            />
+            <CategoryBadge category={item.category} emoji={categoryInfo?.emoji} color={categoryInfo?.color || AppTheme.colors.primary} size="sm" />
             <View style={styles.upcomingInfo}>
               <Text variant="bodyLarge" style={styles.upcomingDescription}>
-                {type === "saving" 
-                  ? (item as ExpectedSavings).category 
-                  : "name" in item 
-                    ? item.name 
-                    : (item as Transaction).description}
+                {type === "saving" ? (item as ExpectedSavings).category : "name" in item ? item.name : (item as Transaction).description}
               </Text>
               <Text variant="bodySmall" style={styles.upcomingMeta}>
-                {item.category} •{" "}
-                {type === "income"
-                  ? "Expected Income"
-                  : type === "invoice"
-                  ? "Expected Invoice"
-                  : type === "saving"
-                  ? "Savings"
-                  : "Upcoming"}
+                {item.category} • {type === "income" ? "Expected Income" : type === "invoice" ? "Expected Invoice" : type === "saving" ? "Savings" : "Upcoming"}
               </Text>
             </View>
           </View>
 
           <View style={styles.upcomingRight}>
             {formatAmount(isIncome ? amount : -amount)}
-            <Chip
-              mode="outlined"
-              compact
-              style={styles.statusChip}
-              textStyle={styles.statusChipText}
-            >
+            <Chip mode="outlined" compact style={styles.statusChip} textStyle={styles.statusChipText}>
               Pending
             </Chip>
           </View>
@@ -559,31 +572,18 @@ export default function TransactionsScreen() {
     );
   };
 
-  const totalUpcoming =
-    upcomingFromIncomes.length + upcomingFromInvoices.length + upcomingTransactions.length;
+  const totalUpcoming = upcomingFromIncomes.length + upcomingFromInvoices.length + upcomingTransactions.length;
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.monthSelector}>
-          <IconButton
-            icon="chevron-left"
-            size={24}
-            onPress={() =>
-              setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))
-            }
-          />
+          <IconButton icon="chevron-left" size={24} onPress={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} />
           <Text variant="headlineSmall" style={styles.monthText}>
             {format(currentMonth, "MMMM yyyy")}
           </Text>
-          <IconButton
-            icon="chevron-right"
-            size={24}
-            onPress={() =>
-              setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))
-            }
-          />
+          <IconButton icon="chevron-right" size={24} onPress={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))} />
         </View>
         <View style={styles.headerActions}>
           <IconButton icon="bell-outline" size={24} />
@@ -591,39 +591,17 @@ export default function TransactionsScreen() {
         </View>
       </View>
 
-      <ScrollView 
-        style={styles.content} 
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
         {/* Search and Filters */}
         <View style={styles.searchSection}>
-          <Searchbar
-            placeholder="Search transactions..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            style={styles.searchBar}
-            icon="magnify"
-          />
+          <Searchbar placeholder="Search transactions..." value={searchQuery} onChangeText={setSearchQuery} style={styles.searchBar} icon="magnify" />
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.filterChips}
-            contentContainerStyle={styles.filterChipsContent}
-          >
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterChips} contentContainerStyle={styles.filterChipsContent}>
             <Chip
               mode={selectedCategory === null ? "flat" : "outlined"}
               onPress={() => setSelectedCategory(null)}
-              style={[
-                styles.filterChip,
-                selectedCategory === null && { backgroundColor: AppTheme.colors.chip },
-              ]}
-              textStyle={
-                selectedCategory === null ? { color: AppTheme.colors.chipText } : undefined
-              }
+              style={[styles.filterChip, selectedCategory === null && { backgroundColor: AppTheme.colors.chip }]}
+              textStyle={selectedCategory === null ? { color: AppTheme.colors.chipText } : undefined}
             >
               All Categories
             </Chip>
@@ -634,13 +612,8 @@ export default function TransactionsScreen() {
                   key={cat.id}
                   mode={selectedCategory === cat.name ? "flat" : "outlined"}
                   onPress={() => setSelectedCategory(cat.name)}
-                  style={[
-                    styles.filterChip,
-                    selectedCategory === cat.name && { backgroundColor: AppTheme.colors.chip },
-                  ]}
-                  textStyle={
-                    selectedCategory === cat.name ? { color: AppTheme.colors.chipText } : undefined
-                  }
+                  style={[styles.filterChip, selectedCategory === cat.name && { backgroundColor: AppTheme.colors.chip }]}
+                  textStyle={selectedCategory === cat.name ? { color: AppTheme.colors.chipText } : undefined}
                 >
                   {cat.name}
                 </Chip>
@@ -649,31 +622,19 @@ export default function TransactionsScreen() {
         </View>
 
         {/* Upcoming Section */}
-        <TouchableOpacity
-          onPress={() => setUpcomingExpanded(!upcomingExpanded)}
-          style={styles.sectionHeader}
-        >
+        <TouchableOpacity onPress={() => setUpcomingExpanded(!upcomingExpanded)} style={styles.sectionHeader}>
           <View style={styles.sectionTitle}>
             <Ionicons name="time-outline" size={24} color={AppTheme.colors.warning} />
             <Text variant="headlineSmall" style={styles.sectionTitleText}>
               Upcoming
             </Text>
             {totalUpcoming > 0 && (
-              <Chip
-                mode="flat"
-                compact
-                style={[styles.countChip, { backgroundColor: AppTheme.colors.accent }]}
-                textStyle={{ color: AppTheme.colors.textInverse }}
-              >
+              <Chip mode="flat" compact style={[styles.countChip, { backgroundColor: AppTheme.colors.accent }]} textStyle={{ color: AppTheme.colors.textInverse }}>
                 {totalUpcoming}
               </Chip>
             )}
           </View>
-          <Ionicons
-            name={upcomingExpanded ? "chevron-up" : "chevron-down"}
-            size={20}
-            color={AppTheme.colors.textSecondary}
-          />
+          <Ionicons name={upcomingExpanded ? "chevron-up" : "chevron-down"} size={20} color={AppTheme.colors.textSecondary} />
         </TouchableOpacity>
 
         {upcomingExpanded && (
@@ -700,31 +661,19 @@ export default function TransactionsScreen() {
         )}
 
         {/* Savings Section */}
-        <TouchableOpacity
-          onPress={() => setSavingsExpanded(!savingsExpanded)}
-          style={styles.sectionHeader}
-        >
+        <TouchableOpacity onPress={() => setSavingsExpanded(!savingsExpanded)} style={styles.sectionHeader}>
           <View style={styles.sectionTitle}>
             <Ionicons name="wallet" size={24} color={AppTheme.colors.secondary} />
             <Text variant="headlineSmall" style={styles.sectionTitleText}>
               Savings
             </Text>
             {paidSavings.length > 0 && (
-              <Chip
-                mode="flat"
-                compact
-                style={[styles.countChip, { backgroundColor: AppTheme.colors.secondary }]}
-                textStyle={{ color: AppTheme.colors.textInverse }}
-              >
+              <Chip mode="flat" compact style={[styles.countChip, { backgroundColor: AppTheme.colors.secondary }]} textStyle={{ color: AppTheme.colors.textInverse }}>
                 {paidSavings.length}
               </Chip>
             )}
           </View>
-          <Ionicons
-            name={savingsExpanded ? "chevron-up" : "chevron-down"}
-            size={20}
-            color={AppTheme.colors.textSecondary}
-          />
+          <Ionicons name={savingsExpanded ? "chevron-up" : "chevron-down"} size={20} color={AppTheme.colors.textSecondary} />
         </TouchableOpacity>
 
         {savingsExpanded && (
@@ -741,39 +690,25 @@ export default function TransactionsScreen() {
                 </Card.Content>
               </Card>
             ) : (
-              <View style={styles.upcomingList}>
-                {paidSavings.map((saving) => renderUpcomingItem(saving, "saving"))}
-              </View>
+              <View style={styles.upcomingList}>{paidSavings.map((saving) => renderUpcomingItem(saving, "saving"))}</View>
             )}
           </View>
         )}
 
         {/* Incomes Section */}
-        <TouchableOpacity
-          onPress={() => setIncomeExpanded(!incomeExpanded)}
-          style={styles.sectionHeader}
-        >
+        <TouchableOpacity onPress={() => setIncomeExpanded(!incomeExpanded)} style={styles.sectionHeader}>
           <View style={styles.sectionTitle}>
             <Ionicons name="trending-up" size={24} color={AppTheme.colors.success} />
             <Text variant="headlineSmall" style={styles.sectionTitleText}>
               Incomes
             </Text>
             {incomeTransactions.length > 0 && (
-              <Chip
-                mode="flat"
-                compact
-                style={[styles.countChip, { backgroundColor: AppTheme.colors.success }]}
-                textStyle={{ color: AppTheme.colors.textInverse }}
-              >
+              <Chip mode="flat" compact style={[styles.countChip, { backgroundColor: AppTheme.colors.success }]} textStyle={{ color: AppTheme.colors.textInverse }}>
                 {incomeTransactions.length}
               </Chip>
             )}
           </View>
-          <Ionicons
-            name={incomeExpanded ? "chevron-up" : "chevron-down"}
-            size={20}
-            color={AppTheme.colors.textSecondary}
-          />
+          <Ionicons name={incomeExpanded ? "chevron-up" : "chevron-down"} size={20} color={AppTheme.colors.textSecondary} />
         </TouchableOpacity>
 
         {incomeExpanded && (
@@ -785,18 +720,14 @@ export default function TransactionsScreen() {
                 <Card.Content style={styles.emptyContent}>
                   <Ionicons name="trending-up" size={48} color={AppTheme.colors.textMuted} />
                   <Text variant="bodyLarge" style={styles.emptyText}>
-                    {searchQuery || selectedCategory
-                      ? "No income transactions match your filters"
-                      : "No income transactions yet"}
+                    {searchQuery || selectedCategory ? "No income transactions match your filters" : "No income transactions yet"}
                   </Text>
                 </Card.Content>
               </Card>
             ) : (
               <View style={styles.transactionList}>
-                {incomeTransactions.map((item) => (
-                  <React.Fragment key={item.id}>
-                    {renderTransactionItem(item)}
-                  </React.Fragment>
+                {incomeTransactions.map((item, index) => (
+                  <React.Fragment key={item.id}>{renderTransactionItem(item, index, incomeTransactions.length, true)}</React.Fragment>
                 ))}
               </View>
             )}
@@ -804,31 +735,19 @@ export default function TransactionsScreen() {
         )}
 
         {/* Expenses Section */}
-        <TouchableOpacity
-          onPress={() => setExpenseExpanded(!expenseExpanded)}
-          style={styles.sectionHeader}
-        >
+        <TouchableOpacity onPress={() => setExpenseExpanded(!expenseExpanded)} style={styles.sectionHeader}>
           <View style={styles.sectionTitle}>
             <Ionicons name="trending-down" size={24} color={AppTheme.colors.error} />
             <Text variant="headlineSmall" style={styles.sectionTitleText}>
               Expenses
             </Text>
             {expenseTransactions.length > 0 && (
-              <Chip
-                mode="flat"
-                compact
-                style={[styles.countChip, { backgroundColor: AppTheme.colors.error }]}
-                textStyle={{ color: AppTheme.colors.textInverse }}
-              >
+              <Chip mode="flat" compact style={[styles.countChip, { backgroundColor: AppTheme.colors.error }]} textStyle={{ color: AppTheme.colors.textInverse }}>
                 {expenseTransactions.length}
               </Chip>
             )}
           </View>
-          <Ionicons
-            name={expenseExpanded ? "chevron-up" : "chevron-down"}
-            size={20}
-            color={AppTheme.colors.textSecondary}
-          />
+          <Ionicons name={expenseExpanded ? "chevron-up" : "chevron-down"} size={20} color={AppTheme.colors.textSecondary} />
         </TouchableOpacity>
 
         {expenseExpanded && (
@@ -840,18 +759,14 @@ export default function TransactionsScreen() {
                 <Card.Content style={styles.emptyContent}>
                   <Ionicons name="trending-down" size={48} color={AppTheme.colors.textMuted} />
                   <Text variant="bodyLarge" style={styles.emptyText}>
-                    {searchQuery || selectedCategory
-                      ? "No expense transactions match your filters"
-                      : "No expense transactions yet"}
+                    {searchQuery || selectedCategory ? "No expense transactions match your filters" : "No expense transactions yet"}
                   </Text>
                 </Card.Content>
               </Card>
             ) : (
               <View style={styles.transactionList}>
-                {expenseTransactions.map((item) => (
-                  <React.Fragment key={item.id}>
-                    {renderTransactionItem(item)}
-                  </React.Fragment>
+                {expenseTransactions.map((item, index) => (
+                  <React.Fragment key={item.id}>{renderTransactionItem(item, index, expenseTransactions.length, false)}</React.Fragment>
                 ))}
               </View>
             )}
@@ -888,27 +803,25 @@ export default function TransactionsScreen() {
               setCategory(value);
               setCategoryError(false);
             }}
-            data={categories
-              .filter((c) => c.is_visible) 
-              .map((cat) => ({ id: cat.name, name: cat.name, emoji: cat.emoji, color: cat.color }))}
+            data={categories.filter((c) => c.is_visible).map((cat) => ({ id: cat.name, name: cat.name, emoji: cat.emoji, color: cat.color }))}
             placeholder="Select category *"
             style={styles.input}
             error={categoryError}
           />
-          
+
           {/* Use Savings dropdown - only show for expense categories */}
           {(() => {
-            const selectedCategoryInfo = categories.find(c => c.name === category);
+            const selectedCategoryInfo = categories.find((c) => c.name === category);
             const isExpenseCategory = selectedCategoryInfo?.type === "expense";
             const availableSavings = Object.entries(savingsBalances)
               .filter(([_, balance]) => balance > 0)
               .map(([catName, balance]) => ({
                 id: catName,
                 name: `${catName} (€${balance.toFixed(1)})`,
-                emoji: categories.find(c => c.name === catName)?.emoji,
-                color: categories.find(c => c.name === catName)?.color,
+                emoji: categories.find((c) => c.name === catName)?.emoji,
+                color: categories.find((c) => c.name === catName)?.color,
               }));
-            
+
             if (isExpenseCategory && availableSavings.length > 0) {
               return (
                 <SimpleDropdown
@@ -917,10 +830,7 @@ export default function TransactionsScreen() {
                   onValueChange={(value) => {
                     setUseSavingsCategory(value || null);
                   }}
-                  data={[
-                    { id: "", name: "None", emoji: undefined, color: undefined },
-                    ...availableSavings,
-                  ]}
+                  data={[{ id: "", name: "None", emoji: undefined, color: undefined }, ...availableSavings]}
                   placeholder="None"
                   style={styles.input}
                 />
@@ -928,9 +838,13 @@ export default function TransactionsScreen() {
             }
             return null;
           })()}
-          
+
           <TextInput
-            label={<Text style={{ color: amountError ? 'red' : AppTheme.colors.textSecondary }}>Amount <Text style={{color: 'red'}}>*</Text></Text>}
+            label={
+              <Text style={{ color: amountError ? "red" : AppTheme.colors.textSecondary }}>
+                Amount <Text style={{ color: "red" }}>*</Text>
+              </Text>
+            }
             value={amount}
             onChangeText={(value) => {
               setAmount(value);
@@ -941,40 +855,19 @@ export default function TransactionsScreen() {
             style={styles.input}
             left={<TextInput.Affix text="€" />}
           />
-          <TextInput
-            label="Description"
-            value={description}
-            onChangeText={setDescription}
-            placeholder="e.g., Grocery shopping"
-            style={styles.input}
-          />
-          <TextInput
-            label="Date (YYYY-MM-DD)"
-            value={date}
-            onChangeText={setDate}
-            placeholder="2025-01-15"
-            style={styles.input}
-          />
+          <TextInput label="Description" value={description} onChangeText={setDescription} placeholder="e.g., Grocery shopping" style={styles.input} />
+          <TextInput label="Date (YYYY-MM-DD)" value={date} onChangeText={setDate} placeholder="2025-01-15" style={styles.input} />
 
           {categories.length > 0 && (
             <View style={styles.categorySelector}>
               <Text variant="labelMedium" style={styles.categoryLabel}>
                 Quick Select Category:
               </Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.categoryChips}
-              >
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryChips}>
                 {categories
                   .filter((c) => c.is_visible)
                   .map((cat) => (
-                    <Chip
-                      key={cat.id}
-                      mode={category === cat.name ? "flat" : "outlined"}
-                      onPress={() => setCategory(cat.name)}
-                      style={styles.categoryChip}
-                    >
+                    <Chip key={cat.id} mode={category === cat.name ? "flat" : "outlined"} onPress={() => setCategory(cat.name)} style={styles.categoryChip}>
                       {cat.name}
                     </Chip>
                   ))}
@@ -1001,9 +894,11 @@ export default function TransactionsScreen() {
         onDismiss={() => setPendingDialogVisible(false)}
         onConfirm={confirmMoveToPending}
         title="Move to Pending?"
-        message={itemToPending?.transaction.source_type === 'income'
-          ? "This will mark the expected income as unpaid and move it back to pending."
-          : "This will mark the expected invoice as unpaid and move it back to pending."}
+        message={
+          itemToPending?.transaction.source_type === "income"
+            ? "This will mark the expected income as unpaid and move it back to pending."
+            : "This will mark the expected invoice as unpaid and move it back to pending."
+        }
         confirmText="Move to Pending"
         cancelText="Cancel"
         confirmColor={AppTheme.colors.warning}
@@ -1126,8 +1021,7 @@ const styles = StyleSheet.create({
     color: AppTheme.colors.warning,
     fontSize: 12,
   },
-  transactionList: {
-  },
+  transactionList: {},
   transactionCard: {
     ...AppTheme.shadows.sm,
     marginBottom: AppTheme.spacing.md,
@@ -1141,12 +1035,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: AppTheme.spacing.sm,
+    paddingVertical: AppTheme.spacing.xs, // Minimal vertical padding
+    paddingHorizontal: 0, // Remove default padding to control spacing better
   },
   transactionLeft: {
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
+    paddingLeft: AppTheme.spacing.md,
   },
   transactionInfo: {
     flex: 1,
@@ -1168,6 +1064,7 @@ const styles = StyleSheet.create({
   },
   transactionRight: {
     alignItems: "flex-end",
+    paddingRight: AppTheme.spacing.md,
   },
   amountAndMenuRow: {
     flexDirection: "row",
@@ -1232,5 +1129,36 @@ const styles = StyleSheet.create({
   savingsBadgeText: {
     color: AppTheme.colors.secondary,
     fontSize: 12,
+  },
+  reorderButtons: {
+    flexDirection: "column",
+    justifyContent: "center",
+    alignItems: "center",
+    width: 48, // Fixed width for reorder section
+    alignSelf: "stretch", // Match parent height
+  },
+  reorderButtonContainer: {
+    width: 48,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  reorderButtonUp: {
+    marginTop: -2, // Shift up slightly for visual centering
+  },
+  reorderButtonDown: {
+    marginBottom: -2, // Shift down slightly for visual centering
+  },
+  horizontalDivider: {
+    height: 1,
+    width: 24, // Not full width, centered
+    backgroundColor: AppTheme.colors.border,
+    marginVertical: -4, // Reduce vertical spacing between buttons
+  },
+  verticalDivider: {
+    width: 1,
+    alignSelf: "stretch",
+    backgroundColor: AppTheme.colors.border,
+    marginRight: AppTheme.spacing.xs,
   },
 });

@@ -232,6 +232,31 @@ Color-coded based on spending ratio:
 - 75-95%: Orange (#ff9800)
 - 96%+: Red (#f44336)
 
+### Transaction Reordering (Transactions Screen)
+
+**Implementation:** Simple up/down arrow buttons (cross-platform)
+
+- **UI:** Each transaction card has up/down chevron IconButtons on the left side
+- **Functionality:**
+  - Up arrow moves the transaction one position up in its list (income or expense)
+  - Down arrow moves the transaction one position down in its list
+  - Arrows are disabled at boundaries (top item has no up arrow, bottom item has no down arrow)
+- **Cross-platform:** Works identically on web, iOS, and Android
+- **State Management:** Swaps adjacent items in the transactions array based on their IDs
+- **Logging:** All reorder actions are logged via `logger.userAction()`
+- **Note:** Order changes are LOCAL only (in-memory state) - not persisted to database
+
+**Implementation Details:**
+
+```typescript
+// Move handlers swap adjacent items in the filtered list
+handleMoveUp(transactionId, isIncome);  // Swaps with previous item
+handleMoveDown(transactionId, isIncome); // Swaps with next item
+
+// Render with index to determine if first/last
+renderTransactionItem(item, index, totalCount, isIncome);
+```
+
 ## Environment Setup
 
 Required environment variables (in `.env`):
