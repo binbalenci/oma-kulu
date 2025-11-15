@@ -10,31 +10,31 @@ import { SimpleDropdown } from "@/components/ui/SimpleDropdown";
 import { AppTheme } from "@/constants/AppTheme";
 import { useMonth } from "@/lib/month-context";
 import {
-  deleteBudget,
-  deleteIncome,
-  deleteInvoice,
-  deleteSavings,
-  deleteTransaction,
-  getSavingsBalance,
-  loadBudgets,
-  loadCategories,
-  loadIncomes,
-  loadInvoices,
-  loadSavings,
-  loadTransactions,
-  saveBudget,
-  saveIncome,
-  saveInvoice,
-  saveSavings,
-  saveTransaction,
+    deleteBudget,
+    deleteIncome,
+    deleteInvoice,
+    deleteSavings,
+    deleteTransaction,
+    getSavingsBalance,
+    loadBudgets,
+    loadCategories,
+    loadIncomes,
+    loadInvoices,
+    loadSavings,
+    loadTransactions,
+    saveBudget,
+    saveIncome,
+    saveInvoice,
+    saveSavings,
+    saveTransaction,
 } from "@/lib/storage";
 import type {
-  Budget,
-  Category,
-  ExpectedIncome,
-  ExpectedInvoice,
-  ExpectedSavings,
-  Transaction,
+    Budget,
+    Category,
+    ExpectedIncome,
+    ExpectedInvoice,
+    ExpectedSavings,
+    Transaction,
 } from "@/lib/types";
 import Ionicons from "@react-native-vector-icons/ionicons";
 import MaterialIcons from "@react-native-vector-icons/material-design-icons";
@@ -478,6 +478,17 @@ export default function HomeScreen() {
       ? categories.find((c) => c.name === useSavingsCategory && c.type === "saving")
       : undefined;
 
+    // Calculate order_index for new transaction (appear at top of their type list)
+    const isIncome = type === "income" || type === "saving";
+    const sameTypeTransactions = transactions.filter((t) => (isIncome && t.amount > 0) || (!isIncome && t.amount < 0));
+    let orderIndex: number;
+    if (sameTypeTransactions.length > 0) {
+      const minOrderIndex = Math.min(...sameTypeTransactions.map((t) => t.order_index ?? 0));
+      orderIndex = minOrderIndex - 1; // Place new transaction before existing ones
+    } else {
+      orderIndex = 0; // First transaction of this type
+    }
+
     // Mark as paid - create transaction
     const tx: Transaction = {
       id: Crypto.randomUUID(),
@@ -493,6 +504,7 @@ export default function HomeScreen() {
       uses_savings_category: useSavingsCategory,
       uses_savings_category_id: usesSavingsCategoryObj?.id,
       savings_amount_used: savingsAmountUsed > 0 ? savingsAmountUsed : undefined,
+      order_index: orderIndex,
     };
 
     const txSuccess = await saveTransaction(tx);

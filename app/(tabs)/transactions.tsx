@@ -427,8 +427,15 @@ export default function TransactionsScreen() {
   // Move transaction up in the list
   const handleMoveUp = React.useCallback(async (transactionId: string, isIncome: boolean) => {
     setTransactions((prev) => {
-      // Get the correct filtered list to find the current position
-      const relevantList = isIncome ? prev.filter((t) => t.amount > 0) : prev.filter((t) => t.amount < 0);
+      // Get the correct filtered list and sort by order_index to get the actual display order
+      const relevantList = (isIncome ? prev.filter((t) => t.amount > 0) : prev.filter((t) => t.amount < 0)).sort((a, b) => {
+        const aOrder = a.order_index ?? Number.MAX_SAFE_INTEGER;
+        const bOrder = b.order_index ?? Number.MAX_SAFE_INTEGER;
+        if (aOrder !== bOrder) {
+          return aOrder - bOrder;
+        }
+        return new Date(b.date).getTime() - new Date(a.date).getTime();
+      });
 
       const currentIndex = relevantList.findIndex((t) => t.id === transactionId);
       if (currentIndex <= 0) return prev; // Already at the top or not found
@@ -466,8 +473,15 @@ export default function TransactionsScreen() {
   // Move transaction down in the list
   const handleMoveDown = React.useCallback(async (transactionId: string, isIncome: boolean) => {
     setTransactions((prev) => {
-      // Get the correct filtered list to find the current position
-      const relevantList = isIncome ? prev.filter((t) => t.amount > 0) : prev.filter((t) => t.amount < 0);
+      // Get the correct filtered list and sort by order_index to get the actual display order
+      const relevantList = (isIncome ? prev.filter((t) => t.amount > 0) : prev.filter((t) => t.amount < 0)).sort((a, b) => {
+        const aOrder = a.order_index ?? Number.MAX_SAFE_INTEGER;
+        const bOrder = b.order_index ?? Number.MAX_SAFE_INTEGER;
+        if (aOrder !== bOrder) {
+          return aOrder - bOrder;
+        }
+        return new Date(b.date).getTime() - new Date(a.date).getTime();
+      });
 
       const currentIndex = relevantList.findIndex((t) => t.id === transactionId);
       if (currentIndex < 0 || currentIndex >= relevantList.length - 1) return prev; // Already at bottom or not found
