@@ -17,12 +17,13 @@
     "check-all": "npm run type-check && npm run lint:check",
     "pre-commit": "npm run check-all",
     "lint-status": "node scripts/lint-status.js",
-    "predeploy:ios": "npx expo export --source-maps --platform ios",
-    "deploy:ios": "eas update",
-    "postdeploy:ios": "npx sentry-expo-upload-sourcemaps dist",
-    "predeploy:web": "npx expo export --source-maps --platform web",
+    "predeploy:ios": "npx expo export --source-maps --platform ios --output-dir dist-ios",
+    "deploy:ios": "eas update --auto --non-interactive",
+    "postdeploy:ios": "npx sentry-expo-upload-sourcemaps dist-ios",
+    "predeploy:web": "npx expo export --source-maps --platform web --output-dir dist-web",
     "deploy:web": "eas deploy --prod",
-    "postdeploy:web": "npx sentry-expo-upload-sourcemaps dist"
+    "postdeploy:web": "npx sentry-expo-upload-sourcemaps dist-web",
+    "deploy:all": "./scripts/deploy-all.sh"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
