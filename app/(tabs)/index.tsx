@@ -474,27 +474,21 @@ export default function HomeScreen() {
     const categoryType = type === "income" ? "income" : type === "saving" ? "saving" : "expense";
     const categoryObj = categories.find((c) => c.name === item.category && c.type === categoryType);
     // Find uses_savings_category_id if using savings
-    const usesSavingsCategoryObj = useSavingsCategory 
+    const usesSavingsCategoryObj = useSavingsCategory
       ? categories.find((c) => c.name === useSavingsCategory && c.type === "saving")
       : undefined;
 
-    // Calculate order_index for new transaction (appear at top of their type list)
-    const isIncome = type === "income" || type === "saving";
-    const sameTypeTransactions = transactions.filter((t) => (isIncome && t.amount > 0) || (!isIncome && t.amount < 0));
-    let orderIndex: number;
-    if (sameTypeTransactions.length > 0) {
-      const minOrderIndex = Math.min(...sameTypeTransactions.map((t) => t.order_index ?? 0));
-      orderIndex = minOrderIndex - 1; // Place new transaction before existing ones
-    } else {
-      orderIndex = 0; // First transaction of this type
-    }
+    // Calculate order_index: append to end of same-date transactions
+    const txDate = format(new Date(), "yyyy-MM-dd");
+    const sameDateTransactions = transactions.filter((t) => t.date === txDate);
+    const orderIndex = sameDateTransactions.length; // Append to end
 
     // Mark as paid - create transaction
     const tx: Transaction = {
       id: Crypto.randomUUID(),
       amount: type === "income" ? item.amount : -item.amount,
       description: type === "saving" ? (item as ExpectedSavings).category : (item as ExpectedIncome | ExpectedInvoice).name,
-      date: format(new Date(), "yyyy-MM-dd"),
+      date: txDate,
       category: item.category,
       category_id: categoryObj?.id,
       status: "paid",

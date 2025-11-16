@@ -351,8 +351,8 @@ export async function loadTransactions(): Promise<Transaction[]> {
     const { data, error } = await supabase
       .from("transactions")
       .select("*")
-      .order("order_index", { ascending: true, nullsFirst: false })
-      .order("date", { ascending: false });
+      .order("date", { ascending: false })
+      .order("order_index", { ascending: true, nullsFirst: false });
 
     if (error) {
       console.error("Error loading transactions:", error);

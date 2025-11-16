@@ -234,27 +234,49 @@ Color-coded based on spending ratio:
 
 ### Transaction Reordering (Transactions Screen)
 
-**Implementation:** Simple up/down arrow buttons (cross-platform)
+**Implementation:** Simple up/down arrow buttons for same-date transactions (cross-platform)
 
-- **UI:** Each transaction card has up/down chevron IconButtons on the left side
+- **UI:** Arrows appear **only when reordering is possible**
+  - Up arrow shows only if previous transaction has the same date
+  - Down arrow shows only if next transaction has the same date
+  - No arrows shown for single transactions on a date
+  - Clean UI - no disabled/grayed-out elements
 - **Functionality:**
-  - Up arrow moves the transaction one position up in its list (income or expense)
-  - Down arrow moves the transaction one position down in its list
-  - Arrows are disabled at boundaries (top item has no up arrow, bottom item has no down arrow)
+  - Up arrow moves the transaction one position up within the same date
+  - Down arrow moves the transaction one position down within the same date
+  - Arrows only appear when the action is possible (same-date adjacent item exists)
+- **Use Case:** Match the order of transactions as they appear in bank statements (which group by date)
 - **Cross-platform:** Works identically on web, iOS, and Android
-- **State Management:** Swaps adjacent items in the transactions array based on their IDs
+- **Database Persistence:** Order changes are persisted via `order_index` field in transactions table
+- **Sorting:**
+  - Primary: `date DESC` (newest first)
+  - Secondary: `order_index ASC` (lower values first) for same-date transactions
 - **Logging:** All reorder actions are logged via `logger.userAction()`
-- **Note:** Order changes are LOCAL only (in-memory state) - not persisted to database
 
 **Implementation Details:**
 
 ```typescript
-// Move handlers swap adjacent items in the filtered list
-handleMoveUp(transactionId, isIncome);  // Swaps with previous item
-handleMoveDown(transactionId, isIncome); // Swaps with next item
+// Database query
+ORDER BY date DESC, order_index ASC NULLS LAST
 
-// Render with index to determine if first/last
-renderTransactionItem(item, index, totalCount, isIncome);
+// Frontend sorting (matches database)
+.sort((a, b) => {
+  const dateCompare = new Date(b.date).getTime() - new Date(a.date).getTime();
+  if (dateCompare !== 0) return dateCompare;
+  return (a.order_index ?? 0) - (b.order_index ?? 0);
+});
+
+// UI only shows arrows when reordering is possible
+const prevItem = index > 0 ? relevantList[index - 1] : null;
+const nextItem = index < totalCount - 1 ? relevantList[index + 1] : null;
+const canMoveUp = prevItem && prevItem.date === item.date;
+const canMoveDown = nextItem && nextItem.date === item.date;
+
+// New transactions append to end of same-date list
+const sameDateTransactions = transactions.filter((t) => t.date === date);
+const orderIndex = sameDateTransactions.length; // 0, 1, 2, 3...
+
+// All transactions have explicit order_index (no nulls in normal operation)
 ```
 
 ## Environment Setup

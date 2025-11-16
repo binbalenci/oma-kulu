@@ -7,7 +7,19 @@ import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { SimpleDropdown } from "@/components/ui/SimpleDropdown";
 import { AppTheme } from "@/constants/AppTheme";
 import { useMonth } from "@/lib/month-context";
-import { deleteTransaction, getSavingsBalance, loadCategories, loadIncomes, loadInvoices, loadSavings, loadTransactions, saveIncome, saveInvoice, saveTransaction, saveTransactions } from "@/lib/storage";
+import {
+  deleteTransaction,
+  getSavingsBalance,
+  loadCategories,
+  loadIncomes,
+  loadInvoices,
+  loadSavings,
+  loadTransactions,
+  saveIncome,
+  saveInvoice,
+  saveTransaction,
+  saveTransactions,
+} from "@/lib/storage";
 import type { Category, ExpectedIncome, ExpectedInvoice, ExpectedSavings, Transaction } from "@/lib/types";
 import Ionicons from "@react-native-vector-icons/ionicons";
 import { endOfMonth, format, startOfMonth } from "date-fns";
@@ -180,14 +192,11 @@ export default function TransactionsScreen() {
       return transactionDate >= monthStart && transactionDate <= monthEnd;
     })
     .sort((a, b) => {
-      // First sort by order_index (if available), then by date
-      const aOrder = a.order_index ?? Number.MAX_SAFE_INTEGER;
-      const bOrder = b.order_index ?? Number.MAX_SAFE_INTEGER;
-      if (aOrder !== bOrder) {
-        return aOrder - bOrder; // Lower order_index appears first
-      }
-      // Fallback to date if order_index is the same
-      return new Date(b.date).getTime() - new Date(a.date).getTime();
+      // First sort by date (descending - newest first)
+      const dateCompare = new Date(b.date).getTime() - new Date(a.date).getTime();
+      if (dateCompare !== 0) return dateCompare;
+      // Then by order_index (ascending - lower values first) for same-date transactions
+      return (a.order_index ?? 0) - (b.order_index ?? 0);
     });
 
   // Filter transactions based on search and filters
@@ -248,17 +257,14 @@ export default function TransactionsScreen() {
       savingsAmountUsed = Math.min(availableBalance, transactionAmount);
     }
 
-    // Calculate order_index for new transactions (appear at top of their type list)
-    let orderIndex: number | undefined = editing?.order_index;
-    if (!editing) {
-      // For new transactions, find the minimum order_index for transactions of the same type
-      const sameTypeTransactions = transactions.filter((t) => (isIncome && t.amount > 0) || (!isIncome && t.amount < 0));
-      if (sameTypeTransactions.length > 0) {
-        const minOrderIndex = Math.min(...sameTypeTransactions.map((t) => t.order_index ?? 0));
-        orderIndex = minOrderIndex - 1; // Place new transaction before existing ones
-      } else {
-        orderIndex = 0; // First transaction of this type
-      }
+    // Calculate order_index: preserve when editing, append to end of same-date list for new transactions
+    let orderIndex: number;
+    if (editing) {
+      orderIndex = editing.order_index ?? 0;
+    } else {
+      // Count transactions with the same date
+      const sameDateTransactions = transactions.filter((t) => t.date === date);
+      orderIndex = sameDateTransactions.length; // Append to end
     }
 
     const tx: Transaction = {
@@ -277,7 +283,7 @@ export default function TransactionsScreen() {
       uses_savings_category: useSavingsCategory || undefined,
       uses_savings_category_id: usesSavingsCategoryObj?.id,
       savings_amount_used: savingsAmountUsed > 0 ? savingsAmountUsed : undefined,
-      // Order index
+      // Order index - appends to end of same-date transactions
       order_index: orderIndex,
     };
 
@@ -424,140 +430,150 @@ export default function TransactionsScreen() {
     );
   };
 
-  // Move transaction up in the list
-  const handleMoveUp = React.useCallback(async (transactionId: string, isIncome: boolean) => {
-    setTransactions((prev) => {
-      // Get the correct filtered list and sort by order_index to get the actual display order
-      const relevantList = (isIncome ? prev.filter((t) => t.amount > 0) : prev.filter((t) => t.amount < 0)).sort((a, b) => {
-        const aOrder = a.order_index ?? Number.MAX_SAFE_INTEGER;
-        const bOrder = b.order_index ?? Number.MAX_SAFE_INTEGER;
-        if (aOrder !== bOrder) {
-          return aOrder - bOrder;
+  // Move transaction up in the list (only works for same-date transactions)
+  const handleMoveUp = React.useCallback(
+    async (transactionId: string, isIncome: boolean) => {
+      setTransactions((prev) => {
+        // Get the correct filtered list sorted by date DESC, order_index ASC
+        const relevantList = (isIncome ? prev.filter((t) => t.amount > 0) : prev.filter((t) => t.amount < 0)).sort((a, b) => {
+          // Sort by date first (descending)
+          const dateCompare = new Date(b.date).getTime() - new Date(a.date).getTime();
+          if (dateCompare !== 0) return dateCompare;
+          // Then by order_index (ascending)
+          return (a.order_index ?? 0) - (b.order_index ?? 0);
+        });
+
+        const currentIndex = relevantList.findIndex((t) => t.id === transactionId);
+        if (currentIndex <= 0) return prev; // Already at the top or not found
+
+        const itemToMove = relevantList[currentIndex];
+        const itemToSwap = relevantList[currentIndex - 1];
+
+        // Safety check: only allow reordering within the same date (arrows should prevent this, but double-check)
+        if (itemToMove.date !== itemToSwap.date) {
+          return prev; // Silently ignore - UI shouldn't allow this
         }
-        return new Date(b.date).getTime() - new Date(a.date).getTime();
+
+        // Swap order_index values
+        const updatedItemToMove = { ...itemToMove, order_index: itemToSwap.order_index ?? 0 };
+        const updatedItemToSwap = { ...itemToSwap, order_index: itemToMove.order_index ?? 0 };
+
+        // Persist to database
+        (async () => {
+          const success = await saveTransactions([updatedItemToMove, updatedItemToSwap]);
+          if (!success) {
+            logger.error(new Error("Failed to save transaction order"), { operation: "move_transaction_up", transactionId, isIncome });
+            showSnackbar("Failed to save order");
+          } else {
+            logger.databaseSuccess("update_transaction_order", { transactionId, isIncome, direction: "up" });
+          }
+        })();
+
+        // Create new array with swapped positions
+        return prev.map((t) => {
+          if (t.id === itemToMove.id) return updatedItemToMove;
+          if (t.id === itemToSwap.id) return updatedItemToSwap;
+          return t;
+        });
       });
+      logger.userAction("move_transaction_up", { transactionId, isIncome });
+    },
+    [showSnackbar]
+  );
 
-      const currentIndex = relevantList.findIndex((t) => t.id === transactionId);
-      if (currentIndex <= 0) return prev; // Already at the top or not found
+  // Move transaction down in the list (only works for same-date transactions)
+  const handleMoveDown = React.useCallback(
+    async (transactionId: string, isIncome: boolean) => {
+      setTransactions((prev) => {
+        // Get the correct filtered list sorted by date DESC, order_index ASC
+        const relevantList = (isIncome ? prev.filter((t) => t.amount > 0) : prev.filter((t) => t.amount < 0)).sort((a, b) => {
+          // Sort by date first (descending)
+          const dateCompare = new Date(b.date).getTime() - new Date(a.date).getTime();
+          if (dateCompare !== 0) return dateCompare;
+          // Then by order_index (ascending)
+          return (a.order_index ?? 0) - (b.order_index ?? 0);
+        });
 
-      // Swap with previous item in the relevant list
-      const itemToMove = relevantList[currentIndex];
-      const itemToSwap = relevantList[currentIndex - 1];
+        const currentIndex = relevantList.findIndex((t) => t.id === transactionId);
+        if (currentIndex < 0 || currentIndex >= relevantList.length - 1) return prev; // Already at bottom or not found
 
-      // Swap order_index values
-      const tempOrderIndex = itemToMove.order_index ?? 0;
-      const updatedItemToMove = { ...itemToMove, order_index: itemToSwap.order_index ?? 0 };
-      const updatedItemToSwap = { ...itemToSwap, order_index: tempOrderIndex };
+        const itemToMove = relevantList[currentIndex];
+        const itemToSwap = relevantList[currentIndex + 1];
 
-      // Persist to database
-      (async () => {
-        const success = await saveTransactions([updatedItemToMove, updatedItemToSwap]);
-        if (!success) {
-          logger.error(new Error("Failed to save transaction order"), { operation: "move_transaction_up", transactionId, isIncome });
-          showSnackbar("Failed to save order");
-        } else {
-          logger.databaseSuccess("update_transaction_order", { transactionId, isIncome, direction: "up" });
+        // Safety check: only allow reordering within the same date (arrows should prevent this, but double-check)
+        if (itemToMove.date !== itemToSwap.date) {
+          return prev; // Silently ignore - UI shouldn't allow this
         }
-      })();
 
-      // Create new array with swapped positions
-      return prev.map((t) => {
-        if (t.id === itemToMove.id) return updatedItemToMove;
-        if (t.id === itemToSwap.id) return updatedItemToSwap;
-        return t;
+        // Swap order_index values
+        const updatedItemToMove = { ...itemToMove, order_index: itemToSwap.order_index ?? 0 };
+        const updatedItemToSwap = { ...itemToSwap, order_index: itemToMove.order_index ?? 0 };
+
+        // Persist to database
+        (async () => {
+          const success = await saveTransactions([updatedItemToMove, updatedItemToSwap]);
+          if (!success) {
+            logger.error(new Error("Failed to save transaction order"), { operation: "move_transaction_down", transactionId, isIncome });
+            showSnackbar("Failed to save order");
+          } else {
+            logger.databaseSuccess("update_transaction_order", { transactionId, isIncome, direction: "down" });
+          }
+        })();
+
+        // Create new array with swapped positions
+        return prev.map((t) => {
+          if (t.id === itemToMove.id) return updatedItemToMove;
+          if (t.id === itemToSwap.id) return updatedItemToSwap;
+          return t;
+        });
       });
-    });
-    logger.userAction("move_transaction_up", { transactionId, isIncome });
-  }, [showSnackbar]);
-
-  // Move transaction down in the list
-  const handleMoveDown = React.useCallback(async (transactionId: string, isIncome: boolean) => {
-    setTransactions((prev) => {
-      // Get the correct filtered list and sort by order_index to get the actual display order
-      const relevantList = (isIncome ? prev.filter((t) => t.amount > 0) : prev.filter((t) => t.amount < 0)).sort((a, b) => {
-        const aOrder = a.order_index ?? Number.MAX_SAFE_INTEGER;
-        const bOrder = b.order_index ?? Number.MAX_SAFE_INTEGER;
-        if (aOrder !== bOrder) {
-          return aOrder - bOrder;
-        }
-        return new Date(b.date).getTime() - new Date(a.date).getTime();
-      });
-
-      const currentIndex = relevantList.findIndex((t) => t.id === transactionId);
-      if (currentIndex < 0 || currentIndex >= relevantList.length - 1) return prev; // Already at bottom or not found
-
-      // Swap with next item in the relevant list
-      const itemToMove = relevantList[currentIndex];
-      const itemToSwap = relevantList[currentIndex + 1];
-
-      // Swap order_index values
-      const tempOrderIndex = itemToMove.order_index ?? 0;
-      const updatedItemToMove = { ...itemToMove, order_index: itemToSwap.order_index ?? 0 };
-      const updatedItemToSwap = { ...itemToSwap, order_index: tempOrderIndex };
-
-      // Persist to database
-      (async () => {
-        const success = await saveTransactions([updatedItemToMove, updatedItemToSwap]);
-        if (!success) {
-          logger.error(new Error("Failed to save transaction order"), { operation: "move_transaction_down", transactionId, isIncome });
-          showSnackbar("Failed to save order");
-        } else {
-          logger.databaseSuccess("update_transaction_order", { transactionId, isIncome, direction: "down" });
-        }
-      })();
-
-      // Create new array with swapped positions
-      return prev.map((t) => {
-        if (t.id === itemToMove.id) return updatedItemToMove;
-        if (t.id === itemToSwap.id) return updatedItemToSwap;
-        return t;
-      });
-    });
-    logger.userAction("move_transaction_down", { transactionId, isIncome });
-  }, [showSnackbar]);
+      logger.userAction("move_transaction_down", { transactionId, isIncome });
+    },
+    [showSnackbar]
+  );
 
   const renderTransactionItem = (item: Transaction, index: number, totalCount: number, isIncome: boolean) => {
     const categoryInfo = getCategoryInfo(item.category);
     const isMenuOpen = openMenuId === item.id;
     const isLinkedTransaction = item.source_type && item.source_id;
-    const isFirst = index === 0;
-    const isLast = index === totalCount - 1;
+
+    // Get the relevant list to check for same-date neighbors
+    const relevantList = isIncome ? incomeTransactions : expenseTransactions;
+    const prevItem = index > 0 ? relevantList[index - 1] : null;
+    const nextItem = index < totalCount - 1 ? relevantList[index + 1] : null;
+
+    // Only show arrows if adjacent item has the same date
+    const canMoveUp = prevItem && prevItem.date === item.date;
+    const canMoveDown = nextItem && nextItem.date === item.date;
+    const showAnyArrow = canMoveUp || canMoveDown;
 
     return (
       <Card style={[styles.transactionCard, isLinkedTransaction && styles.linkedTransactionCard]}>
         <Card.Content style={styles.transactionContent}>
-          {/* Reorder arrows - takes first part of the row */}
-          <View style={styles.reorderButtons}>
-            <TouchableOpacity
-              onPress={() => handleMoveUp(item.id, isIncome)}
-              disabled={isFirst}
-              style={[styles.reorderButtonContainer, styles.reorderButtonUp]}
-              activeOpacity={isFirst ? 1 : 0.6}
-            >
-              <Ionicons
-                name="chevron-up"
-                size={24}
-                color={isFirst ? AppTheme.colors.borderLight : AppTheme.colors.textSecondary}
-              />
-            </TouchableOpacity>
-            {/* Horizontal divider between arrows */}
-            <View style={styles.horizontalDivider} />
-            <TouchableOpacity
-              onPress={() => handleMoveDown(item.id, isIncome)}
-              disabled={isLast}
-              style={[styles.reorderButtonContainer, styles.reorderButtonDown]}
-              activeOpacity={isLast ? 1 : 0.6}
-            >
-              <Ionicons
-                name="chevron-down"
-                size={24}
-                color={isLast ? AppTheme.colors.borderLight : AppTheme.colors.textSecondary}
-              />
-            </TouchableOpacity>
-          </View>
+          {/* Reorder arrows - only show when reordering is possible */}
+          {showAnyArrow && (
+            <>
+              <View style={styles.reorderButtons}>
+                {canMoveUp && (
+                  <TouchableOpacity onPress={() => handleMoveUp(item.id, isIncome)} style={[styles.reorderButtonContainer]} activeOpacity={0.6}>
+                    <Ionicons style={styles.reorderButtonUp} name="chevron-up" size={24} color={AppTheme.colors.textSecondary} />
+                  </TouchableOpacity>
+                )}
 
-          {/* Vertical divider */}
-          <View style={styles.verticalDivider} />
+                {/* Horizontal divider between arrows - only show if both arrows present */}
+                {canMoveUp && canMoveDown && <View style={styles.horizontalDivider} />}
+
+                {canMoveDown && (
+                  <TouchableOpacity onPress={() => handleMoveDown(item.id, isIncome)} style={styles.reorderButtonContainer} activeOpacity={0.6}>
+                    <Ionicons style={styles.reorderButtonDown} name="chevron-down" size={24} color={AppTheme.colors.textSecondary} />
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {/* Vertical divider */}
+              <View style={styles.verticalDivider} />
+            </>
+          )}
 
           <View style={styles.transactionLeft}>
             <View style={styles.transactionInfo}>
@@ -714,7 +730,7 @@ export default function TransactionsScreen() {
             ) : totalUpcoming === 0 ? (
               <Card style={styles.emptyCard}>
                 <Card.Content style={styles.emptyContent}>
-                  <Ionicons name="time-outline" size={48} color={AppTheme.colors.textMuted} />
+                  <Ionicons name="time-outline" size={AppTheme.spacing["4xl"]} color={AppTheme.colors.textMuted} />
                   <Text variant="bodyLarge" style={styles.emptyText}>
                     No upcoming items
                   </Text>
@@ -753,7 +769,7 @@ export default function TransactionsScreen() {
             ) : paidSavings.length === 0 ? (
               <Card style={styles.emptyCard}>
                 <Card.Content style={styles.emptyContent}>
-                  <Ionicons name="wallet-outline" size={48} color={AppTheme.colors.textMuted} />
+                  <Ionicons name="wallet-outline" size={AppTheme.spacing["4xl"]} color={AppTheme.colors.textMuted} />
                   <Text variant="bodyLarge" style={styles.emptyText}>
                     No paid savings items this month
                   </Text>
@@ -1095,6 +1111,8 @@ const styles = StyleSheet.create({
   transactionCard: {
     ...AppTheme.shadows.sm,
     marginBottom: AppTheme.spacing.md,
+    borderLeftWidth: 4,
+    borderLeftColor: AppTheme.colors.border,
   },
   linkedTransactionCard: {
     backgroundColor: "#FFF8F0",
@@ -1107,6 +1125,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingVertical: AppTheme.spacing.xs, // Minimal vertical padding
     paddingHorizontal: 0, // Remove default padding to control spacing better
+    minHeight: 80, // Ensure consistent height for all transaction cards
   },
   transactionLeft: {
     flexDirection: "row",
@@ -1214,10 +1233,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   reorderButtonUp: {
-    marginTop: -2, // Shift up slightly for visual centering
+    marginTop: -8, // Shift up slightly for visual centering
   },
   reorderButtonDown: {
-    marginBottom: -2, // Shift down slightly for visual centering
+    marginBottom: -8, // Shift down slightly for visual centering
   },
   horizontalDivider: {
     height: 1,
