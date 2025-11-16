@@ -2,26 +2,46 @@
 
 A beautiful, Apple-standard personal finance management app built with React Native and Expo.
 
-> **Version 2.1.0** - Enhanced UX with session management and pull-to-refresh
+> **Version 3.3.0** - Foundation Layer Complete: Feature-Based Architecture with Comprehensive Testing
 
-## 🆕 What's New in 2.1.0
+## 🆕 What's New in 3.3.0
 
-### 🔐 Session Management
-- **24-Hour Sessions**: No need to re-enter passcode on every app restart
-- **Automatic Validation**: Seamless session checking on app startup
-- **Cross-Platform**: Works on iOS, Android, and Web
-- **Smart Cleanup**: Automatic session expiration and cleanup
+### 🏗️ Major Refactoring - Phase 1 Complete
+**Feature-Based Architecture**: Completed the foundation layer of a comprehensive codebase refactoring that transforms the app into a modern, maintainable, and LLM-optimized architecture.
 
-### 🔄 Pull-to-Refresh
-- **Universal Refresh**: Pull-to-refresh on all tabs (Home, Transactions, Reports, Categories)
-- **Native Indicators**: Smooth refresh animations with visual feedback
-- **Smart Data Loading**: Each tab refreshes only its relevant data
-- **Error Handling**: User-friendly error messages for failed refreshes
+#### ✨ New Foundation
+- **Shared Utilities**: Centralized calculations, formatters, and validators in `features/shared/`
+- **Comprehensive Testing**: 90-100% test coverage on all shared services and hooks
+- **Code Reduction**: Eliminated 400+ lines of duplicated code
+- **Better Organization**: Clear separation of concerns (Services → Hooks → Components → Screens)
 
-### 🔧 Bug Fixes
-- **"In Bank" Calculation**: Fixed to show accurate current month balance
-- **Month Filtering**: Proper filtering of paid transactions only
-- **Code Cleanup**: Removed unused settings loading and improved maintainability
+#### 🧪 Testing Infrastructure
+- **Jest Framework**: Full testing setup with Expo integration
+- **Hook Testing**: @testing-library/react for testing custom hooks
+- **Co-located Tests**: Test files live next to source code for maintainability
+- **Test Scripts**: `npm test`, `test:watch`, `test:coverage`, `test:shared`, `test:budget`
+
+#### 📦 Shared Services (100% Tested)
+- **calculations.ts**: Financial calculations (money to assign, actual in bank, category spending, savings)
+- **formatters.ts**: Currency and date formatting utilities
+- **validators.ts**: Form validation logic for budgets, transactions, and inputs
+- **database-helpers.ts**: Common database operations and category resolution (90% tested)
+
+#### 🪝 Shared Hooks (90%+ Tested)
+- **useFinancialData**: Centralized data loading for incomes, invoices, budgets, and transactions
+
+#### 📚 Documentation
+- **Detailed Docs**: [features/shared/README.md](features/shared/README.md) with complete API reference
+- **AI Guide**: [features/shared/CLAUDE.md](features/shared/CLAUDE.md) for AI-optimized development
+- **Refactoring Plan**: [docs/plans/2025-01-16-feature-based-refactoring.md](docs/plans/2025-01-16-feature-based-refactoring.md)
+
+#### 🎯 Impact
+- **Maintainability**: Modular, testable code structure
+- **Quality**: Comprehensive test coverage prevents regressions
+- **Developer Experience**: Clear patterns and documentation for future development
+- **LLM Optimization**: Smaller files (100-300 lines) improve AI code comprehension
+
+This release establishes the foundation for Phase 2 (Budget Feature) and beyond. See the [refactoring plan](docs/plans/2025-01-16-feature-based-refactoring.md) for the complete roadmap.
 
 ## ✨ Features
 
