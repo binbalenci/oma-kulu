@@ -35,7 +35,12 @@ expo-env.d.ts
 .env
 .env.*
 .env*.local
+!.env.example
 .envrc
+!.envrc.example
+
+# MCP configuration (contains secrets)
+.mcp.json
 
 # TypeScript
 *.tsbuildinfo
