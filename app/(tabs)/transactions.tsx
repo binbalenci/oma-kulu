@@ -262,9 +262,10 @@ export default function TransactionsScreen() {
     if (editing) {
       orderIndex = editing.order_index ?? 0;
     } else {
-      // Count transactions with the same date
+      // Find the maximum order_index for the same date and add 1
       const sameDateTransactions = transactions.filter((t) => t.date === date);
-      orderIndex = sameDateTransactions.length; // Append to end
+      const maxOrderIndex = sameDateTransactions.reduce((max, t) => Math.max(max, t.order_index ?? -1), -1);
+      orderIndex = maxOrderIndex + 1; // Append to end with next sequential index
     }
 
     const tx: Transaction = {
@@ -433,6 +434,7 @@ export default function TransactionsScreen() {
   // Move transaction up in the list (only works for same-date transactions)
   const handleMoveUp = React.useCallback(
     async (transactionId: string, isIncome: boolean) => {
+      // Get the current transactions outside of setState to avoid stale closure issues
       setTransactions((prev) => {
         // Get the correct filtered list sorted by date DESC, order_index ASC
         const relevantList = (isIncome ? prev.filter((t) => t.amount > 0) : prev.filter((t) => t.amount < 0)).sort((a, b) => {
@@ -444,13 +446,17 @@ export default function TransactionsScreen() {
         });
 
         const currentIndex = relevantList.findIndex((t) => t.id === transactionId);
-        if (currentIndex <= 0) return prev; // Already at the top or not found
+        if (currentIndex <= 0) {
+          logger.breadcrumb("Cannot move up - already at top or not found", "reorder", { transactionId, currentIndex });
+          return prev; // Already at the top or not found
+        }
 
         const itemToMove = relevantList[currentIndex];
         const itemToSwap = relevantList[currentIndex - 1];
 
         // Safety check: only allow reordering within the same date (arrows should prevent this, but double-check)
         if (itemToMove.date !== itemToSwap.date) {
+          logger.breadcrumb("Cannot move up - different dates", "reorder", { transactionId });
           return prev; // Silently ignore - UI shouldn't allow this
         }
 
@@ -458,23 +464,34 @@ export default function TransactionsScreen() {
         const updatedItemToMove = { ...itemToMove, order_index: itemToSwap.order_index ?? 0 };
         const updatedItemToSwap = { ...itemToSwap, order_index: itemToMove.order_index ?? 0 };
 
-        // Persist to database
-        (async () => {
-          const success = await saveTransactions([updatedItemToMove, updatedItemToSwap]);
+        logger.breadcrumb("Swapping transactions", "reorder", {
+          moveId: itemToMove.id,
+          moveOldIndex: itemToMove.order_index,
+          moveNewIndex: updatedItemToMove.order_index,
+          swapId: itemToSwap.id,
+          swapOldIndex: itemToSwap.order_index,
+          swapNewIndex: updatedItemToSwap.order_index,
+        });
+
+        // Persist to database (fire and forget, but log errors)
+        saveTransactions([updatedItemToMove, updatedItemToSwap]).then((success) => {
           if (!success) {
             logger.error(new Error("Failed to save transaction order"), { operation: "move_transaction_up", transactionId, isIncome });
             showSnackbar("Failed to save order");
           } else {
             logger.databaseSuccess("update_transaction_order", { transactionId, isIncome, direction: "up" });
           }
-        })();
+        });
 
-        // Create new array with swapped positions
-        return prev.map((t) => {
+        // Create new array with swapped positions - ensure we create new object references
+        const newTransactions = prev.map((t) => {
           if (t.id === itemToMove.id) return updatedItemToMove;
           if (t.id === itemToSwap.id) return updatedItemToSwap;
           return t;
         });
+
+        logger.breadcrumb("Returning new transaction array", "reorder", { prevLength: prev.length, newLength: newTransactions.length });
+        return newTransactions;
       });
       logger.userAction("move_transaction_up", { transactionId, isIncome });
     },
@@ -484,6 +501,7 @@ export default function TransactionsScreen() {
   // Move transaction down in the list (only works for same-date transactions)
   const handleMoveDown = React.useCallback(
     async (transactionId: string, isIncome: boolean) => {
+      // Get the current transactions outside of setState to avoid stale closure issues
       setTransactions((prev) => {
         // Get the correct filtered list sorted by date DESC, order_index ASC
         const relevantList = (isIncome ? prev.filter((t) => t.amount > 0) : prev.filter((t) => t.amount < 0)).sort((a, b) => {
@@ -495,13 +513,17 @@ export default function TransactionsScreen() {
         });
 
         const currentIndex = relevantList.findIndex((t) => t.id === transactionId);
-        if (currentIndex < 0 || currentIndex >= relevantList.length - 1) return prev; // Already at bottom or not found
+        if (currentIndex < 0 || currentIndex >= relevantList.length - 1) {
+          logger.breadcrumb("Cannot move down - already at bottom or not found", "reorder", { transactionId, currentIndex, listLength: relevantList.length });
+          return prev; // Already at bottom or not found
+        }
 
         const itemToMove = relevantList[currentIndex];
         const itemToSwap = relevantList[currentIndex + 1];
 
         // Safety check: only allow reordering within the same date (arrows should prevent this, but double-check)
         if (itemToMove.date !== itemToSwap.date) {
+          logger.breadcrumb("Cannot move down - different dates", "reorder", { transactionId });
           return prev; // Silently ignore - UI shouldn't allow this
         }
 
@@ -509,23 +531,34 @@ export default function TransactionsScreen() {
         const updatedItemToMove = { ...itemToMove, order_index: itemToSwap.order_index ?? 0 };
         const updatedItemToSwap = { ...itemToSwap, order_index: itemToMove.order_index ?? 0 };
 
-        // Persist to database
-        (async () => {
-          const success = await saveTransactions([updatedItemToMove, updatedItemToSwap]);
+        logger.breadcrumb("Swapping transactions", "reorder", {
+          moveId: itemToMove.id,
+          moveOldIndex: itemToMove.order_index,
+          moveNewIndex: updatedItemToMove.order_index,
+          swapId: itemToSwap.id,
+          swapOldIndex: itemToSwap.order_index,
+          swapNewIndex: updatedItemToSwap.order_index,
+        });
+
+        // Persist to database (fire and forget, but log errors)
+        saveTransactions([updatedItemToMove, updatedItemToSwap]).then((success) => {
           if (!success) {
             logger.error(new Error("Failed to save transaction order"), { operation: "move_transaction_down", transactionId, isIncome });
             showSnackbar("Failed to save order");
           } else {
             logger.databaseSuccess("update_transaction_order", { transactionId, isIncome, direction: "down" });
           }
-        })();
+        });
 
-        // Create new array with swapped positions
-        return prev.map((t) => {
+        // Create new array with swapped positions - ensure we create new object references
+        const newTransactions = prev.map((t) => {
           if (t.id === itemToMove.id) return updatedItemToMove;
           if (t.id === itemToSwap.id) return updatedItemToSwap;
           return t;
         });
+
+        logger.breadcrumb("Returning new transaction array", "reorder", { prevLength: prev.length, newLength: newTransactions.length });
+        return newTransactions;
       });
       logger.userAction("move_transaction_down", { transactionId, isIncome });
     },
