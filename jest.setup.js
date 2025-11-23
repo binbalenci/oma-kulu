@@ -59,3 +59,23 @@ jest.mock('react-native-paper', () => {
     Provider: ({ children }) => children,
   };
 });
+
+/**
+ * Mock Logger
+ *
+ * Mocks the application logger that depends on Sentry.
+ * Provides no-op implementations for all logging methods.
+ */
+jest.mock('@/app/utils/logger', () => ({
+  default: {
+    info: jest.fn(),
+    warning: jest.fn(),
+    error: jest.fn(),
+    breadcrumb: jest.fn(),
+    navigationAction: jest.fn(),
+    userAction: jest.fn(),
+    dataAction: jest.fn(),
+    databaseError: jest.fn(),
+    performanceWarning: jest.fn(),
+  },
+}));

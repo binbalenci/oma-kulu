@@ -257,6 +257,99 @@ jest.mock('expo-router', () => ({
 | Phase 4 | Transaction hooks | 90%+ |
 | Phase 5 | Reports/Categories | 80%+ |
 
+### Testing Guidelines (CRITICAL)
+
+**Philosophy: Simple Tests That Pass, Covering Critical Operations**
+
+❌ **DON'T:**
+- Write overly comprehensive tests that are hard to maintain
+- Test every single edge case upfront
+- Create complex mocking scenarios
+- Aim for 100% coverage on first iteration
+- Test implementation details
+
+✅ **DO:**
+- Write simple, focused tests that pass easily
+- Cover the MOST CRITICAL operations first
+- Use straightforward mocking patterns
+- Focus on happy path + 1-2 key error cases
+- Test public API behavior, not internals
+
+**Test Priority Framework:**
+
+1. **CRITICAL (Must test first):**
+   - Data loading success case
+   - Core business logic (calculations, validations)
+   - User-facing operations (save, delete, update)
+   - Error handling for data loading
+
+2. **IMPORTANT (Test if time permits):**
+   - Edge cases (empty data, null values)
+   - Refresh/reload operations
+   - Multiple calls/race conditions
+
+3. **NICE TO HAVE (Can skip initially):**
+   - Loading states
+   - Complex timing scenarios
+   - Every possible error path
+
+**Example: Hook Testing Pattern**
+
+```typescript
+describe('useBudgetData', () => {
+  // CRITICAL: Test happy path
+  it('should load all data successfully', async () => {
+    const { result } = renderHook(() => useBudgetData());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.data.incomes).toBeDefined();
+    expect(result.current.error).toBeNull();
+  });
+
+  // CRITICAL: Test error handling
+  it('should handle load errors', async () => {
+    (loadIncomes as jest.Mock).mockRejectedValue(new Error('DB error'));
+
+    const { result } = renderHook(() => useBudgetData());
+
+    await waitFor(() => {
+      expect(result.current.error).toBeTruthy();
+    });
+  });
+
+  // IMPORTANT: Test refresh if it's a key feature
+  it('should refresh data when called', async () => {
+    const { result } = renderHook(() => useBudgetData());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await result.current.refresh();
+
+    expect(loadIncomes).toHaveBeenCalledTimes(2);
+  });
+
+  // SKIP: Complex timing, loading states, etc. (unless blocking issues)
+});
+```
+
+**Coverage Targets - Realistic:**
+- Services (pure functions): Aim for 90%+ (easy to achieve)
+- Hooks: Aim for 70-85% (focus on critical paths)
+- Components: 0% (by design)
+
+**When Tests Fail:**
+- If 1-2 tests fail but core functionality works: Document and move on
+- If critical test fails: Fix immediately
+- If test is flaky: Simplify or remove, don't spend hours debugging
+
+**Test Maintenance:**
+- Start with 3-5 simple tests per file
+- Add more tests later if bugs appear
+- Delete tests that don't add value
+- Refactor tests if they become brittle
+
 ---
 
 ## 🚀 Phase-by-Phase Execution Plan
