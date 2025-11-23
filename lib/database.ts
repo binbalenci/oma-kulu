@@ -8,50 +8,23 @@ import type {
   ExpectedSavings,
   Transaction,
 } from "./types";
+import {
+  getCategoryIdByName,
+  resolveCategoryId,
+  createCategoryMap,
+  enrichWithCategoryNames,
+  enrichWithMultipleCategoryNames,
+  genericDelete,
+} from "./database-helpers";
+import logger from "@/app/utils/logger";
 
 // ============================================================================
-// Helper: Get category name from category_id
+// Helper: Convert unknown errors to Error
 // ============================================================================
 
-async function getCategoryNameById(categoryId: string): Promise<string | null> {
-  try {
-    const { data, error } = await supabase
-      .from("categories")
-      .select("name")
-      .eq("id", categoryId)
-      .single();
-
-    if (error || !data) {
-      return null;
-    }
-
-    return data.name;
-  } catch (error) {
-    return null;
-  }
-}
-
-// ============================================================================
-// Helper: Get category_id from category name and type
-// ============================================================================
-
-async function getCategoryIdByName(name: string, type: 'income' | 'expense' | 'saving'): Promise<string | null> {
-  try {
-    const { data, error } = await supabase
-      .from("categories")
-      .select("id")
-      .eq("name", name)
-      .eq("type", type)
-      .single();
-
-    if (error || !data) {
-      return null;
-    }
-
-    return data.id;
-  } catch (error) {
-    return null;
-  }
+function toError(error: unknown): Error {
+  if (error instanceof Error) return error;
+  return new Error(String(error));
 }
 
 // ============================================================================
@@ -69,7 +42,7 @@ export async function loadIncomes(month?: string): Promise<ExpectedIncome[]> {
     const { data, error } = await query;
 
     if (error) {
-      console.error("Error loading incomes:", error);
+      logger.databaseError(toError(error), "loadIncomes", { month });
       return [];
     }
 
@@ -77,38 +50,22 @@ export async function loadIncomes(month?: string): Promise<ExpectedIncome[]> {
       return [];
     }
 
-    // Load all categories and create a map
-    const categories = await loadCategories();
-    const categoryMap = new Map<string, string>();
-    categories.forEach(cat => {
-      categoryMap.set(cat.id, cat.name);
-    });
-
-    // Map results to include category name from category_id
-    return data.map((item: any) => ({
-      ...item,
-      category: item.category_id ? (categoryMap.get(item.category_id) || item.category || '') : (item.category || ''),
-    }));
+    // Enrich with category names using helper
+    const categoryMap = await createCategoryMap();
+    return enrichWithCategoryNames(data, categoryMap);
   } catch (error) {
-    console.error("Error loading incomes:", error);
+    logger.databaseError(toError(error), "loadIncomes", { month });
     return [];
   }
 }
 
 export async function saveIncome(income: ExpectedIncome): Promise<boolean> {
   try {
-    // If category_id not provided, look it up from category name
-    let categoryId: string | null | undefined = income.category_id;
-    if (!categoryId && income.category) {
-      categoryId = await getCategoryIdByName(income.category, 'income');
-      if (!categoryId) {
-        console.error("Error saving income: category not found", income.category);
-        return false;
-      }
-    }
+    // Resolve category_id using helper
+    const categoryId = await resolveCategoryId(income.category_id, income.category, 'income');
 
     if (!categoryId) {
-      console.error("Error saving income: category_id is required");
+      logger.databaseError("category_id required", "saveIncome", { income });
       return false;
     }
 
@@ -123,31 +80,19 @@ export async function saveIncome(income: ExpectedIncome): Promise<boolean> {
       .upsert(dataToSave, { onConflict: "id" });
 
     if (error) {
-      console.error("Error saving income:", error);
+      logger.databaseError(toError(error), "saveIncome", { income });
       return false;
     }
 
     return true;
   } catch (error) {
-    console.error("Error saving income:", error);
+    logger.databaseError(toError(error), "saveIncome", { income });
     return false;
   }
 }
 
 export async function deleteIncome(id: string): Promise<boolean> {
-  try {
-    const { error } = await supabase.from("expected_incomes").delete().eq("id", id);
-
-    if (error) {
-      console.error("Error deleting income:", error);
-      return false;
-    }
-
-    return true;
-  } catch (error) {
-    console.error("Error deleting income:", error);
-    return false;
-  }
+  return genericDelete("expected_incomes", id, "deleteIncome");
 }
 
 // ============================================================================
@@ -165,7 +110,7 @@ export async function loadInvoices(month?: string): Promise<ExpectedInvoice[]> {
     const { data, error } = await query;
 
     if (error) {
-      console.error("Error loading invoices:", error);
+      logger.databaseError(toError(error), "loadInvoices", { month });
       return [];
     }
 
@@ -173,38 +118,22 @@ export async function loadInvoices(month?: string): Promise<ExpectedInvoice[]> {
       return [];
     }
 
-    // Load all categories and create a map
-    const categories = await loadCategories();
-    const categoryMap = new Map<string, string>();
-    categories.forEach(cat => {
-      categoryMap.set(cat.id, cat.name);
-    });
-
-    // Map results to include category name from category_id
-    return data.map((item: any) => ({
-      ...item,
-      category: item.category_id ? (categoryMap.get(item.category_id) || item.category || '') : (item.category || ''),
-    }));
+    // Enrich with category names using helper
+    const categoryMap = await createCategoryMap();
+    return enrichWithCategoryNames(data, categoryMap);
   } catch (error) {
-    console.error("Error loading invoices:", error);
+    logger.databaseError(toError(error), "loadInvoices", { month });
     return [];
   }
 }
 
 export async function saveInvoice(invoice: ExpectedInvoice): Promise<boolean> {
   try {
-    // If category_id not provided, look it up from category name
-    let categoryId: string | null | undefined = invoice.category_id;
-    if (!categoryId && invoice.category) {
-      categoryId = await getCategoryIdByName(invoice.category, 'expense');
-      if (!categoryId) {
-        console.error("Error saving invoice: category not found", invoice.category);
-        return false;
-      }
-    }
+    // Resolve category_id using helper
+    const categoryId = await resolveCategoryId(invoice.category_id, invoice.category, 'expense');
 
     if (!categoryId) {
-      console.error("Error saving invoice: category_id is required");
+      logger.databaseError("category_id required", "saveInvoice", { invoice });
       return false;
     }
 
@@ -219,31 +148,19 @@ export async function saveInvoice(invoice: ExpectedInvoice): Promise<boolean> {
       .upsert(dataToSave, { onConflict: "id" });
 
     if (error) {
-      console.error("Error saving invoice:", error);
+      logger.databaseError(toError(error), "saveInvoice", { invoice });
       return false;
     }
 
     return true;
   } catch (error) {
-    console.error("Error saving invoice:", error);
+    logger.databaseError(toError(error), "saveInvoice", { invoice });
     return false;
   }
 }
 
 export async function deleteInvoice(id: string): Promise<boolean> {
-  try {
-    const { error } = await supabase.from("expected_invoices").delete().eq("id", id);
-
-    if (error) {
-      console.error("Error deleting invoice:", error);
-      return false;
-    }
-
-    return true;
-  } catch (error) {
-    console.error("Error deleting invoice:", error);
-    return false;
-  }
+  return genericDelete("expected_invoices", id, "deleteInvoice");
 }
 
 // ============================================================================
@@ -261,7 +178,7 @@ export async function loadBudgets(month?: string): Promise<Budget[]> {
     const { data, error } = await query;
 
     if (error) {
-      console.error("Error loading budgets:", error);
+      logger.databaseError(toError(error), "loadBudgets", { month });
       return [];
     }
 
@@ -269,38 +186,22 @@ export async function loadBudgets(month?: string): Promise<Budget[]> {
       return [];
     }
 
-    // Load all categories and create a map
-    const categories = await loadCategories();
-    const categoryMap = new Map<string, string>();
-    categories.forEach(cat => {
-      categoryMap.set(cat.id, cat.name);
-    });
-
-    // Map results to include category name from category_id
-    return data.map((item: any) => ({
-      ...item,
-      category: item.category_id ? (categoryMap.get(item.category_id) || item.category || '') : (item.category || ''),
-    }));
+    // Enrich with category names using helper
+    const categoryMap = await createCategoryMap();
+    return enrichWithCategoryNames(data, categoryMap);
   } catch (error) {
-    console.error("Error loading budgets:", error);
+    logger.databaseError(toError(error), "loadBudgets", { month });
     return [];
   }
 }
 
 export async function saveBudget(budget: Budget): Promise<boolean> {
   try {
-    // If category_id not provided, look it up from category name
-    let categoryId: string | null | undefined = budget.category_id;
-    if (!categoryId && budget.category) {
-      categoryId = await getCategoryIdByName(budget.category, 'expense');
-      if (!categoryId) {
-        console.error("Error saving budget: category not found", budget.category);
-        return false;
-      }
-    }
+    // Resolve category_id using helper
+    const categoryId = await resolveCategoryId(budget.category_id, budget.category, 'expense');
 
     if (!categoryId) {
-      console.error("Error saving budget: category_id is required");
+      logger.databaseError("category_id required", "saveBudget", { budget });
       return false;
     }
 
@@ -315,31 +216,19 @@ export async function saveBudget(budget: Budget): Promise<boolean> {
       .upsert(dataToSave, { onConflict: "id" });
 
     if (error) {
-      console.error("Error saving budget:", error);
+      logger.databaseError(toError(error), "saveBudget", { budget });
       return false;
     }
 
     return true;
   } catch (error) {
-    console.error("Error saving budget:", error);
+    logger.databaseError(toError(error), "saveBudget", { budget });
     return false;
   }
 }
 
 export async function deleteBudget(id: string): Promise<boolean> {
-  try {
-    const { error } = await supabase.from("budgets").delete().eq("id", id);
-
-    if (error) {
-      console.error("Error deleting budget:", error);
-      return false;
-    }
-
-    return true;
-  } catch (error) {
-    console.error("Error deleting budget:", error);
-    return false;
-  }
+  return genericDelete("budgets", id, "deleteBudget");
 }
 
 // ============================================================================
@@ -355,7 +244,7 @@ export async function loadTransactions(): Promise<Transaction[]> {
       .order("order_index", { ascending: true, nullsFirst: false });
 
     if (error) {
-      console.error("Error loading transactions:", error);
+      logger.databaseError(toError(error), "loadTransactions", {});
       return [];
     }
 
@@ -363,49 +252,34 @@ export async function loadTransactions(): Promise<Transaction[]> {
       return [];
     }
 
-    // Load all categories and create a map
-    const categories = await loadCategories();
-    const categoryMap = new Map<string, string>();
-    categories.forEach(cat => {
-      categoryMap.set(cat.id, cat.name);
-    });
-
-    // Map results to include category names from category_id
-    return data.map((item: any) => ({
-      ...item,
-      category: item.category_id ? (categoryMap.get(item.category_id) || item.category || '') : (item.category || ''),
-      uses_savings_category: item.uses_savings_category_id ? (categoryMap.get(item.uses_savings_category_id) || item.uses_savings_category || '') : (item.uses_savings_category || ''),
-    }));
+    // Enrich with category names using helper (supports multiple category fields)
+    const categoryMap = await createCategoryMap();
+    return enrichWithMultipleCategoryNames(data, categoryMap);
   } catch (error) {
-    console.error("Error loading transactions:", error);
+    logger.databaseError(toError(error), "loadTransactions", {});
     return [];
   }
 }
 
 export async function saveTransaction(transaction: Transaction): Promise<boolean> {
   try {
-    // If category_id not provided, look it up from category name
-    let categoryId: string | null | undefined = transaction.category_id;
-    if (!categoryId && transaction.category) {
-      // Determine type from amount: positive = income, negative = expense
-      const type = transaction.amount > 0 ? 'income' : 'expense';
-      categoryId = await getCategoryIdByName(transaction.category, type);
-      if (!categoryId) {
-        console.error("Error saving transaction: category not found", transaction.category);
-        return false;
-      }
-    }
+    // Determine type from amount: positive = income, negative = expense
+    const type = transaction.amount > 0 ? 'income' : 'expense';
+
+    // Resolve category_id using helper
+    const categoryId = await resolveCategoryId(transaction.category_id, transaction.category, type);
 
     if (!categoryId) {
-      console.error("Error saving transaction: category_id is required");
+      logger.databaseError("category_id required", "saveTransaction", { transaction });
       return false;
     }
 
-    // If uses_savings_category_id not provided, look it up from uses_savings_category name
-    let usesSavingsCategoryId: string | null | undefined = transaction.uses_savings_category_id;
-    if (!usesSavingsCategoryId && transaction.uses_savings_category) {
-      usesSavingsCategoryId = await getCategoryIdByName(transaction.uses_savings_category, 'saving');
-    }
+    // Resolve uses_savings_category_id if provided
+    const usesSavingsCategoryId = await resolveCategoryId(
+      transaction.uses_savings_category_id,
+      transaction.uses_savings_category,
+      'saving'
+    );
 
     // Prepare data with category_id
     const dataToSave = {
@@ -419,31 +293,19 @@ export async function saveTransaction(transaction: Transaction): Promise<boolean
       .upsert(dataToSave, { onConflict: "id" });
 
     if (error) {
-      console.error("Error saving transaction:", error);
+      logger.databaseError(toError(error), "saveTransaction", { transaction });
       return false;
     }
 
     return true;
   } catch (error) {
-    console.error("Error saving transaction:", error);
+    logger.databaseError(toError(error), "saveTransaction", { transaction });
     return false;
   }
 }
 
 export async function deleteTransaction(id: string): Promise<boolean> {
-  try {
-    const { error } = await supabase.from("transactions").delete().eq("id", id);
-
-    if (error) {
-      console.error("Error deleting transaction:", error);
-      return false;
-    }
-
-    return true;
-  } catch (error) {
-    console.error("Error deleting transaction:", error);
-    return false;
-  }
+  return genericDelete("transactions", id, "deleteTransaction");
 }
 
 export async function saveTransactions(transactions: Transaction[]): Promise<boolean> {
@@ -451,18 +313,17 @@ export async function saveTransactions(transactions: Transaction[]): Promise<boo
     // Process each transaction to ensure category_id is set
     const processedTransactions = await Promise.all(
       transactions.map(async (transaction) => {
-        // If category_id not provided, look it up from category name
-        let categoryId: string | null | undefined = transaction.category_id;
-        if (!categoryId && transaction.category) {
-          const type = transaction.amount > 0 ? 'income' : 'expense';
-          categoryId = await getCategoryIdByName(transaction.category, type);
-        }
+        const type = transaction.amount > 0 ? 'income' : 'expense';
 
-        // If uses_savings_category_id not provided, look it up
-        let usesSavingsCategoryId: string | null | undefined = transaction.uses_savings_category_id;
-        if (!usesSavingsCategoryId && transaction.uses_savings_category) {
-          usesSavingsCategoryId = await getCategoryIdByName(transaction.uses_savings_category, 'saving');
-        }
+        // Resolve category_id using helper
+        const categoryId = await resolveCategoryId(transaction.category_id, transaction.category, type);
+
+        // Resolve uses_savings_category_id if provided
+        const usesSavingsCategoryId = await resolveCategoryId(
+          transaction.uses_savings_category_id,
+          transaction.uses_savings_category,
+          'saving'
+        );
 
         return {
           ...transaction,
@@ -477,13 +338,13 @@ export async function saveTransactions(transactions: Transaction[]): Promise<boo
       .upsert(processedTransactions, { onConflict: "id" });
 
     if (error) {
-      console.error("Error saving transactions:", error);
+      logger.databaseError(toError(error), "saveTransactions", { count: transactions.length });
       return false;
     }
 
     return true;
   } catch (error) {
-    console.error("Error saving transactions:", error);
+    logger.databaseError(toError(error), "saveTransactions", { count: transactions.length });
     return false;
   }
 }
@@ -501,13 +362,13 @@ export async function loadCategories(): Promise<Category[]> {
       .order("order_index", { ascending: true });
 
     if (error) {
-      console.error("Error loading categories:", error);
+      logger.databaseError(toError(error), "loadCategories", {});
       return [];
     }
 
     return data || [];
   } catch (error) {
-    console.error("Error loading categories:", error);
+    logger.databaseError(toError(error), "loadCategories", {});
     return [];
   }
 }
@@ -524,7 +385,7 @@ export async function saveCategory(category: Category): Promise<boolean> {
         .maybeSingle();
 
       if (idCheckError) {
-        console.error("Error checking category by ID:", idCheckError);
+        logger.databaseError(idCheckError, "saveCategory", { step: "check ID", category });
         return false;
       }
 
@@ -540,7 +401,7 @@ export async function saveCategory(category: Category): Promise<boolean> {
       .maybeSingle();
 
     if (checkError) {
-      console.error("Error checking existing category:", checkError);
+      logger.databaseError(checkError, "saveCategory", { step: "check duplicate", category });
       return false;
     }
 
@@ -554,7 +415,7 @@ export async function saveCategory(category: Category): Promise<boolean> {
         .eq("id", category.id);
 
       if (error) {
-        console.error("Error updating category:", error);
+        logger.databaseError(toError(error), "saveCategory", { step: "update", category });
         return false;
       }
       return true;
@@ -562,7 +423,7 @@ export async function saveCategory(category: Category): Promise<boolean> {
 
     // If creating: check for duplicate (name, type) - this should fail
     if (existingByNameType) {
-      console.error("Error: Category with name and type already exists", {
+      logger.databaseError("duplicate category", "saveCategory", {
         name: category.name,
         type: category.type,
         existingId: existingByNameType.id,
@@ -576,13 +437,13 @@ export async function saveCategory(category: Category): Promise<boolean> {
       .insert(category);
 
     if (error) {
-      console.error("Error saving category:", error);
+      logger.databaseError(toError(error), "saveCategory", { step: "insert", category });
       return false;
     }
 
     return true;
   } catch (error) {
-    console.error("Error saving category:", error);
+    logger.databaseError(toError(error), "saveCategory", { category });
     return false;
   }
 }
@@ -594,13 +455,13 @@ export async function saveCategories(categories: Category[]): Promise<boolean> {
       .upsert(categories, { onConflict: "id" });
 
     if (error) {
-      console.error("Error saving categories:", error);
+      logger.databaseError(toError(error), "saveCategories", { count: categories.length });
       return false;
     }
 
     return true;
   } catch (error) {
-    console.error("Error saving categories:", error);
+    logger.databaseError(toError(error), "saveCategories", { count: categories.length });
     return false;
   }
 }
@@ -610,17 +471,21 @@ export async function deleteCategory(id: string): Promise<boolean> {
     const { error } = await supabase.from("categories").delete().eq("id", id);
 
     if (error) {
-      console.error("Error deleting category:", error);
       // Check if it's a foreign key constraint violation
       if (error.code === "23503") {
-        console.error("Cannot delete category: it is still referenced by transactions, budgets, incomes, invoices, or savings");
+        logger.databaseError(toError(error), "deleteCategory", {
+          id,
+          error: "foreign key constraint: category still referenced",
+        });
+      } else {
+        logger.databaseError(toError(error), "deleteCategory", { id });
       }
       return false;
     }
 
     return true;
   } catch (error) {
-    console.error("Error deleting category:", error);
+    logger.databaseError(toError(error), "deleteCategory", { id });
     return false;
   }
 }
@@ -642,13 +507,13 @@ export async function loadSettings(): Promise<AppSettings> {
       if (error.code === "PGRST116") {
         return { starting_balance: 0 };
       }
-      console.error("Error loading settings:", error);
+      logger.databaseError(toError(error), "loadSettings", {});
       return { starting_balance: 0 };
     }
 
     return data || { starting_balance: 0 };
   } catch (error) {
-    console.error("Error loading settings:", error);
+    logger.databaseError(toError(error), "loadSettings", {});
     return { starting_balance: 0 };
   }
 }
@@ -670,7 +535,7 @@ export async function saveSettings(settings: AppSettings): Promise<boolean> {
         .eq("id", existing.id);
 
       if (error) {
-        console.error("Error updating settings:", error);
+        logger.databaseError(toError(error), "saveSettings", { step: "update", settings });
         return false;
       }
     } else {
@@ -680,14 +545,14 @@ export async function saveSettings(settings: AppSettings): Promise<boolean> {
         .insert([{ ...settings, id: 1 }]);
 
       if (error) {
-        console.error("Error inserting settings:", error);
+        logger.databaseError(toError(error), "saveSettings", { step: "insert", settings });
         return false;
       }
     }
 
     return true;
   } catch (error) {
-    console.error("Error saving settings:", error);
+    logger.databaseError(toError(error), "saveSettings", { settings });
     return false;
   }
 }
@@ -707,7 +572,7 @@ export async function loadSavings(month?: string): Promise<ExpectedSavings[]> {
     const { data, error } = await query;
 
     if (error) {
-      console.error("Error loading savings:", error);
+      logger.databaseError(toError(error), "loadSavings", { month });
       return [];
     }
 
@@ -715,38 +580,22 @@ export async function loadSavings(month?: string): Promise<ExpectedSavings[]> {
       return [];
     }
 
-    // Load all categories and create a map
-    const categories = await loadCategories();
-    const categoryMap = new Map<string, string>();
-    categories.forEach(cat => {
-      categoryMap.set(cat.id, cat.name);
-    });
-
-    // Map results to include category name from category_id
-    return data.map((item: any) => ({
-      ...item,
-      category: item.category_id ? (categoryMap.get(item.category_id) || item.category || '') : (item.category || ''),
-    }));
+    // Enrich with category names using helper
+    const categoryMap = await createCategoryMap();
+    return enrichWithCategoryNames(data, categoryMap);
   } catch (error) {
-    console.error("Error loading savings:", error);
+    logger.databaseError(toError(error), "loadSavings", { month });
     return [];
   }
 }
 
 export async function saveSavings(savings: ExpectedSavings): Promise<boolean> {
   try {
-    // If category_id not provided, look it up from category name
-    let categoryId: string | null | undefined = savings.category_id;
-    if (!categoryId && savings.category) {
-      categoryId = await getCategoryIdByName(savings.category, 'saving');
-      if (!categoryId) {
-        console.error("Error saving savings: category not found", savings.category);
-        return false;
-      }
-    }
+    // Resolve category_id using helper
+    const categoryId = await resolveCategoryId(savings.category_id, savings.category, 'saving');
 
     if (!categoryId) {
-      console.error("Error saving savings: category_id is required");
+      logger.databaseError("category_id required", "saveSavings", { savings });
       return false;
     }
 
@@ -761,49 +610,30 @@ export async function saveSavings(savings: ExpectedSavings): Promise<boolean> {
       .upsert(dataToSave, { onConflict: "id" });
 
     if (error) {
-      console.error("Error saving savings:", error);
+      logger.databaseError(toError(error), "saveSavings", { savings });
       return false;
     }
 
     return true;
   } catch (error) {
-    console.error("Error saving savings:", error);
+    logger.databaseError(toError(error), "saveSavings", { savings });
     return false;
   }
 }
 
 export async function deleteSavings(id: string): Promise<boolean> {
-  try {
-    const { error } = await supabase.from("expected_savings").delete().eq("id", id);
-
-    if (error) {
-      console.error("Error deleting savings:", error);
-      return false;
-    }
-
-    return true;
-  } catch (error) {
-    console.error("Error deleting savings:", error);
-    return false;
-  }
+  return genericDelete("expected_savings", id, "deleteSavings");
 }
 
 export async function getSavingsBalance(category: string): Promise<number> {
   try {
-    // First, find the category_id from the category name
-    const { data: categoryData, error: categoryError } = await supabase
-      .from("categories")
-      .select("id")
-      .eq("name", category)
-      .eq("type", "saving")
-      .single();
+    // Find the category_id from the category name using helper
+    const categoryId = await getCategoryIdByName(category, 'saving');
 
-    if (categoryError || !categoryData) {
-      console.error("Error finding savings category:", categoryError);
+    if (!categoryId) {
+      logger.databaseError("category not found", "getSavingsBalance", { category });
       return 0;
     }
-
-    const categoryId = categoryData.id;
 
     // Load transactions filtered by category_id for better performance
     // We need transactions where either category_id or uses_savings_category_id matches
@@ -814,7 +644,7 @@ export async function getSavingsBalance(category: string): Promise<number> {
       .order("date", { ascending: false });
 
     if (error) {
-      console.error("Error loading transactions for savings balance:", error);
+      logger.databaseError(toError(error), "getSavingsBalance", { category, categoryId });
       return 0;
     }
 
@@ -836,13 +666,13 @@ export async function getSavingsBalance(category: string): Promise<number> {
     const balance = Math.max(0, contributions - payments);
     return balance;
   } catch (error) {
-    console.error("Error calculating savings balance:", error);
+    logger.databaseError(toError(error), "getSavingsBalance", { category });
     return 0;
   }
 }
 
 export async function getActiveSavingsCategories(): Promise<
-  Array<{ category: string; balance: number; target?: number }>
+  { category: string; balance: number; target?: number }[]
 > {
   try {
     // Load all savings categories with IDs
@@ -852,7 +682,7 @@ export async function getActiveSavingsCategories(): Promise<
       .eq("type", "saving");
 
     if (categoriesError || !categories) {
-      console.error("Error loading savings categories:", categoriesError);
+      logger.databaseError(categoriesError, "getActiveSavingsCategories", { step: "load categories" });
       return [];
     }
 
@@ -862,7 +692,7 @@ export async function getActiveSavingsCategories(): Promise<
       .select("*");
 
     if (transactionsError) {
-      console.error("Error loading transactions for active savings:", transactionsError);
+      logger.databaseError(transactionsError, "getActiveSavingsCategories", { step: "load transactions" });
       return [];
     }
 
@@ -875,7 +705,7 @@ export async function getActiveSavingsCategories(): Promise<
       .order("created_at", { ascending: false });
 
     if (savingsError) {
-      console.error("Error loading savings targets:", savingsError);
+      logger.databaseError(savingsError, "getActiveSavingsCategories", { step: "load targets" });
     }
 
     // Build a map of category_id -> latest target
@@ -889,7 +719,7 @@ export async function getActiveSavingsCategories(): Promise<
     }
 
     // Calculate balance for each category using category_id
-    const result: Array<{ category: string; balance: number; target?: number }> = [];
+    const result: { category: string; balance: number; target?: number }[] = [];
 
     for (const cat of categories) {
       const contributions = (transactions || [])
@@ -914,7 +744,7 @@ export async function getActiveSavingsCategories(): Promise<
 
     return result;
   } catch (error) {
-    console.error("Error getting active savings categories:", error);
+    logger.databaseError(toError(error), "getActiveSavingsCategories", {});
     return [];
   }
 }

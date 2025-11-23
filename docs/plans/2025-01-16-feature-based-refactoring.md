@@ -1210,7 +1210,7 @@ Components (presentation)
 Hooks (state & data)
   ↓ uses
 Services (business logic)
-  ↓ uses
+  ↓ usesx
 Database (data access)
 ```
 
