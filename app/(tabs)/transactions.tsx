@@ -8,17 +8,17 @@ import { SimpleDropdown } from "@/components/ui/SimpleDropdown";
 import { AppTheme } from "@/constants/AppTheme";
 import { useMonth } from "@/lib/month-context";
 import {
-  deleteTransaction,
-  getSavingsBalance,
-  loadCategories,
-  loadIncomes,
-  loadInvoices,
-  loadSavings,
-  loadTransactions,
-  saveIncome,
-  saveInvoice,
-  saveTransaction,
-  saveTransactions,
+    deleteTransaction,
+    getSavingsBalance,
+    loadCategories,
+    loadIncomes,
+    loadInvoices,
+    loadSavings,
+    loadTransactions,
+    saveIncome,
+    saveInvoice,
+    saveTransaction,
+    saveTransactions,
 } from "@/lib/storage";
 import type { Category, ExpectedIncome, ExpectedInvoice, ExpectedSavings, Transaction } from "@/lib/types";
 import Ionicons from "@react-native-vector-icons/ionicons";
@@ -88,6 +88,7 @@ export default function TransactionsScreen() {
   const [description, setDescription] = React.useState("");
   const [date, setDate] = React.useState(format(new Date(), "yyyy-MM-dd"));
   const [category, setCategory] = React.useState("General");
+  const [selectedType, setSelectedType] = React.useState<"income" | "expense" | "saving">("expense");
   const [useSavingsCategory, setUseSavingsCategory] = React.useState<string | null>(null);
 
   // Validation error states
@@ -216,7 +217,14 @@ export default function TransactionsScreen() {
     setAmount("");
     setDescription("");
     setDate(format(new Date(), "yyyy-MM-dd"));
-    setCategory("General");
+    
+    // Default to expense type
+    setSelectedType("expense");
+    
+    // Default to first expense category
+    const firstExpenseCategory = categories.find((c) => c.type === "expense" && c.is_visible);
+    setCategory(firstExpenseCategory?.name || "General");
+    
     setUseSavingsCategory(null);
     setEditing(null);
   };
@@ -354,6 +362,11 @@ export default function TransactionsScreen() {
     setDescription(t.description);
     setDate(t.date);
     setCategory(t.category);
+    
+    // Determine type based on amount
+    const type = t.amount > 0 ? "income" : "expense";
+    setSelectedType(type);
+    
     setUseSavingsCategory(t.uses_savings_category || null);
     setDialogVisible(true);
   };
@@ -915,6 +928,48 @@ export default function TransactionsScreen() {
         hasUnsavedChanges={!!(amount || description || category || useSavingsCategory)}
       >
         <View style={styles.dialogContent}>
+          {/* Type Selector */}
+          <View style={styles.typeSelector}>
+            <View style={styles.typeButtons}>
+              <TouchableOpacity
+                style={[styles.typeButton, selectedType === "expense" && styles.typeButtonSelected]}
+                onPress={() => {
+                  setSelectedType("expense");
+                  // Auto-select first category of this type
+                  const firstCat = categories.find(c => c.type === "expense" && c.is_visible);
+                  if (firstCat) setCategory(firstCat.name);
+                }}
+              >
+                <Ionicons
+                  name="trending-down"
+                  size={20}
+                  color={selectedType === "expense" ? AppTheme.colors.textInverse : AppTheme.colors.error}
+                />
+                <Text style={[styles.typeButtonText, selectedType === "expense" && styles.typeButtonTextSelected]}>
+                  Expense
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.typeButton, selectedType === "income" && styles.typeButtonSelected]}
+                onPress={() => {
+                  setSelectedType("income");
+                  // Auto-select first category of this type
+                  const firstCat = categories.find(c => c.type === "income" && c.is_visible);
+                  if (firstCat) setCategory(firstCat.name);
+                }}
+              >
+                <Ionicons
+                  name="trending-up"
+                  size={20}
+                  color={selectedType === "income" ? AppTheme.colors.textInverse : AppTheme.colors.success}
+                />
+                <Text style={[styles.typeButtonText, selectedType === "income" && styles.typeButtonTextSelected]}>
+                  Income
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
           <SimpleDropdown
             label=""
             value={category}
@@ -922,16 +977,21 @@ export default function TransactionsScreen() {
               setCategory(value);
               setCategoryError(false);
             }}
-            data={categories.filter((c) => c.is_visible).map((cat) => ({ id: cat.name, name: cat.name, emoji: cat.emoji, color: cat.color }))}
+            data={categories
+              .filter((c) => {
+                if (!c.is_visible) return false;
+                // Filter by selected type
+                return c.type === selectedType;
+              })
+              .map((cat) => ({ id: cat.name, name: cat.name, emoji: cat.emoji, color: cat.color }))}
             placeholder="Select category *"
-            style={styles.input}
+            style={[styles.input, { zIndex: 10000 }]}
             error={categoryError}
           />
 
-          {/* Use Savings dropdown - only show for expense categories */}
+          {/* Use Savings dropdown - only show for expense type */}
           {(() => {
-            const selectedCategoryInfo = categories.find((c) => c.name === category);
-            const isExpenseCategory = selectedCategoryInfo?.type === "expense";
+            const isExpenseType = selectedType === "expense";
             const availableSavings = Object.entries(savingsBalances)
               .filter(([_, balance]) => balance > 0)
               .map(([catName, balance]) => ({
@@ -941,7 +1001,7 @@ export default function TransactionsScreen() {
                 color: categories.find((c) => c.name === catName)?.color,
               }));
 
-            if (isExpenseCategory && availableSavings.length > 0) {
+            if (isExpenseType && availableSavings.length > 0) {
               return (
                 <SimpleDropdown
                   label="Use Savings (optional)"
@@ -951,7 +1011,7 @@ export default function TransactionsScreen() {
                   }}
                   data={[{ id: "", name: "None", emoji: undefined, color: undefined }, ...availableSavings]}
                   placeholder="None"
-                  style={styles.input}
+                  style={[styles.input, { zIndex: 9000 }]}
                 />
               );
             }
@@ -984,7 +1044,7 @@ export default function TransactionsScreen() {
               </Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryChips}>
                 {categories
-                  .filter((c) => c.is_visible)
+                  .filter((c) => c.is_visible && c.type === selectedType)
                   .map((cat) => (
                     <Chip key={cat.id} mode={category === cat.name ? "flat" : "outlined"} onPress={() => setCategory(cat.name)} style={styles.categoryChip}>
                       {cat.name}
@@ -1282,5 +1342,35 @@ const styles = StyleSheet.create({
     alignSelf: "stretch",
     backgroundColor: AppTheme.colors.border,
     marginRight: AppTheme.spacing.xs,
+  },
+  typeSelector: {
+    marginBottom: AppTheme.spacing.sm,
+  },
+  typeButtons: {
+    flexDirection: "row",
+    gap: AppTheme.spacing.sm,
+  },
+  typeButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: AppTheme.spacing.md,
+    paddingHorizontal: AppTheme.spacing.lg,
+    borderRadius: AppTheme.borderRadius.md,
+    borderWidth: 1,
+    borderColor: AppTheme.colors.border,
+    gap: AppTheme.spacing.sm,
+  },
+  typeButtonSelected: {
+    backgroundColor: AppTheme.colors.primary,
+    borderColor: AppTheme.colors.primary,
+  },
+  typeButtonText: {
+    fontWeight: AppTheme.typography.fontWeight.medium,
+    color: AppTheme.colors.textPrimary,
+  },
+  typeButtonTextSelected: {
+    color: AppTheme.colors.textInverse,
   },
 });
