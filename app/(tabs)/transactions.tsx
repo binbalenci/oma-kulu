@@ -362,11 +362,11 @@ export default function TransactionsScreen() {
     setDescription(t.description);
     setDate(t.date);
     setCategory(t.category);
-    
+
     // Determine type based on amount
     const type = t.amount > 0 ? "income" : "expense";
     setSelectedType(type);
-    
+
     setUseSavingsCategory(t.uses_savings_category || null);
     setDialogVisible(true);
   };
@@ -434,12 +434,17 @@ export default function TransactionsScreen() {
     return categories.find((c) => c.name === categoryName);
   };
 
-  const formatAmount = (amount: number) => {
-    const sign = amount >= 0 ? "+" : "-";
-    const color = amount >= 0 ? AppTheme.colors.success : AppTheme.colors.error;
+  const formatAmount = (amount: number, savingsAmountUsed?: number) => {
+    // Calculate the actual amount from income (excluding savings portion)
+    const actualAmount = savingsAmountUsed && savingsAmountUsed > 0
+      ? amount + savingsAmountUsed // amount is negative for expenses, so we add to reduce it
+      : amount;
+
+    const sign = actualAmount >= 0 ? "+" : "-";
+    const color = actualAmount >= 0 ? AppTheme.colors.success : AppTheme.colors.error;
     return (
       <Text style={[styles.amountText, { color }]}>
-        {sign}€{Math.abs(amount).toFixed(1)}
+        {sign}€{Math.abs(actualAmount).toFixed(1)}
       </Text>
     );
   };
@@ -639,7 +644,7 @@ export default function TransactionsScreen() {
 
           <View style={styles.transactionRight}>
             <View style={styles.amountAndMenuRow}>
-              {formatAmount(item.amount)}
+              {formatAmount(item.amount, item.savings_amount_used)}
               <Menu visible={isMenuOpen} onDismiss={() => setOpenMenuId(null)} anchor={<IconButton icon="dots-vertical" size={20} onPress={() => setOpenMenuId(item.id)} style={styles.menuButton} />}>
                 <Menu.Item
                   leadingIcon="pencil"
@@ -996,23 +1001,35 @@ export default function TransactionsScreen() {
               .filter(([_, balance]) => balance > 0)
               .map(([catName, balance]) => ({
                 id: catName,
-                name: `${catName} (€${balance.toFixed(1)})`,
+                name: catName, // Store clean category name as the name (this gets saved)
                 emoji: categories.find((c) => c.name === catName)?.emoji,
                 color: categories.find((c) => c.name === catName)?.color,
+                balance: balance, // Store balance for display
               }));
 
             if (isExpenseType && availableSavings.length > 0) {
               return (
-                <SimpleDropdown
-                  label="Use Savings (optional)"
-                  value={useSavingsCategory || ""}
-                  onValueChange={(value) => {
-                    setUseSavingsCategory(value || null);
-                  }}
-                  data={[{ id: "", name: "None", emoji: undefined, color: undefined }, ...availableSavings]}
-                  placeholder="None"
-                  style={[styles.input, { zIndex: 9000 }]}
-                />
+                <View style={styles.savingsDropdownWrapper}>
+                  <SimpleDropdown
+                    label="Use Savings (optional)"
+                    value={useSavingsCategory || ""}
+                    onValueChange={(value) => {
+                      // Value is the clean category name
+                      setUseSavingsCategory(value || null);
+                    }}
+                    data={[
+                      { id: "", name: "", emoji: undefined, color: undefined },
+                      ...availableSavings
+                    ]}
+                    placeholder="None"
+                    style={[styles.input, { zIndex: 9000 }]}
+                  />
+                  {useSavingsCategory && savingsBalances[useSavingsCategory] && (
+                    <Text style={styles.savingsBalanceHint}>
+                      Available: €{savingsBalances[useSavingsCategory].toFixed(1)}
+                    </Text>
+                  )}
+                </View>
               );
             }
             return null;
@@ -1372,5 +1389,14 @@ const styles = StyleSheet.create({
   },
   typeButtonTextSelected: {
     color: AppTheme.colors.textInverse,
+  },
+  savingsDropdownWrapper: {
+    marginBottom: AppTheme.spacing.sm,
+  },
+  savingsBalanceHint: {
+    fontSize: 12,
+    color: AppTheme.colors.textSecondary,
+    marginTop: 4,
+    marginLeft: 4,
   },
 });
