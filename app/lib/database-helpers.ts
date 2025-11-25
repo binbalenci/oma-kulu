@@ -1,5 +1,4 @@
 import { supabase } from "./supabase";
-import type { Category } from "./types";
 import logger from "@/app/utils/logger";
 
 // ============================================================================
@@ -141,7 +140,7 @@ export async function getCategoryNameById(categoryId: string): Promise<string | 
     }
 
     return data.name;
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -173,7 +172,7 @@ export async function getCategoryIdByName(
     }
 
     return data.id;
-  } catch (error) {
+  } catch {
     return null;
   }
 }

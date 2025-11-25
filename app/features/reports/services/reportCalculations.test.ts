@@ -21,9 +21,9 @@ describe("reportCalculations", () => {
           amount: -100,
           category: "Groceries",
           description: "Food",
-          month: "2025-01",
+          created_at: "2025-01-15T00:00:00Z",
           order_index: 0,
-          is_paid: true,
+          status: "paid",
         },
         {
           id: "2",
@@ -31,9 +31,9 @@ describe("reportCalculations", () => {
           amount: -50,
           category: "Groceries",
           description: "More food",
-          month: "2025-01",
+          created_at: "2025-01-16T00:00:00Z",
           order_index: 1,
-          is_paid: true,
+          status: "paid",
         },
         {
           id: "3",
@@ -41,9 +41,9 @@ describe("reportCalculations", () => {
           amount: -200,
           category: "Transport",
           description: "Gas",
-          month: "2025-01",
+          created_at: "2025-01-17T00:00:00Z",
           order_index: 2,
-          is_paid: true,
+          status: "paid",
         },
       ];
 
@@ -64,9 +64,9 @@ describe("reportCalculations", () => {
           amount: -100,
           category: "Groceries",
           description: "Food",
-          month: "2025-01",
+          created_at: "2025-01-15T00:00:00Z",
           order_index: 0,
-          is_paid: true,
+          status: "paid",
         },
         {
           id: "2",
@@ -74,9 +74,9 @@ describe("reportCalculations", () => {
           amount: 500,
           category: "Salary",
           description: "Income",
-          month: "2025-01",
+          created_at: "2025-01-15T00:00:00Z",
           order_index: 1,
-          is_paid: true,
+          status: "paid",
         },
       ];
 
@@ -97,9 +97,9 @@ describe("reportCalculations", () => {
           amount: -100,
           category: "Groceries",
           description: "January",
-          month: "2025-01",
+          created_at: "2025-01-15T00:00:00Z",
           order_index: 0,
-          is_paid: true,
+          status: "paid",
         },
         {
           id: "2",
@@ -107,9 +107,9 @@ describe("reportCalculations", () => {
           amount: -50,
           category: "Groceries",
           description: "February",
-          month: "2025-02",
+          created_at: "2025-02-15T00:00:00Z",
           order_index: 0,
-          is_paid: true,
+          status: "paid",
         },
       ];
 
@@ -143,12 +143,14 @@ describe("reportCalculations", () => {
           category: "Groceries",
           allocated_amount: 200,
           month: "2025-01",
+          created_at: "2025-01-01T00:00:00Z",
         },
         {
           id: "2",
           category: "Transport",
           allocated_amount: 150,
           month: "2025-01",
+          created_at: "2025-01-01T00:00:00Z",
         },
       ];
 
@@ -176,6 +178,7 @@ describe("reportCalculations", () => {
           category: "Groceries",
           allocated_amount: 200,
           month: "2025-01",
+          created_at: "2025-01-01T00:00:00Z",
         },
       ];
 
@@ -219,12 +222,14 @@ describe("reportCalculations", () => {
           category: "Groceries",
           allocated_amount: 200,
           month: "2025-01",
+          created_at: "2025-01-01T00:00:00Z",
         },
         {
           id: "2",
           category: "Groceries",
           allocated_amount: 250,
           month: "2025-02",
+          created_at: "2025-02-01T00:00:00Z",
         },
       ];
 
@@ -249,9 +254,9 @@ describe("reportCalculations", () => {
           description: "Payment",
           uses_savings_category: "Emergency",
           savings_amount_used: 50,
-          month: "2025-01",
+          created_at: "2025-01-15T00:00:00Z",
           order_index: 0,
-          is_paid: true,
+          status: "paid",
         },
       ];
 
@@ -261,6 +266,8 @@ describe("reportCalculations", () => {
           category: "Emergency",
           amount: 200,
           month: "2025-01",
+          is_paid: true,
+          created_at: "2025-01-01T00:00:00Z",
         },
       ];
 
@@ -312,12 +319,16 @@ describe("reportCalculations", () => {
           category: "Emergency",
           amount: 100,
           month: "2025-01",
+          is_paid: true,
+          created_at: "2025-01-01T00:00:00Z",
         },
         {
           id: "2",
           category: "Emergency",
           amount: 150,
           month: "2025-01",
+          is_paid: true,
+          created_at: "2025-01-01T00:00:00Z",
         },
       ];
 
@@ -343,9 +354,9 @@ describe("reportCalculations", () => {
           description: "Payment 1",
           uses_savings_category: "Emergency",
           savings_amount_used: 50,
-          month: "2025-01",
+          created_at: "2025-01-15T00:00:00Z",
           order_index: 0,
-          is_paid: true,
+          status: "paid",
         },
         {
           id: "2",
@@ -355,9 +366,9 @@ describe("reportCalculations", () => {
           description: "Payment 2",
           uses_savings_category: "Emergency",
           savings_amount_used: 75,
-          month: "2025-01",
+          created_at: "2025-01-16T00:00:00Z",
           order_index: 1,
-          is_paid: true,
+          status: "paid",
         },
       ];
 

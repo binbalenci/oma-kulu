@@ -2,10 +2,8 @@
  * @jest-environment jsdom
  */
 
-import { renderHook, waitFor } from "@testing-library/react";
-import { useReportsData } from "./useReportsData";
-
-// Mock dependencies
+// Mock dependencies MUST be before imports (Jest hoisting requirement)
+/* eslint-disable import/first */
 jest.mock("@/app/utils/logger", () => ({
   __esModule: true,
   default: {
@@ -30,6 +28,7 @@ jest.mock("@/app/lib/storage", () => ({
   getActiveSavingsCategories: jest.fn(),
 }));
 
+import { renderHook, waitFor } from "@testing-library/react";
 import {
   getActiveSavingsCategories,
   loadBudgets,
@@ -37,6 +36,7 @@ import {
   loadSavings,
   loadTransactions,
 } from "@/app/lib/storage";
+import { useReportsData } from "./useReportsData";
 
 describe("useReportsData", () => {
   beforeEach(() => {

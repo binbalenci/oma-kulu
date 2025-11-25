@@ -6,7 +6,6 @@ import { renderHook, act } from "@testing-library/react";
 import type { Transaction } from "@/app/lib/types";
 import { useTransactionReorder } from "./useTransactionReorder";
 import { saveTransactions } from "@/app/lib/storage";
-import React from "react";
 
 // Mock dependencies
 jest.mock("@/app/lib/storage", () => ({

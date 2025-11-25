@@ -3,7 +3,6 @@
  * Keeping this for backward compatibility with existing components
  */
 
-import { Platform } from 'react-native';
 import { AppTheme } from './AppTheme';
 
 const tintColorLight = AppTheme.colors.primary;
