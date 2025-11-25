@@ -5,6 +5,87 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.6.0] - 2025-01-25
+
+### 🏗️ Architecture - Official Expo Router Structure
+
+**Major Refactoring**: Migrated from `app/` directory structure to the official Expo Router `src/` structure to eliminate route scanning warnings and follow Expo best practices.
+
+#### ✨ Structure Migration
+
+- **Adopted Official Expo Pattern** - Moved to `src/` directory structure
+  - Routes isolated in `src/app/` (7 route files)
+  - All non-route code in `src/features/`, `src/components/`, `src/lib/`, etc.
+  - Eliminates "missing default export" warnings (100+ warnings removed)
+  - Follows official Expo Router documentation and best practices
+  - Better separation of concerns: routes vs application logic
+
+#### 📦 File Organization
+
+- **New Structure**:
+  ```
+  src/
+  ├── app/              # Routes only (Expo Router scans here)
+  ├── features/         # Feature modules (65 files)
+  ├── components/       # Shared UI (20 files)
+  ├── lib/              # Core utilities (9 files)
+  ├── constants/        # App theme (2 files)
+  ├── hooks/            # Framework hooks (3 files)
+  └── utils/            # Logger (1 file)
+  ```
+
+#### 🔧 Configuration Updates
+
+- **TypeScript Configuration**
+  - Added `@/src/*` path alias to tsconfig.json
+  - Maintains backward compatibility with `@/*` for root access
+  - Full TypeScript path resolution working correctly
+
+- **Jest Configuration**
+  - Updated coverage paths to `src/features/**` and `src/lib/**`
+  - Updated jest.setup.js mocks to use `@/src/*` paths
+  - All 275 tests passing with updated paths
+
+#### 📝 Import Path Migration
+
+- **Mass Import Updates** - 146 import statements updated
+  - `@/app/features/*` → `@/src/features/*` (16 occurrences)
+  - `@/app/components/*` → `@/src/components/*` (36 occurrences)
+  - `@/app/lib/*` → `@/src/lib/*` (47 occurrences)
+  - `@/app/constants/*` → `@/src/constants/*` (23 occurrences)
+  - `@/app/hooks/*` → `@/src/hooks/*` (9 occurrences)
+  - `@/app/utils/*` → `@/src/utils/*` (15 occurrences)
+
+#### 📚 Documentation Updates
+
+- **Updated CLAUDE.md** - All import examples use `@/src/*` paths
+- **Updated Feature Docs** - 20+ README.md and CLAUDE.md files
+- **Updated Test Examples** - Jest mock patterns reflect new structure
+
+#### 📊 Migration Results
+
+- **Files Moved**: 107 files successfully relocated
+- **Zero Warnings**: Eliminated all Expo Router route scanning warnings
+- **All Tests Passing**: 275 tests with 99-100% coverage maintained
+- **Type-Check Clean**: Zero TypeScript errors
+- **Lint Clean**: Zero ESLint warnings
+- **Official Pattern**: Following documented Expo Router best practices
+
+#### 🎯 Impact
+
+- **Better Organization**: Clear separation between routes and application code
+- **Expo Compliance**: Following official Expo Router documentation patterns
+- **Cleaner Dev Experience**: No more "missing default export" spam in logs
+- **Future-Proof**: Structure aligns with Expo Router evolution
+- **Maintainability**: Easier to understand and navigate codebase structure
+
+#### 🔗 References
+
+- [Expo Router: Using src directory](https://docs.expo.dev/router/reference/src-directory/)
+- [Expo Router: File-based routing](https://docs.expo.dev/router/basics/core-concepts/)
+
+---
+
 ## [3.5.0] - 2025-01-25
 
 ### 🏗️ Architecture - Phase 6: Code Consolidation Complete
