@@ -1,5 +1,5 @@
-import { loadCategories, saveCategories } from "@/lib/storage";
-import type { Category } from "@/lib/types";
+import { loadCategories, saveCategories } from "@/app/lib/storage";
+import type { Category } from "@/app/lib/types";
 import React from "react";
 import { StyleSheet, View } from "react-native";
 import { Button, List, Switch, Text, TextInput } from "react-native-paper";

@@ -8,14 +8,10 @@
 ## 🚀 Quick Commands
 
 ```bash
-# Development
 npm start              # Expo dev
 npm run check-all      # Type-check + lint (zero warnings required)
-npm test              # Run tests
-
-# Testing
-npm test features/shared                    # Run feature tests
-npm test path/to/file.test.ts -- --coverage # With coverage
+npm test              # Run all tests (275 passing)
+npm test app/features/[name]  # Run feature tests
 ```
 
 ---
@@ -24,39 +20,53 @@ npm test path/to/file.test.ts -- --coverage # With coverage
 
 ### File Structure
 ```
-app/(tabs)/           # Screens: index.tsx (budget), transactions.tsx, reports.tsx, categories.tsx
-features/             # Feature-based modules (Phase 1: shared/ complete, Phase 2+: budget/, transactions/, etc.)
-  shared/             # Utilities for all features (calculations, formatters, validators, hooks)
-lib/                  # Core: database.ts, types.ts, supabase.ts
-components/           # UI components (legacy, migrating to features/)
+app/
+├── (tabs)/           # Thin wrappers (3-11 lines) → features/*/screen.tsx
+├── features/         # Feature modules (shared, budget, transactions, reports, categories)
+│   └── [name]/
+│       ├── components/   # UI components (no tests)
+│       ├── hooks/        # React hooks (90%+ coverage)
+│       ├── services/     # Pure functions (100% coverage)
+│       ├── screen.tsx    # Main screen (composition only)
+│       ├── index.ts      # Barrel exports
+│       ├── README.md     # Detailed docs
+│       └── CLAUDE.md     # Compact AI guide
+├── lib/              # Core: database.ts, types.ts, supabase.ts, storage.ts
+├── components/       # Shared UI (legacy, migrating to features/)
+├── constants/        # AppTheme, theme
+└── hooks/            # Framework hooks (useColorScheme, useThemeColor)
 ```
 
 ### Data Flow
 ```
-Screen → Hook → Service → Database
-       ↓
-     Components (presentation only)
+Tab Wrapper → Feature Screen → Hook → Service → Database
+                              ↓
+                         Components (UI only)
 ```
 
 **Rule:** Code only depends on layers below, never above.
-
-### Key Files
-- `lib/database.ts` - All CRUD (load*, save*, delete*), returns empty on error
-- `lib/types.ts` - All data models (ExpectedIncome, Budget, Transaction, etc.)
-- `features/shared/` - Reusable utilities (see `features/shared/CLAUDE.md`)
 
 ---
 
 ## 📋 Critical Patterns
 
-### 1. Month State (Global)
+### 1. Imports (Updated Paths)
 ```typescript
-const { currentMonth } = useMonth();  // Shared across all tabs
+// ✅ All app code now in app/
+import { calculateMoneyToAssign } from '@/app/features/shared/services';
+import { BudgetScreen } from '@/app/features/budget';
+import { supabase } from '@/app/lib/supabase';
+import { Category } from '@/app/lib/types';
+import { AppTheme } from '@/app/constants/AppTheme';
+
+// Root-level hooks (framework only)
+import { useColorScheme } from '@/hooks/use-color-scheme';
 ```
 
-### 2. Snackbar (Global)
+### 2. Global State
 ```typescript
-const { showSnackbar } = useSnackbar();  // NEVER create local toasts
+const { currentMonth } = useMonth();         // Month state (shared)
+const { showSnackbar } = useSnackbar();      // Toasts (global)
 ```
 
 ### 3. Logging (Required)
@@ -68,12 +78,8 @@ logger.databaseError(error, "saveIncome", context);
 
 ### 4. Data Loading
 ```typescript
-// ✅ Use shared hook (Phase 1+)
+// ✅ Use feature hooks
 const { data, loading, error, refresh } = useFinancialData(currentMonth);
-
-// Old pattern (pre-Phase 1):
-const [incomes, setIncomes] = useState([]);
-useEffect(() => { loadIncomes(monthKey).then(setIncomes); }, [monthKey]);
 ```
 
 ---
@@ -81,8 +87,8 @@ useEffect(() => { loadIncomes(monthKey).then(setIncomes); }, [monthKey]);
 ## 💰 Business Logic
 
 ### Financial Calculations
-- **Money to assign:** `expectedIncome - expectedExpenses - totalAllocated` (all items, paid/unpaid)
-- **Actual in bank:** `totalIncome - totalExpenses` (only PAID, date <= today)
+- **Money to assign:** `expectedIncome - expectedExpenses - totalAllocated - totalSavings` (all items)
+- **Actual in bank:** `totalIncome - totalExpenses` (paid only, date ≤ today)
 
 ### Date Formats
 - Month key: `yyyy-MM` ("2025-01")
@@ -90,100 +96,62 @@ useEffect(() => { loadIncomes(monthKey).then(setIncomes); }, [monthKey]);
 - Display: `"January 2025"`
 
 ### Data Model
-- Categories (foundation) → Expected items (incomes/invoices/savings) → Budgets → Transactions
+- Categories → Expected items (incomes/invoices/savings) → Budgets → Transactions
 - Dual fields: `category` (name, legacy) + `category_id` (UUID, current)
-- Transactions track source: `source_type` + `source_id`
+- Transactions: `source_type` + `source_id` link to expected items
 
 ---
 
 ## 🧪 Testing Rules
 
 ### Coverage Targets
-- **Services (pure functions):** 100%
-- **Hooks:** 90%+
-- **Components:** No tests (UI only)
+- **Services:** 100% (pure functions)
+- **Hooks:** 90%+ (business logic)
+- **Components/Screens:** 0% (UI only, too brittle)
 
 ### Test Setup
-- Co-locate tests: `myService.ts` + `myService.test.ts`
+- Co-locate: `myFile.ts` + `myFile.test.ts`
 - Hook tests: Add `@jest-environment jsdom` at top
-- Use `@testing-library/react` with `renderHook`
+- Mocks: Must be BEFORE imports (hoisting)
 
 ### Example
 ```typescript
-// myService.test.ts
-describe('myFunction', () => {
-  it('should handle edge case', () => {
-    expect(myFunction(input)).toBe(expected);
+/**
+ * @jest-environment jsdom
+ */
+jest.mock('@/app/lib/storage');  // BEFORE imports
+
+import { renderHook } from '@testing-library/react';
+import { useMyHook } from './useMyHook';
+
+describe('useMyHook', () => {
+  it('should load data', async () => {
+    const { result } = renderHook(() => useMyHook());
+    expect(result.current.loading).toBe(true);
   });
 });
 ```
 
 ---
 
-## 📁 Scoped Documentation (CRITICAL)
+## 📁 Documentation
 
-**RULE:** Every feature directory (`features/shared/`, `features/budget/`, etc.) MUST have:
+**RULE:** Every `app/features/[name]/` directory has:
+1. **README.md** - Detailed docs with function signatures + examples
+2. **CLAUDE.md** - Compact AI guide (purpose, rules, core exports, update triggers)
 
-### 1. `README.md` (User-facing)
-- Detailed documentation
-- Function signatures + examples
-- Test coverage stats
-- Architecture notes
-
-### 2. `CLAUDE.md` (AI-facing - THIS FILE'S FORMAT)
-- Super compact, AI-optimized
-- Key rules + patterns only
-- Quick reference commands
-- Common tasks
-
-### When Creating New Feature Directory
-```bash
-# ALWAYS create both:
-1. features/new-feature/README.md      # Detailed docs
-2. features/new-feature/CLAUDE.md      # Compact AI guide (follow THIS file's format)
-3. Update root docs/plans/ if architectural
-```
-
-### Documentation Maintenance (CRITICAL)
-**When making changes:**
-1. ✅ Update local `README.md` with new functions/components/coverage
-2. ✅ Update local `CLAUDE.md` if rules/patterns change
-3. ✅ Keep examples current with actual code
-4. ✅ Update coverage stats after adding tests
-
-**Template for feature CLAUDE.md:**
-```markdown
-# features/[name] - AI Guidance
-
-## Quick Reference
-**Purpose:** [1 line]
-**Tests:** [X passing, Y% coverage]
-**Commands:** npm test features/[name]
-
-## Key Rules
-1. [Rule 1]
-2. [Rule 2]
-
-## Core Functions/Hooks/Components
-- [List with 1-line descriptions]
-
-## Common Tasks
-### Adding New [X]
-[Step-by-step commands]
-
-## Documentation Maintenance
-Update README.md and this CLAUDE.md when:
-- [Triggers]
-```
+**Update triggers:**
+- New function/component → Update README.md
+- Pattern/rule change → Update CLAUDE.md
+- Coverage change → Update test stats
 
 ---
 
 ## 🎨 UI Guidelines
 
-- **Components:** React Native Paper only
-- **Spacing:** Multiples of 4 (4, 8, 12, 16, 24, 32)
-- **Theme:** `const theme = useTheme()`
-- **Emojis:** Categories use emoji identifiers
+- **Components:** React Native Paper + custom components
+- **Spacing:** Multiples of 4 (use `AppTheme.spacing.*`)
+- **Colors:** Use `AppTheme.colors.*` (NOT hardcoded)
 - **Progress bars:** Green (0-74%), Orange (75-95%), Red (96%+)
 
 ---
@@ -191,15 +159,15 @@ Update README.md and this CLAUDE.md when:
 ## 🔧 Special Features
 
 ### Transaction Reordering
-- Up/down arrows for same-date transactions only
-- Persisted via `order_index` field
-- Sort: `ORDER BY date DESC, order_index ASC`
+- Only same-date transactions can be reordered
+- Sort: `sortTransactionsByDateAndOrder()` (date DESC, order_index ASC)
+- New: `order_index = max + 1`, Reordered: swap values
 
 ---
 
 ## 📦 Database Tables
 
-- `categories` - Income/expense/saving types (foundation)
+- `categories` - Foundation (income/expense/saving types)
 - `expected_incomes` / `expected_invoices` / `expected_savings` - Per-month planning
 - `budgets` - Spending limits per category/month
 - `transactions` - Actual financial activity
@@ -211,15 +179,15 @@ Update README.md and this CLAUDE.md when:
 
 - [ ] `npm run check-all` passes (zero warnings)
 - [ ] All tests pass with required coverage
-- [ ] Used `logger.*` instead of `console.log`
-- [ ] Updated `README.md` in changed directories
-- [ ] Updated `CLAUDE.md` if patterns changed
+- [ ] Used `logger.*` (NOT `console.log`)
+- [ ] Updated `README.md` + `CLAUDE.md` in changed dirs
 - [ ] No `any` types without justification
+- [ ] Imports use `@/app/*` paths (NOT `@/*`)
 
 ---
 
 ## 📚 References
 
-- **Detailed Docs:** See individual `features/*/README.md` files
+- **Feature Docs:** See `app/features/*/README.md` files
 - **Refactoring Plan:** `docs/plans/2025-01-16-feature-based-refactoring.md`
 - **App Spec:** `docs/APP_SPEC.md`

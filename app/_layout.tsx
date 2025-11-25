@@ -8,12 +8,12 @@ import "react-native-reanimated";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import logger from "@/app/utils/logger";
-import PasscodeGate from "@/components/passcode-gate";
-import { SnackbarProvider } from "@/components/snackbar-provider";
-import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
-import { AppTheme } from "@/constants/AppTheme";
-import { MonthProvider } from "@/lib/month-context";
-import { isSessionValid } from "@/lib/session";
+import PasscodeGate from "@/app/components/passcode-gate";
+import { SnackbarProvider } from "@/app/components/snackbar-provider";
+import { LoadingSpinner } from "@/app/components/ui/LoadingSpinner";
+import { AppTheme } from "@/app/constants/AppTheme";
+import { MonthProvider } from "@/app/lib/month-context";
+import { isSessionValid } from "@/app/lib/session";
 
 /**
  * Initialize Sentry error monitoring and performance tracking

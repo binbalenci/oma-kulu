@@ -6,6 +6,6 @@
  * to be developed independently.
  */
 
-import { BudgetScreen } from "@/features/budget";
+import { BudgetScreen } from "@/app/features/budget";
 
 export default BudgetScreen;

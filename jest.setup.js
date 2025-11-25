@@ -14,7 +14,7 @@
  * Mocks the Supabase database client to prevent actual database calls during tests.
  * Provides mock implementations of common Supabase methods (from, auth.getSession).
  */
-jest.mock('@/lib/supabase', () => ({
+jest.mock('@/app/lib/supabase', () => ({
   supabase: {
     from: jest.fn(), // Mock database query builder
     auth: { getSession: jest.fn() }, // Mock authentication session retrieval

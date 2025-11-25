@@ -6,6 +6,6 @@
  * to be developed independently.
  */
 
-import { TransactionsScreen } from "@/features/transactions";
+import { TransactionsScreen } from "@/app/features/transactions";
 
 export default TransactionsScreen;
