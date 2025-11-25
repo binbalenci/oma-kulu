@@ -7,41 +7,71 @@ Manages all category types (income, expense, saving) with CRUD operations and se
 
 ```
 categories/
-├── services/           # Business logic and helpers
-│   ├── categoryHelpers.ts       [TESTED - 20 tests, 20 passing]
-│   └── categoryHelpers.test.ts
-├── types.ts            # TypeScript types (re-exports)
+├── components/         # UI components
+│   ├── CategoryForm.tsx           [339 lines]
+│   ├── CategoryListItem.tsx       [107 lines]
+│   ├── CategoryTypeSection.tsx    [155 lines]
+│   └── index.ts
+├── hooks/              # Data management
+│   ├── useCategoriesData.ts       [87 lines]
+│   └── index.ts
+├── screen.tsx          # Main screen [276 lines]
 ├── index.ts            # Public API
-└── README.md           # This file
+├── README.md           # This file
+└── CLAUDE.md           # AI developer guide
 ```
 
-## Key Services **[TESTED - 100% coverage]**
+## Key Components
 
-### categoryHelpers.ts
-- `filterCategoriesByQuery(categories, query)` - Filter categories by search term (case-insensitive)
-- `groupCategoriesByType(categories, query)` - Group and sort categories by type (income/expense/saving)
-- `validateCategoryName(name)` - Check if category name is valid
-- `isDuplicateCategory(name, type, categories, excludeId)` - Check for duplicate name+type combination
-- `getNextOrderIndex(categories)` - Calculate next order_index for new category
+### CategoryForm.tsx (339 lines)
+Form dialog for adding/editing categories with:
+- Name input with validation
+- Type selector (income/expense/saving)
+- Emoji and color pickers
+- Visibility and budget toggles
 
-## Current Implementation
+### CategoryListItem.tsx (107 lines)
+Displays individual category with:
+- Color bar indicator
+- Emoji icon
+- Name and status badges
+- Edit and delete actions
 
-The categories screen ([app/(tabs)/categories.tsx](../../app/(tabs)/categories.tsx)) is currently a self-contained component at 733 lines. It includes:
+### CategoryTypeSection.tsx (155 lines)
+Section component for grouped categories with:
+- Section header with icon and count
+- Add button for that type
+- List of categories or empty state
 
-- Search functionality
-- Category CRUD operations
-- Form dialogs with emoji and color pickers
-- Category grouping by type (Income, Expenses, Savings)
-- Confirmation dialogs for deletion
+## Key Hook
+
+### useCategoriesData.ts (87 lines)
+Manages category data loading and state:
+- Initial load on mount
 - Pull-to-refresh support
+- Search filtering
+- Type-based grouping and sorting
 
-## Refactoring Note
+Returns:
+- `items` - All categories
+- `setItems` - Update categories state
+- `query` - Current search query
+- `setQuery` - Update search query
+- `refreshing` - Pull-to-refresh state
+- `onRefresh` - Refresh handler
+- `incomeCategories` - Filtered income categories
+- `expenseCategories` - Filtered expense categories
+- `savingCategories` - Filtered saving categories
 
-Phase 5 focused on quick wins. The categories screen is already well-structured, so we created:
-- ✅ Tested helper services for common operations
-- ✅ Documentation and organization
-- ⏳ Future: Extract form hooks (useCategoryForm) if needed
-- ⏳ Future: Extract components if reused elsewhere
+## Refactoring Complete ✅
+
+**Original**: 733 lines (monolithic screen)
+**After Refactoring**:
+- Tab wrapper: 9 lines (99% reduction)
+- Screen: 276 lines (proper component composition)
+- Components: 601 lines (3 components)
+- Hooks: 87 lines (1 hook)
+- **Total reduction**: 62% in screen complexity
 
 ## Business Logic
 
@@ -60,16 +90,12 @@ Phase 5 focused on quick wins. The categories screen is already well-structured,
 
 ## Testing
 
-- **Services**: 20 tests, 100% coverage
-  - `categoryHelpers.test.ts` - All helper functions tested
-- **Run Tests**: `npm test features/categories`
-- **Coverage**: `npm test features/categories -- --coverage`
+Currently, no tests have been written for this feature. Following the project testing philosophy:
+- **Components**: No tests (UI only, by design)
+- **Hooks**: Could be tested if business logic becomes complex
+- **Services**: No services created yet
 
-### Test Coverage Summary
-```
-Services: 20/20 passing (100%)
-Total:    20 tests passing
-```
+**Run Tests**: `npm test features/categories` (when tests are added)
 
 ## Dependencies
 
@@ -86,46 +112,37 @@ Total:    20 tests passing
 ## Usage
 
 ```typescript
-import {
-  filterCategoriesByQuery,
-  groupCategoriesByType,
-  validateCategoryName,
-  isDuplicateCategory,
-  getNextOrderIndex,
-} from "@/features/categories";
+// Import the screen (already done in app/(tabs)/categories.tsx)
+import { CategoriesScreen } from "@/features/categories";
 
-// Filter categories by search
-const filtered = filterCategoriesByQuery(categories, "groc");
+// Use the hook in other features if needed
+import { useCategoriesData } from "@/features/categories";
 
-// Group by type
-const { income, expense, saving } = groupCategoriesByType(categories, "");
+function MyComponent() {
+  const { incomeCategories, expenseCategories, savingCategories } = useCategoriesData();
 
-// Validate before save
-if (!validateCategoryName(name)) {
-  showError("Name required");
+  // Use the filtered and sorted categories
 }
 
-// Check for duplicates
-if (isDuplicateCategory(name, type, categories, editingId)) {
-  showError("Category already exists");
-}
-
-// Get next order index
-const orderIndex = getNextOrderIndex(categories);
+// Use individual components if needed
+import { CategoryListItem, CategoryTypeSection } from "@/features/categories";
 ```
 
 ## File Stats
 
-| File | Lines | Status |
-|------|-------|--------|
-| `app/(tabs)/categories.tsx` | 733 lines | Well-structured, kept as-is |
-| `features/categories/services/` | ~100 lines | NEW - Tested helpers |
-| **With tests** | ~200 lines | +200 lines (tests) |
+| File | Lines | Reduction |
+|------|-------|-----------|
+| **Original** `app/(tabs)/categories.tsx` | 733 lines | - |
+| **New** `app/(tabs)/categories.tsx` | 9 lines | 99% ✅ |
+| `features/categories/screen.tsx` | 276 lines | 62% reduction |
+| `features/categories/components/` | 601 lines | 3 components |
+| `features/categories/hooks/` | 87 lines | 1 hook |
+| **Total** | 973 lines | Organized & maintainable |
 
 ## Future Improvements
 
-- Extract `useCategoryForm` hook for form state management
-- Extract `CategoryCard` component if reused
+- Add tests for `useCategoriesData` hook
+- Extract additional hooks if form logic becomes complex
 - Add category reordering (drag & drop)
 - Add category icons library beyond emojis
-- Add category usage statistics
+- Add category usage statistics (where used, # of transactions)
