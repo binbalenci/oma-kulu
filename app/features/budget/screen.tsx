@@ -1,4 +1,4 @@
-import logger from "@/app/utils/logger";
+import { AboutModal } from "@/app/components/AboutModal";
 import { useSnackbar } from "@/app/components/snackbar-provider";
 import { ConfirmDialog } from "@/app/components/ui/ConfirmDialog";
 import { BreakdownSection, CalculationView, DetailPopup } from "@/app/components/ui/DetailPopup";
@@ -6,12 +6,6 @@ import { Dialog } from "@/app/components/ui/Dialog";
 import { LoadingSpinner } from "@/app/components/ui/LoadingSpinner";
 import { SimpleDropdown } from "@/app/components/ui/SimpleDropdown";
 import { AppTheme } from "@/app/constants/AppTheme";
-import {
-  BudgetCard,
-  CashOverviewCard,
-  CategoryGroup,
-  SavingsCard,
-} from "./components";
 import { useMonth } from "@/app/lib/month-context";
 import {
   deleteBudget,
@@ -32,14 +26,8 @@ import {
   saveSavings,
   saveTransaction,
 } from "@/app/lib/storage";
-import type {
-  Budget,
-  Category,
-  ExpectedIncome,
-  ExpectedInvoice,
-  ExpectedSavings,
-  Transaction,
-} from "@/app/lib/types";
+import type { Budget, Category, ExpectedIncome, ExpectedInvoice, ExpectedSavings, Transaction } from "@/app/lib/types";
+import logger from "@/app/utils/logger";
 import Ionicons from "@react-native-vector-icons/ionicons";
 import { addMonths, endOfMonth, format, startOfMonth } from "date-fns";
 import * as Crypto from "expo-crypto";
@@ -48,6 +36,7 @@ import React from "react";
 import { Platform, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { Button, Card, IconButton, Text, TextInput } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { BudgetCard, CashOverviewCard, CategoryGroup, SavingsCard } from "./components";
 
 function monthKey(d: Date): string {
   return format(d, "yyyy-MM");
@@ -77,12 +66,12 @@ export function BudgetScreen() {
       setIsLoadingData(true);
       try {
         const [incms, invcs, bdgts, svgs, txs, cats] = await Promise.all([
-          loadIncomes(),      // needed for expected incomes by month
-          loadInvoices(),     // needed for expected invoices by month
-          loadBudgets(),      // needed for budgets by month
-          loadSavings(),      // needed for expected savings by month
+          loadIncomes(), // needed for expected incomes by month
+          loadInvoices(), // needed for expected invoices by month
+          loadBudgets(), // needed for budgets by month
+          loadSavings(), // needed for expected savings by month
           loadTransactions(), // needed for "in bank" calc and spent amounts
-          loadCategories(),   // needed for savings balance calculation
+          loadCategories(), // needed for savings balance calculation
         ]);
         setIncomes(incms);
         setInvoices(invcs);
@@ -92,7 +81,7 @@ export function BudgetScreen() {
         setCategories(cats);
 
         // Calculate savings balances for all savings categories
-        const savingCategories = cats.filter(c => c.type === 'saving');
+        const savingCategories = cats.filter((c) => c.type === "saving");
         const balances: Record<string, number> = {};
         for (const cat of savingCategories) {
           balances[cat.name] = await getSavingsBalance(cat.name);
@@ -120,13 +109,12 @@ export function BudgetScreen() {
   const [showExpenseDetail, setShowExpenseDetail] = React.useState(false);
   const [showRemainingDetail, setShowRemainingDetail] = React.useState(false);
   const [showSavingsDetail, setShowSavingsDetail] = React.useState(false);
+  const [showAboutModal, setShowAboutModal] = React.useState(false);
 
   // UI states
   const [dialogVisible, setDialogVisible] = React.useState(false);
   const [dialogType, setDialogType] = React.useState<"income" | "invoice" | "budget" | "saving">("income");
-  const [editingItem, setEditingItem] = React.useState<
-    ExpectedIncome | ExpectedInvoice | Budget | ExpectedSavings | null
-  >(null);
+  const [editingItem, setEditingItem] = React.useState<ExpectedIncome | ExpectedInvoice | Budget | ExpectedSavings | null>(null);
   const [itemTarget, setItemTarget] = React.useState("");
   const [itemName, setItemName] = React.useState("");
   const [itemCategory, setItemCategory] = React.useState("");
@@ -160,14 +148,7 @@ export function BudgetScreen() {
       const startTime = Date.now();
 
       try {
-        const [incms, invcs, bdgts, svgs, txs, cats] = await Promise.all([
-          loadIncomes(),
-          loadInvoices(),
-          loadBudgets(),
-          loadSavings(),
-          loadTransactions(),
-          loadCategories(),
-        ]);
+        const [incms, invcs, bdgts, svgs, txs, cats] = await Promise.all([loadIncomes(), loadInvoices(), loadBudgets(), loadSavings(), loadTransactions(), loadCategories()]);
 
         setIncomes(incms);
         setInvoices(invcs);
@@ -177,7 +158,7 @@ export function BudgetScreen() {
         setCategories(cats);
 
         // Calculate savings balances
-        const savingCategories = cats.filter(c => c.type === 'saving');
+        const savingCategories = cats.filter((c) => c.type === "saving");
         const balances: Record<string, number> = {};
         for (const cat of savingCategories) {
           balances[cat.name] = await getSavingsBalance(cat.name);
@@ -191,7 +172,7 @@ export function BudgetScreen() {
           budgetsCount: bdgts.length,
           transactionsCount: txs.length,
           categoriesCount: cats.length,
-          duration
+          duration,
         });
         logger.performanceWarning("load_budget_data", duration);
       } catch (error) {
@@ -209,20 +190,20 @@ export function BudgetScreen() {
         const [cats, txs, incms, invcs, bdgts, svgs] = await Promise.all([
           loadCategories(),
           loadTransactions(),
-          loadIncomes(),    // ✅ Reload incomes (may have CASCADE updates)
-          loadInvoices(),   // ✅ Reload invoices (may have CASCADE updates)
-          loadBudgets(),    // ✅ Reload budgets (may have CASCADE updates)
-          loadSavings()     // ✅ Reload savings (may have CASCADE updates)
+          loadIncomes(), // ✅ Reload incomes (may have CASCADE updates)
+          loadInvoices(), // ✅ Reload invoices (may have CASCADE updates)
+          loadBudgets(), // ✅ Reload budgets (may have CASCADE updates)
+          loadSavings(), // ✅ Reload savings (may have CASCADE updates)
         ]);
         setCategories(cats);
         setTransactions(txs);
-        setIncomes(incms);      // ✅ Update incomes with fresh CASCADE data
-        setInvoices(invcs);     // ✅ Update invoices with fresh CASCADE data
-        setBudgets(bdgts);      // ✅ Update budgets with fresh CASCADE data
-        setSavings(svgs);       // ✅ Update savings with fresh CASCADE data
+        setIncomes(incms); // ✅ Update incomes with fresh CASCADE data
+        setInvoices(invcs); // ✅ Update invoices with fresh CASCADE data
+        setBudgets(bdgts); // ✅ Update budgets with fresh CASCADE data
+        setSavings(svgs); // ✅ Update savings with fresh CASCADE data
 
         // Calculate savings balances
-        const savingCategories = cats.filter(c => c.type === 'saving');
+        const savingCategories = cats.filter((c) => c.type === "saving");
         const balances: Record<string, number> = {};
         for (const cat of savingCategories) {
           balances[cat.name] = await getSavingsBalance(cat.name);
@@ -233,7 +214,7 @@ export function BudgetScreen() {
           transactionsCount: txs.length,
           incomesCount: incms.length,
           invoicesCount: invcs.length,
-          budgetsCount: bdgts.length
+          budgetsCount: bdgts.length,
         });
       })();
     }, [])
@@ -245,14 +226,7 @@ export function BudgetScreen() {
     logger.breadcrumb("Pull-to-refresh triggered", "data_refresh");
 
     try {
-      const [cats, txs, incms, invcs, bdgts, svgs] = await Promise.all([
-        loadCategories(),
-        loadTransactions(),
-        loadIncomes(),
-        loadInvoices(),
-        loadBudgets(),
-        loadSavings()
-      ]);
+      const [cats, txs, incms, invcs, bdgts, svgs] = await Promise.all([loadCategories(), loadTransactions(), loadIncomes(), loadInvoices(), loadBudgets(), loadSavings()]);
 
       setCategories(cats);
       setTransactions(txs);
@@ -262,7 +236,7 @@ export function BudgetScreen() {
       setSavings(svgs);
 
       // Calculate savings balances
-      const savingCategories = cats.filter(c => c.type === 'saving');
+      const savingCategories = cats.filter((c) => c.type === "saving");
       const balances: Record<string, number> = {};
       for (const cat of savingCategories) {
         balances[cat.name] = await getSavingsBalance(cat.name);
@@ -274,7 +248,7 @@ export function BudgetScreen() {
         transactionsCount: txs.length,
         incomesCount: incms.length,
         invoicesCount: invcs.length,
-        budgetsCount: bdgts.length
+        budgetsCount: bdgts.length,
       });
     } catch (error) {
       logger.error(error as Error, { operation: "pull_to_refresh" });
@@ -298,10 +272,10 @@ export function BudgetScreen() {
   React.useEffect(() => {
     if (currentIncomes.length > 0 || currentInvoices.length > 0 || currentBudgets.length > 0) {
       logger.info("Home tab data for rendering", {
-        incomes: currentIncomes.map(i => ({ name: i.name, category: i.category })),
-        invoices: currentInvoices.map(i => ({ name: i.name, category: i.category })),
-        budgets: currentBudgets.map(b => ({ category: b.category })),
-        availableCategories: categories.map(c => c.name)
+        incomes: currentIncomes.map((i) => ({ name: i.name, category: i.category })),
+        invoices: currentInvoices.map((i) => ({ name: i.name, category: i.category })),
+        budgets: currentBudgets.map((b) => ({ category: b.category })),
+        availableCategories: categories.map((c) => c.name),
       });
     }
   }, [currentIncomes, currentInvoices, currentBudgets, categories]);
@@ -337,13 +311,11 @@ export function BudgetScreen() {
   });
 
   // Calculate income portion (excluding savings contributions)
-  const totalIncome = monthTransactions
-    .filter(t => t.amount > 0 && t.source_type !== 'savings')
-    .reduce((sum, t) => sum + t.amount, 0);
+  const totalIncome = monthTransactions.filter((t) => t.amount > 0 && t.source_type !== "savings").reduce((sum, t) => sum + t.amount, 0);
 
   // Calculate expense portion (only count portion NOT covered by savings)
   const totalExpenses = monthTransactions
-    .filter(t => t.amount < 0)
+    .filter((t) => t.amount < 0)
     .reduce((sum, t) => {
       const amount = Math.abs(t.amount);
       const savingsUsed = t.savings_amount_used || 0;
@@ -357,32 +329,25 @@ export function BudgetScreen() {
   const totalSavingsBalance = Object.values(savingsBalances).reduce((sum, b) => sum + b, 0);
 
   // Check if all sections are empty
-  const allEmpty =
-    currentIncomes.length === 0 && currentInvoices.length === 0 && currentBudgets.length === 0;
+  const allEmpty = currentIncomes.length === 0 && currentInvoices.length === 0 && currentBudgets.length === 0;
 
   // Group incomes by category
-  const incomesByCategory = currentIncomes.reduce<Record<string, ExpectedIncome[]>>(
-    (acc, income) => {
-      if (!acc[income.category]) {
-        acc[income.category] = [];
-      }
-      acc[income.category].push(income);
-      return acc;
-    },
-    {}
-  );
+  const incomesByCategory = currentIncomes.reduce<Record<string, ExpectedIncome[]>>((acc, income) => {
+    if (!acc[income.category]) {
+      acc[income.category] = [];
+    }
+    acc[income.category].push(income);
+    return acc;
+  }, {});
 
   // Group invoices by category
-  const invoicesByCategory = currentInvoices.reduce<Record<string, ExpectedInvoice[]>>(
-    (acc, invoice) => {
-      if (!acc[invoice.category]) {
-        acc[invoice.category] = [];
-      }
-      acc[invoice.category].push(invoice);
-      return acc;
-    },
-    {}
-  );
+  const invoicesByCategory = currentInvoices.reduce<Record<string, ExpectedInvoice[]>>((acc, invoice) => {
+    if (!acc[invoice.category]) {
+      acc[invoice.category] = [];
+    }
+    acc[invoice.category].push(invoice);
+    return acc;
+  }, {});
 
   const openAddDialog = (type: "income" | "invoice" | "budget" | "saving") => {
     setDialogType(type);
@@ -406,7 +371,7 @@ export function BudgetScreen() {
     setItemNotes(item.notes || "");
     if (type === "saving") {
       // Check if there's an existing target for this category (from other months)
-      const existingSavings = savings.find(s => s.category === item.category && s.target);
+      const existingSavings = savings.find((s) => s.category === item.category && s.target);
       const targetValue = item.target || existingSavings?.target;
       setItemTarget(targetValue ? Number(targetValue).toFixed(2) : "");
     } else {
@@ -488,9 +453,7 @@ export function BudgetScreen() {
     const categoryType = type === "income" ? "income" : type === "saving" ? "saving" : "expense";
     const categoryObj = categories.find((c) => c.name === item.category && c.type === categoryType);
     // Find uses_savings_category_id if using savings
-    const usesSavingsCategoryObj = useSavingsCategory
-      ? categories.find((c) => c.name === useSavingsCategory && c.type === "saving")
-      : undefined;
+    const usesSavingsCategoryObj = useSavingsCategory ? categories.find((c) => c.name === useSavingsCategory && c.type === "saving") : undefined;
 
     // Calculate order_index: append to end of same-date transactions
     const txDate = format(new Date(), "yyyy-MM-dd");
@@ -755,11 +718,7 @@ export function BudgetScreen() {
 
   const copyPreviousMonth = async () => {
     const prevMonth = monthKey(addMonths(currentMonth, -1));
-    const [prevIncomes, prevInvoices, prevBudgets] = await Promise.all([
-      loadIncomes(prevMonth),
-      loadInvoices(prevMonth),
-      loadBudgets(prevMonth),
-    ]);
+    const [prevIncomes, prevInvoices, prevBudgets] = await Promise.all([loadIncomes(prevMonth), loadInvoices(prevMonth), loadBudgets(prevMonth)]);
 
     let count = 0;
 
@@ -815,9 +774,9 @@ export function BudgetScreen() {
       // Get stack trace to see where this is being called from
       const stack = new Error().stack;
       logger.warning(`Category not found: ${categoryName}`, {
-        availableCategories: categories.map(c => c.name),
+        availableCategories: categories.map((c) => c.name),
         categoriesCount: categories.length,
-        callStack: stack?.split('\n').slice(0, 5) // First 5 lines of stack
+        callStack: stack?.split("\n").slice(0, 5), // First 5 lines of stack
       });
     }
     return info;
@@ -828,37 +787,27 @@ export function BudgetScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.monthSelector}>
-          <IconButton
-            icon="chevron-left"
-            size={24}
-            onPress={() =>
-              setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))
-            }
-          />
+          <IconButton icon="chevron-left" size={24} onPress={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} />
           <Text variant="headlineSmall" style={styles.monthText}>
             {format(currentMonth, "MMMM yyyy")}
           </Text>
-          <IconButton
-            icon="chevron-right"
-            size={24}
-            onPress={() =>
-              setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))
-            }
-          />
+          <IconButton icon="chevron-right" size={24} onPress={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))} />
         </View>
         <View style={styles.headerActions}>
-          <IconButton icon="bell-outline" size={24} />
-          <IconButton icon="account-circle-outline" size={24} />
+          <IconButton icon="bell-outline" size={24} iconColor={AppTheme.colors.textPrimary} onPress={() => logger.info("Bell icon pressed")} />
+          <IconButton
+            icon="account-circle-outline"
+            size={24}
+            iconColor={AppTheme.colors.textPrimary}
+            onPress={() => {
+              logger.info("Profile icon pressed");
+              setShowAboutModal(true);
+            }}
+          />
         </View>
       </View>
 
-      <ScrollView
-        style={styles.content}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
         {/* Cash Overview Card - NOW USING COMPONENT */}
         <CashOverviewCard
           expectedIncome={expectedIncome}
@@ -884,15 +833,9 @@ export function BudgetScreen() {
                   Start Fresh or Copy Previous Month
                 </Text>
                 <Text variant="bodyMedium" style={styles.copySubtitle}>
-                  Copy all items from {format(addMonths(currentMonth, -1), "MMMM yyyy")} to get
-                  started quickly
+                  Copy all items from {format(addMonths(currentMonth, -1), "MMMM yyyy")} to get started quickly
                 </Text>
-                <Button
-                  mode="contained"
-                  onPress={copyPreviousMonth}
-                  style={styles.copyButton}
-                  icon="content-copy"
-                >
+                <Button mode="contained" onPress={copyPreviousMonth} style={styles.copyButton} icon="content-copy">
                   Copy Previous Month
                 </Button>
               </View>
@@ -910,23 +853,11 @@ export function BudgetScreen() {
               </Text>
             </View>
             {Platform.OS === "web" ? (
-              <Button
-                mode="contained"
-                onPress={() => openAddDialog("income")}
-                style={styles.addButton}
-                icon="plus"
-              >
+              <Button mode="contained" onPress={() => openAddDialog("income")} style={styles.addButton} icon="plus">
                 Add Income
               </Button>
             ) : (
-              <IconButton
-                icon="plus"
-                mode="contained"
-                onPress={() => openAddDialog("income")}
-                iconColor={AppTheme.colors.textInverse}
-                containerColor={AppTheme.colors.primary}
-                size={24}
-              />
+              <IconButton icon="plus" mode="contained" onPress={() => openAddDialog("income")} iconColor={AppTheme.colors.textInverse} containerColor={AppTheme.colors.primary} size={24} />
             )}
           </View>
 
@@ -971,23 +902,11 @@ export function BudgetScreen() {
               </Text>
             </View>
             {Platform.OS === "web" ? (
-              <Button
-                mode="contained"
-                onPress={() => openAddDialog("invoice")}
-                style={styles.addButton}
-                icon="plus"
-              >
+              <Button mode="contained" onPress={() => openAddDialog("invoice")} style={styles.addButton} icon="plus">
                 Add Invoice
               </Button>
             ) : (
-              <IconButton
-                icon="plus"
-                mode="contained"
-                onPress={() => openAddDialog("invoice")}
-                iconColor={AppTheme.colors.textInverse}
-                containerColor={AppTheme.colors.primary}
-                size={24}
-              />
+              <IconButton icon="plus" mode="contained" onPress={() => openAddDialog("invoice")} iconColor={AppTheme.colors.textInverse} containerColor={AppTheme.colors.primary} size={24} />
             )}
           </View>
 
@@ -996,11 +915,7 @@ export function BudgetScreen() {
           ) : Object.keys(invoicesByCategory).length === 0 ? (
             <Card style={styles.emptyCard}>
               <Card.Content style={styles.emptyContent}>
-                <Ionicons
-                  name="trending-down-outline"
-                  size={48}
-                  color={AppTheme.colors.textMuted}
-                />
+                <Ionicons name="trending-down-outline" size={48} color={AppTheme.colors.textMuted} />
                 <Text variant="bodyLarge" style={styles.emptyText}>
                   No expected invoices yet. Tap + to add one.
                 </Text>
@@ -1036,23 +951,11 @@ export function BudgetScreen() {
               </Text>
             </View>
             {Platform.OS === "web" ? (
-              <Button
-                mode="contained"
-                onPress={() => openAddDialog("budget")}
-                style={styles.addButton}
-                icon="plus"
-              >
+              <Button mode="contained" onPress={() => openAddDialog("budget")} style={styles.addButton} icon="plus">
                 Add Budget
               </Button>
             ) : (
-              <IconButton
-                icon="plus"
-                mode="contained"
-                onPress={() => openAddDialog("budget")}
-                iconColor={AppTheme.colors.textInverse}
-                containerColor={AppTheme.colors.primary}
-                size={24}
-              />
+              <IconButton icon="plus" mode="contained" onPress={() => openAddDialog("budget")} iconColor={AppTheme.colors.textInverse} containerColor={AppTheme.colors.primary} size={24} />
             )}
           </View>
 
@@ -1093,23 +996,11 @@ export function BudgetScreen() {
               </Text>
             </View>
             {Platform.OS === "web" ? (
-              <Button
-                mode="contained"
-                onPress={() => openAddDialog("saving")}
-                style={styles.addButton}
-                icon="plus"
-              >
+              <Button mode="contained" onPress={() => openAddDialog("saving")} style={styles.addButton} icon="plus">
                 Add Savings
               </Button>
             ) : (
-              <IconButton
-                icon="plus"
-                mode="contained"
-                onPress={() => openAddDialog("saving")}
-                iconColor={AppTheme.colors.textInverse}
-                containerColor={AppTheme.colors.primary}
-                size={24}
-              />
+              <IconButton icon="plus" mode="contained" onPress={() => openAddDialog("saving")} iconColor={AppTheme.colors.textInverse} containerColor={AppTheme.colors.primary} size={24} />
             )}
           </View>
 
@@ -1118,11 +1009,7 @@ export function BudgetScreen() {
           ) : currentSavings.length === 0 ? (
             <Card style={styles.emptyCard}>
               <Card.Content style={styles.emptyContent}>
-                <Ionicons
-                  name="wallet-outline"
-                  size={48}
-                  color={AppTheme.colors.textMuted}
-                />
+                <Ionicons name="wallet-outline" size={48} color={AppTheme.colors.textMuted} />
                 <Text variant="bodyLarge" style={styles.emptyText}>
                   No savings yet. Tap + to add one.
                 </Text>
@@ -1154,9 +1041,7 @@ export function BudgetScreen() {
           setCategoryError(false);
           setAmountError(false);
         }}
-        title={`${editingItem ? "Edit" : "Add"} ${
-          dialogType === "income" ? "Income" : dialogType === "invoice" ? "Invoice" : dialogType === "saving" ? "Savings" : "Budget"
-        }`}
+        title={`${editingItem ? "Edit" : "Add"} ${dialogType === "income" ? "Income" : dialogType === "invoice" ? "Invoice" : dialogType === "saving" ? "Savings" : "Budget"}`}
         onSave={handleSaveItem}
         hasUnsavedChanges={!!(itemName || itemAmount || itemCategory || itemNotes || itemTarget || invoiceUseSavings)}
       >
@@ -1169,11 +1054,11 @@ export function BudgetScreen() {
               setCategoryError(false);
             }}
             data={categories
-              .filter((c) => c.is_visible && (
-                (dialogType === "income" && c.type === "income") ||
-                (dialogType === "saving" && c.type === "saving") ||
-                (dialogType !== "income" && dialogType !== "saving" && c.type === "expense")
-              ))
+              .filter(
+                (c) =>
+                  c.is_visible &&
+                  ((dialogType === "income" && c.type === "income") || (dialogType === "saving" && c.type === "saving") || (dialogType !== "income" && dialogType !== "saving" && c.type === "expense"))
+              )
               .map((cat) => ({ id: cat.name, name: cat.name, emoji: cat.emoji, color: cat.color }))}
             placeholder="Select category *"
             style={styles.input}
@@ -1193,38 +1078,40 @@ export function BudgetScreen() {
           )}
 
           {/* Use Savings dropdown - only show for invoice dialog */}
-          {dialogType === "invoice" && (() => {
-            const availableSavings = Object.entries(savingsBalances)
-              .filter(([_, balance]) => balance > 0)
-              .map(([catName, balance]) => ({
-                id: catName,
-                name: `${catName} (€${balance.toFixed(1)})`,
-                emoji: categories.find(c => c.name === catName)?.emoji,
-                color: categories.find(c => c.name === catName)?.color,
-              }));
+          {dialogType === "invoice" &&
+            (() => {
+              const availableSavings = Object.entries(savingsBalances)
+                .filter(([_, balance]) => balance > 0)
+                .map(([catName, balance]) => ({
+                  id: catName,
+                  name: `${catName} (€${balance.toFixed(1)})`,
+                  emoji: categories.find((c) => c.name === catName)?.emoji,
+                  color: categories.find((c) => c.name === catName)?.color,
+                }));
 
-            if (availableSavings.length > 0) {
-              return (
-                <SimpleDropdown
-                  label="Use Savings (optional)"
-                  value={invoiceUseSavings || ""}
-                  onValueChange={(value) => {
-                    setInvoiceUseSavings(value || null);
-                  }}
-                  data={[
-                    { id: "", name: "None", emoji: undefined, color: undefined },
-                    ...availableSavings,
-                  ]}
-                  placeholder="None"
-                  style={styles.input}
-                />
-              );
-            }
-            return null;
-          })()}
+              if (availableSavings.length > 0) {
+                return (
+                  <SimpleDropdown
+                    label="Use Savings (optional)"
+                    value={invoiceUseSavings || ""}
+                    onValueChange={(value) => {
+                      setInvoiceUseSavings(value || null);
+                    }}
+                    data={[{ id: "", name: "None", emoji: undefined, color: undefined }, ...availableSavings]}
+                    placeholder="None"
+                    style={styles.input}
+                  />
+                );
+              }
+              return null;
+            })()}
 
           <TextInput
-            label={<Text style={{ color: amountError ? 'red' : AppTheme.colors.textSecondary }}>Amount <Text style={{color: 'red'}}>*</Text></Text>}
+            label={
+              <Text style={{ color: amountError ? "red" : AppTheme.colors.textSecondary }}>
+                Amount <Text style={{ color: "red" }}>*</Text>
+              </Text>
+            }
             value={itemAmount}
             onChangeText={(value) => {
               setItemAmount(value);
@@ -1237,37 +1124,19 @@ export function BudgetScreen() {
           />
 
           {dialogType !== "budget" && dialogType !== "saving" && (
-            <TextInput
-              label="Name (optional)"
-              value={itemName}
-              onChangeText={setItemName}
-              placeholder={`Uses ${dialogType} category if empty`}
-              style={styles.input}
-            />
+            <TextInput label="Name (optional)" value={itemName} onChangeText={setItemName} placeholder={`Uses ${dialogType} category if empty`} style={styles.input} />
           )}
 
-          <TextInput
-            label="Notes (optional)"
-            value={itemNotes}
-            onChangeText={setItemNotes}
-            placeholder="Additional notes"
-            multiline
-            numberOfLines={3}
-            style={styles.input}
-          />
+          <TextInput label="Notes (optional)" value={itemNotes} onChangeText={setItemNotes} placeholder="Additional notes" multiline numberOfLines={3} style={styles.input} />
         </View>
       </Dialog>
 
       {/* Income Detail Popup */}
-      <DetailPopup
-        visible={showIncomeDetail}
-        onDismiss={() => setShowIncomeDetail(false)}
-        title="Expected Income Breakdown"
-      >
+      <DetailPopup visible={showIncomeDetail} onDismiss={() => setShowIncomeDetail(false)} title="Expected Income Breakdown">
         <BreakdownSection
           title="Expected Income"
           amount={expectedIncome}
-          items={currentIncomes.map(income => ({
+          items={currentIncomes.map((income) => ({
             label: income.name || income.category,
             amount: income.amount,
             description: income.category,
@@ -1278,15 +1147,11 @@ export function BudgetScreen() {
       </DetailPopup>
 
       {/* Expense Detail Popup */}
-      <DetailPopup
-        visible={showExpenseDetail}
-        onDismiss={() => setShowExpenseDetail(false)}
-        title="Expected Expenses Breakdown"
-      >
+      <DetailPopup visible={showExpenseDetail} onDismiss={() => setShowExpenseDetail(false)} title="Expected Expenses Breakdown">
         <BreakdownSection
           title="Expected Expenses"
           amount={expectedExpenses}
-          items={currentInvoices.map(invoice => ({
+          items={currentInvoices.map((invoice) => ({
             label: invoice.name || invoice.category,
             amount: -invoice.amount, // Negative for expenses
             description: invoice.category,
@@ -1297,11 +1162,7 @@ export function BudgetScreen() {
       </DetailPopup>
 
       {/* Remaining Detail Popup */}
-      <DetailPopup
-        visible={showRemainingDetail}
-        onDismiss={() => setShowRemainingDetail(false)}
-        title="Remaining Amount Calculation"
-      >
+      <DetailPopup visible={showRemainingDetail} onDismiss={() => setShowRemainingDetail(false)} title="Remaining Amount Calculation">
         <CalculationView
           steps={[
             { label: "Expected Income", amount: expectedIncome },
@@ -1317,11 +1178,7 @@ export function BudgetScreen() {
       </DetailPopup>
 
       {/* In Bank Detail Popup */}
-      <DetailPopup
-        visible={showInBankDetail}
-        onDismiss={() => setShowInBankDetail(false)}
-        title="In Bank Calculation"
-      >
+      <DetailPopup visible={showInBankDetail} onDismiss={() => setShowInBankDetail(false)} title="In Bank Calculation">
         <CalculationView
           steps={[
             { label: "Total Income (paid)", amount: totalIncome },
@@ -1335,11 +1192,7 @@ export function BudgetScreen() {
       </DetailPopup>
 
       {/* Savings Detail Popup */}
-      <DetailPopup
-        visible={showSavingsDetail}
-        onDismiss={() => setShowSavingsDetail(false)}
-        title="Total Savings Breakdown"
-      >
+      <DetailPopup visible={showSavingsDetail} onDismiss={() => setShowSavingsDetail(false)} title="Total Savings Breakdown">
         <BreakdownSection
           title="Savings Balances"
           amount={totalSavingsBalance}
@@ -1359,12 +1212,13 @@ export function BudgetScreen() {
         onDismiss={() => setConfirmDialogVisible(false)}
         onConfirm={confirmDelete}
         title={`Delete ${itemToDelete?.type || "Item"}`}
-        message={`Are you sure you want to delete this ${
-          itemToDelete?.type || "item"
-        }? This action cannot be undone.`}
+        message={`Are you sure you want to delete this ${itemToDelete?.type || "item"}? This action cannot be undone.`}
         confirmText="Delete"
         cancelText="Cancel"
       />
+
+      {/* About Modal */}
+      <AboutModal visible={showAboutModal} onDismiss={() => setShowAboutModal(false)} />
     </SafeAreaView>
   );
 }

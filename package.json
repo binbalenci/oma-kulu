@@ -1,5 +1,6 @@
 {
   "name": "oma-kulu",
+  "author": "Benjamin B <binhbbui411@gmail.com>",
   "main": "expo-router/entry",
   "version": "3.5.0",
   "scripts": {
