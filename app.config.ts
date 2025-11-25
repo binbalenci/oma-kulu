@@ -3,7 +3,7 @@ import { ExpoConfig } from "expo/config";
 const config: ExpoConfig = {
   name: "oma-kulu",
   slug: "oma-kulu",
-  version: "3.3.0",
+  version: "3.4.0",
   orientation: "portrait",
   icon: "./assets/images/icon.png",
   scheme: "omakulu",

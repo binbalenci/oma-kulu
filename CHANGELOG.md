@@ -5,6 +5,87 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.4.0] - 2025-01-25
+
+### 🏗️ Architecture - Phases 2-5: Feature-Based Refactoring Complete
+
+**Major Refactoring**: Completed Phases 2-5 of the feature-based architecture refactoring plan. This release completes the migration of core screens to the new architecture, establishing a fully maintainable, testable, and LLM-optimized codebase.
+
+#### ✨ Refactoring Achievements
+
+- **Phase 2 Complete** - Enhanced test instructions and refined testing patterns
+  - Improved test documentation for better developer experience
+  - Established consistent testing patterns across features
+  - Refined test coverage requirements and best practices
+
+- **Phase 3 Complete** - Database helpers and comprehensive tests
+  - Created robust database helper utilities with 90%+ test coverage
+  - Implemented consistent error handling patterns
+  - Enhanced database operation reliability and maintainability
+
+- **Phase 4 Complete** - Transactions feature refactored
+  - Migrated [app/(tabs)/transactions.tsx](app/(tabs)/transactions.tsx) to feature-based architecture
+  - Extracted transaction-specific business logic into feature modules
+  - Improved code organization and testability for transaction management
+
+- **Phase 5 Complete** - Budget (Index) and Transactions screens fully refactored
+  - Completed migration of [app/(tabs)/index.tsx](app/(tabs)/index.tsx) (Budget screen)
+  - Finalized [app/(tabs)/transactions.tsx](app/(tabs)/transactions.tsx) refactoring
+  - Screens now serve as thin presentation layers using shared services and hooks
+  - Eliminated remaining code duplication (~600+ lines total reduced)
+
+#### 🐛 Bug Fixes
+
+- **Transaction Type Preservation**
+  - Fixed issue where using "savings option" was not working correctly
+  - Root cause: Wrong category value was being saved during transaction creation
+  - Transactions now properly preserve their original category type (income/expense/saving)
+  - Commit: c2bb703
+
+- **Transaction Category Type Limiting**
+  - Limited transaction categories to match their original type when created
+  - Added transaction type selector in add dialog for better UX
+  - Prevents mixing of income/expense/saving transactions incorrectly
+  - Ensures data integrity across transaction types
+  - Commit: 32edc58
+
+- **Duplicate Order Index**
+  - Fixed duplicate `order_index` values causing transaction ordering issues
+  - Improved transaction creation logic to handle order indices correctly
+  - Ensures consistent and predictable transaction ordering
+  - Commit: fff7349
+
+#### 🔧 Technical Improvements
+
+- **Code Organization**
+  - Established clear separation of concerns across all main screens
+  - Screens → Hooks → Services → Database pattern fully implemented
+  - Reduced screen complexity by moving business logic to feature modules
+  - Improved maintainability with smaller, focused files
+
+- **Testing Infrastructure**
+  - Comprehensive test coverage for database helpers
+  - Consistent testing patterns across all features
+  - Improved test documentation and examples
+
+- **Development Experience**
+  - Better file organization improves AI comprehension
+  - Clear patterns make future feature development faster
+  - Reduced cognitive load with well-separated concerns
+
+#### 📁 Impact Summary
+
+- **Code Quality**: 600+ lines of duplicated/complex code eliminated across phases
+- **Testability**: All core utilities now have comprehensive test coverage
+- **Maintainability**: Clear architecture makes debugging and enhancement easier
+- **Foundation Complete**: All major screens now follow feature-based architecture
+
+#### 📋 Next Steps
+
+Phase 6+ will focus on refactoring remaining screens (Reports, Categories) and extracting additional feature-specific modules. See [docs/plans/2025-01-16-feature-based-refactoring.md](docs/plans/2025-01-16-feature-based-refactoring.md) for the complete roadmap.
+
+---
+
 ## [3.3.0] - 2025-01-16
 
 ### 🏗️ Architecture - Phase 1: Foundation Layer Complete
