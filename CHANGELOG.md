@@ -5,6 +5,70 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.5.0] - 2025-01-25
+
+### 🏗️ Architecture - Phase 6: Code Consolidation Complete
+
+**Final Refactoring Phase**: Completed Phase 6 of the feature-based architecture refactoring, consolidating all application code into the `app/` directory for cleaner organization and improved maintainability.
+
+#### ✨ Code Consolidation
+
+- **Phase 6 Complete** - All code moved into `app/` directory
+  - Moved `features/`, `lib/`, `components/`, `constants/` into `app/`
+  - Moved `hooks/` into `app/hooks/` for consistency
+  - Clean root directory with only configuration files
+  - All code logic now unified in single main folder
+
+#### 🔧 Import Path Standardization
+
+- **Updated all imports** to use `@/app/*` paths
+  - Mass update of 62+ files using automated tools
+  - Manual fixes for edge cases (hooks, special components)
+  - Consistent path aliases throughout codebase
+  - Root-level hooks remain at `@/hooks/` (framework convention)
+
+#### 🧪 Testing & Build Infrastructure
+
+- **Metro bundler configuration**
+  - Added test file exclusion from Metro bundler
+  - Prevents `jest is not defined` errors in development
+  - Blocks `__tests__/`, `*.test.*`, `*.spec.*` files
+- **All tests passing**: 275 tests with 99-100% coverage on services/hooks
+- **Zero import errors**: All TypeScript path resolutions working
+
+#### 📚 Documentation Overhaul
+
+- **Compact CLAUDE.md files** - Reduced verbosity by 70-85%
+  - Feature-level docs: 27-30 lines each (was 40-301 lines)
+  - Precise, frugal, non-redundant AI guidance
+  - Focus on purpose, rules, core exports, update triggers
+- **Root CLAUDE.md updated**
+  - Reflects new `app/` structure
+  - Updated import patterns and path examples
+  - Documents all 6 completed phases
+- **README.md updated**
+  - Version 3.5.0 with complete refactoring summary
+  - Updated architecture diagrams
+  - Phase-by-phase breakdown of all work
+  - New project structure documentation
+
+#### 📊 Final Results
+
+- **4 screen files**: 3-11 lines each (thin wrappers)
+- **5 feature modules**: Shared, budget, transactions, reports, categories
+- **275 tests passing**: Complete test coverage on business logic
+- **Code reduction**: ~4,500 lines → ~2,000 lines (56% reduction)
+- **Clean architecture**: Feature-based with proper separation of concerns
+- **All code in `app/`**: Single unified directory for all application code
+
+#### 🎯 Impact
+
+- **Better organization**: Clear structure with all code in one place
+- **Improved maintainability**: Modular, testable code with clean boundaries
+- **Enhanced DX**: Consistent patterns, comprehensive docs, easy navigation
+- **LLM-optimized**: Small files (100-400 lines), clear structure, compact guides
+- **Production ready**: All tests passing, zero warnings, clean builds
+
 ## [3.4.0] - 2025-01-25
 
 ### 🏗️ Architecture - Phases 2-5: Feature-Based Refactoring Complete
