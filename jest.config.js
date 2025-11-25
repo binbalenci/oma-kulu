@@ -19,14 +19,14 @@ module.exports = {
 
   // Files to include in coverage reports (focuses on business logic, excludes UI components)
   collectCoverageFrom: [
-    'features/**/*.{ts,tsx}',  // Feature-specific logic
-    'lib/**/*.{ts,tsx}',       // Shared utilities and services
-    '!**/*.test.{ts,tsx}',     // Exclude test files
-    '!**/*.spec.{ts,tsx}',     // Exclude spec files
-    '!**/*.d.ts',              // Exclude TypeScript declaration files
-    '!**/index.ts',            // Exclude barrel exports
-    '!**/types.ts',            // Exclude type definitions
-    '!**/*.tsx',               // Exclude React components (focus on business logic)
+    'src/features/**/*.{ts,tsx}',  // Feature-specific logic
+    'src/lib/**/*.{ts,tsx}',       // Shared utilities and services
+    '!**/*.test.{ts,tsx}',         // Exclude test files
+    '!**/*.spec.{ts,tsx}',         // Exclude spec files
+    '!**/*.d.ts',                  // Exclude TypeScript declaration files
+    '!**/index.ts',                // Exclude barrel exports
+    '!**/types.ts',                // Exclude type definitions
+    '!**/*.tsx',                   // Exclude React components (focus on business logic)
   ],
 
   // Minimum coverage requirements - tests must maintain 80% coverage across all metrics

@@ -11,7 +11,7 @@
 npm start              # Expo dev
 npm run check-all      # Type-check + lint (zero warnings required)
 npm test              # Run all tests (275 passing)
-npm test app/features/[name]  # Run feature tests
+npm test src/features/[name]  # Run feature tests
 ```
 
 ---
@@ -20,8 +20,11 @@ npm test app/features/[name]  # Run feature tests
 
 ### File Structure
 ```
-app/
-├── (tabs)/           # Thin wrappers (3-11 lines) → features/*/screen.tsx
+src/
+├── app/              # Routes only (Expo Router)
+│   ├── (tabs)/       # Thin wrappers (3-11 lines) → features/*/screen.tsx
+│   ├── _layout.tsx   # Root layout
+│   └── modal.tsx     # Modal route
 ├── features/         # Feature modules (shared, budget, transactions, reports, categories)
 │   └── [name]/
 │       ├── components/   # UI components (no tests)
@@ -34,7 +37,8 @@ app/
 ├── lib/              # Core: database.ts, types.ts, supabase.ts, storage.ts
 ├── components/       # Shared UI (legacy, migrating to features/)
 ├── constants/        # AppTheme, theme
-└── hooks/            # Framework hooks (useColorScheme, useThemeColor)
+├── hooks/            # Framework hooks (useColorScheme, useThemeColor)
+└── utils/            # Logger, utilities
 ```
 
 ### Data Flow
@@ -50,17 +54,18 @@ Tab Wrapper → Feature Screen → Hook → Service → Database
 
 ## 📋 Critical Patterns
 
-### 1. Imports (Updated Paths)
+### 1. Imports (src/ Structure)
 ```typescript
-// ✅ All app code now in app/
-import { calculateMoneyToAssign } from '@/app/features/shared/services';
-import { BudgetScreen } from '@/app/features/budget';
-import { supabase } from '@/app/lib/supabase';
-import { Category } from '@/app/lib/types';
-import { AppTheme } from '@/app/constants/AppTheme';
+// ✅ All code in src/ (routes in src/app/, logic in src/features/, etc.)
+import { calculateMoneyToAssign } from '@/src/features/shared/services';
+import { BudgetScreen } from '@/src/features/budget';
+import { supabase } from '@/src/lib/supabase';
+import { Category } from '@/src/lib/types';
+import { AppTheme } from '@/src/constants/AppTheme';
+import logger from '@/src/utils/logger';
 
-// Root-level hooks (framework only)
-import { useColorScheme } from '@/hooks/use-color-scheme';
+// Framework hooks
+import { useColorScheme } from '@/src/hooks/use-color-scheme';
 ```
 
 ### 2. Global State
@@ -119,7 +124,7 @@ const { data, loading, error, refresh } = useFinancialData(currentMonth);
 /**
  * @jest-environment jsdom
  */
-jest.mock('@/app/lib/storage');  // BEFORE imports
+jest.mock('@/src/lib/storage');  // BEFORE imports
 
 import { renderHook } from '@testing-library/react';
 import { useMyHook } from './useMyHook';
@@ -136,7 +141,7 @@ describe('useMyHook', () => {
 
 ## 📁 Documentation
 
-**RULE:** Every `app/features/[name]/` directory has:
+**RULE:** Every `src/features/[name]/` directory has:
 1. **README.md** - Detailed docs with function signatures + examples
 2. **CLAUDE.md** - Compact AI guide (purpose, rules, core exports, update triggers)
 
@@ -182,12 +187,12 @@ describe('useMyHook', () => {
 - [ ] Used `logger.*` (NOT `console.log`)
 - [ ] Updated `README.md` + `CLAUDE.md` in changed dirs
 - [ ] No `any` types without justification
-- [ ] Imports use `@/app/*` paths (NOT `@/*`)
+- [ ] Imports use `@/src/*` paths (NOT `@/*`)
 
 ---
 
 ## 📚 References
 
-- **Feature Docs:** See `app/features/*/README.md` files
+- **Feature Docs:** See `src/features/*/README.md` files
 - **Refactoring Plan:** `docs/plans/2025-01-16-feature-based-refactoring.md`
 - **App Spec:** `docs/APP_SPEC.md`

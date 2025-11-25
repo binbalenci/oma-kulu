@@ -14,7 +14,7 @@
  * Mocks the Supabase database client to prevent actual database calls during tests.
  * Provides mock implementations of common Supabase methods (from, auth.getSession).
  */
-jest.mock('@/app/lib/supabase', () => ({
+jest.mock('@/src/lib/supabase', () => ({
   supabase: {
     from: jest.fn(), // Mock database query builder
     auth: { getSession: jest.fn() }, // Mock authentication session retrieval
@@ -66,7 +66,7 @@ jest.mock('react-native-paper', () => {
  * Mocks the application logger that depends on Sentry.
  * Provides no-op implementations for all logging methods.
  */
-jest.mock('@/app/utils/logger', () => ({
+jest.mock('@/src/utils/logger', () => ({
   default: {
     info: jest.fn(),
     warning: jest.fn(),
