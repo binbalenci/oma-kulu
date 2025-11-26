@@ -2,6 +2,7 @@ import React from "react";
 import { Modal, StyleSheet, View } from "react-native";
 import { IconButton, Text } from "react-native-paper";
 import { AppTheme } from "@/src/constants/AppTheme";
+import packageJson from "../../package.json";
 
 interface AboutModalProps {
   visible: boolean;
@@ -38,7 +39,7 @@ export function AboutModal({ visible, onDismiss }: AboutModalProps) {
             </Text>
 
             <Text variant="bodyMedium" style={styles.version}>
-              Version 3.5.0
+              Version {packageJson.version}
             </Text>
 
             <Text variant="bodyMedium" style={styles.author}>
