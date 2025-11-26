@@ -230,15 +230,27 @@ export default function TransactionsScreen() {
       savingsAmountUsed = Math.min(availableBalance, transactionAmount);
     }
 
-    // Calculate order_index: preserve when editing, append to end of same-date list for new transactions
+    // Calculate order_index: append to end of same-date list for new transactions or when date changes
     let orderIndex: number;
-    if (editing) {
+    const dateChanged = editing && editing.date !== date;
+
+    if (editing && !dateChanged) {
+      // Preserve order_index only if editing same date
       orderIndex = editing.order_index ?? 0;
     } else {
-      // Find the maximum order_index for the same date and add 1
+      // Find the maximum order_index for the new date and add 1 (append to end)
       const sameDateTransactions = localTransactions.filter((t) => t.date === date);
       const maxOrderIndex = sameDateTransactions.reduce((max, t) => Math.max(max, t.order_index ?? -1), -1);
       orderIndex = maxOrderIndex + 1; // Append to end with next sequential index
+
+      if (dateChanged) {
+        logger.userAction("transaction_date_changed", {
+          transactionId: editing.id,
+          oldDate: editing.date,
+          newDate: date,
+          newOrderIndex: orderIndex
+        });
+      }
     }
 
     const tx: Transaction = {
