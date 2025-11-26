@@ -10,6 +10,7 @@ import {
   saveIncome,
   saveInvoice,
   saveTransaction,
+  saveTransactions,
 } from "@/src/lib/storage";
 import type { Category, ExpectedIncome, ExpectedInvoice, Transaction } from "@/src/lib/types";
 import Ionicons from "@react-native-vector-icons/ionicons";
@@ -230,18 +231,22 @@ export default function TransactionsScreen() {
       savingsAmountUsed = Math.min(availableBalance, transactionAmount);
     }
 
-    // Calculate order_index: append to end of same-date list for new transactions or when date changes
+    // Calculate order_index: insert at first position for new transactions or when date changes
     let orderIndex: number;
     const dateChanged = editing && editing.date !== date;
+    let transactionsToShift: Transaction[] = [];
 
     if (editing && !dateChanged) {
       // Preserve order_index only if editing same date
       orderIndex = editing.order_index ?? 0;
     } else {
-      // Find the maximum order_index for the new date and add 1 (append to end)
-      const sameDateTransactions = localTransactions.filter((t) => t.date === date);
-      const maxOrderIndex = sameDateTransactions.reduce((max, t) => Math.max(max, t.order_index ?? -1), -1);
-      orderIndex = maxOrderIndex + 1; // Append to end with next sequential index
+      // Insert at first position (0) and shift all other same-date transactions down
+      orderIndex = 0;
+
+      // Get all transactions on this date (excluding the one being edited if date changed)
+      transactionsToShift = localTransactions.filter((t) =>
+        t.date === date && (!editing || t.id !== editing.id)
+      );
 
       if (dateChanged) {
         logger.userAction("transaction_date_changed", {
@@ -269,19 +274,44 @@ export default function TransactionsScreen() {
       uses_savings_category: useSavingsCategory || undefined,
       uses_savings_category_id: usesSavingsCategoryObj?.id,
       savings_amount_used: savingsAmountUsed > 0 ? savingsAmountUsed : undefined,
-      // Order index - appends to end of same-date transactions
+      // Order index - inserts at first position for new/date-changed transactions
       order_index: orderIndex,
     };
 
+    // Save the main transaction first
     const success = await saveTransaction(tx);
     if (success) {
+      // If we inserted at first position, shift all other same-date transactions down
+      if (transactionsToShift.length > 0) {
+        const shiftedTransactions = transactionsToShift.map((t) => ({
+          ...t,
+          order_index: (t.order_index ?? 0) + 1,
+        }));
+
+        // Save all shifted transactions
+        await saveTransactions(shiftedTransactions);
+        logger.breadcrumb("Shifted same-date transactions", "transaction_create", {
+          date,
+          shiftedCount: shiftedTransactions.length,
+        });
+      }
+
       // Update savings balance if savings were used
       if (savingsAmountUsed > 0 && useSavingsCategory) {
         const balance = await getSavingsBalance(useSavingsCategory);
         setLocalSavingsBalances((prev) => ({ ...prev, [useSavingsCategory]: balance }));
       }
       if (editing) {
-        setLocalTransactions((prev) => prev.map((t) => (t.id === tx.id ? tx : t)));
+        setLocalTransactions((prev) =>
+          prev.map((t) => {
+            if (t.id === tx.id) return tx;
+            // Update shifted transactions in state
+            if (transactionsToShift.some((st) => st.id === t.id)) {
+              return { ...t, order_index: (t.order_index ?? 0) + 1 };
+            }
+            return t;
+          })
+        );
 
         // If transaction was created from an expected item, sync changes back
         if (editing.source_type && editing.source_id) {
@@ -322,7 +352,19 @@ export default function TransactionsScreen() {
 
         showSnackbar("Transaction updated!");
       } else {
-        setLocalTransactions((prev) => [tx, ...prev]);
+        setLocalTransactions((prev) => {
+          const updated = [tx, ...prev];
+          // Update shifted transactions in state
+          if (transactionsToShift.length > 0) {
+            return updated.map((t) => {
+              if (transactionsToShift.some((st) => st.id === t.id)) {
+                return { ...t, order_index: (t.order_index ?? 0) + 1 };
+              }
+              return t;
+            });
+          }
+          return updated;
+        });
         showSnackbar("Transaction added!");
       }
       resetForm();
