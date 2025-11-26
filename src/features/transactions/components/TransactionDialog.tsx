@@ -96,17 +96,20 @@ export function TransactionDialog({
           </View>
         </View>
 
-        <SimpleDropdown
-          label=""
-          value={category}
-          onValueChange={onCategoryChange}
-          data={categories
-            .filter((c) => c.is_visible && c.type === selectedType)
-            .map((cat) => ({ id: cat.name, name: cat.name, emoji: cat.emoji, color: cat.color }))}
-          placeholder="Select category *"
-          style={[styles.input, { zIndex: 10000 }]}
-          error={categoryError}
-        />
+        {/* Category dropdown with highest z-index */}
+        <View style={styles.categoryDropdownWrapper}>
+          <SimpleDropdown
+            label=""
+            value={category}
+            onValueChange={onCategoryChange}
+            data={categories
+              .filter((c) => c.is_visible && c.type === selectedType)
+              .map((cat) => ({ id: cat.name, name: cat.name, emoji: cat.emoji, color: cat.color }))}
+            placeholder="Select category *"
+            style={styles.input}
+            error={categoryError}
+          />
+        </View>
 
         {/* Use Savings dropdown - only show for expense type */}
         {(() => {
@@ -130,7 +133,7 @@ export function TransactionDialog({
                   onValueChange={(value) => onUseSavingsChange(value || null)}
                   data={[{ id: "", name: "", emoji: undefined, color: undefined }, ...availableSavings]}
                   placeholder="None"
-                  style={[styles.input, { zIndex: 9000 }]}
+                  style={styles.input}
                 />
                 {useSavingsCategory && savingsBalances[useSavingsCategory] && (
                   <Text style={styles.savingsBalanceHint}>
@@ -234,7 +237,11 @@ const styles = StyleSheet.create({
   typeButtonTextSelected: {
     color: AppTheme.colors.textInverse,
   },
+  categoryDropdownWrapper: {
+    zIndex: 10000,
+  },
   savingsDropdownWrapper: {
+    zIndex: 9000,
     marginBottom: AppTheme.spacing.sm,
   },
   savingsBalanceHint: {
