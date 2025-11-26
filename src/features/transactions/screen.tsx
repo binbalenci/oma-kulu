@@ -235,6 +235,7 @@ export default function TransactionsScreen() {
     let orderIndex: number;
     const dateChanged = editing && editing.date !== date;
     let transactionsToShift: Transaction[] = [];
+    let oldDateTransactionsToReindex: Transaction[] = [];
 
     if (editing && !dateChanged) {
       // Preserve order_index only if editing same date
@@ -248,12 +249,18 @@ export default function TransactionsScreen() {
         t.date === date && (!editing || t.id !== editing.id)
       );
 
-      if (dateChanged) {
+      // If date changed, we need to reindex the old date to close the gap
+      if (dateChanged && editing) {
+        oldDateTransactionsToReindex = localTransactions.filter(
+          (t) => t.date === editing.date && t.id !== editing.id && (t.order_index ?? 0) > (editing.order_index ?? 0)
+        );
+
         logger.userAction("transaction_date_changed", {
           transactionId: editing.id,
           oldDate: editing.date,
           newDate: date,
-          newOrderIndex: orderIndex
+          newOrderIndex: orderIndex,
+          oldDateReindexCount: oldDateTransactionsToReindex.length
         });
       }
     }
@@ -278,23 +285,58 @@ export default function TransactionsScreen() {
       order_index: orderIndex,
     };
 
-    // Save the main transaction first
+    // If inserting at first position, shift existing transactions down FIRST
+    if (transactionsToShift.length > 0) {
+      const shiftedTransactions = transactionsToShift.map((t) => ({
+        ...t,
+        order_index: (t.order_index ?? 0) + 1,
+      }));
+
+      // Save all shifted transactions BEFORE saving the new one
+      await saveTransactions(shiftedTransactions);
+      logger.breadcrumb("Shifted same-date transactions before insert", "transaction_create", {
+        date,
+        shiftedCount: shiftedTransactions.length,
+      });
+
+      // Update local state for shifted transactions
+      setLocalTransactions((prev) =>
+        prev.map((t) => {
+          if (transactionsToShift.some((st) => st.id === t.id)) {
+            return { ...t, order_index: (t.order_index ?? 0) + 1 };
+          }
+          return t;
+        })
+      );
+    }
+
+    // If date changed, reindex the old date to close the gap
+    if (oldDateTransactionsToReindex.length > 0) {
+      const reindexedOldDateTransactions = oldDateTransactionsToReindex.map((t) => ({
+        ...t,
+        order_index: (t.order_index ?? 0) - 1,
+      }));
+
+      // Save the reindexed transactions from old date
+      await saveTransactions(reindexedOldDateTransactions);
+      logger.breadcrumb("Reindexed old date after date change", "transaction_update", {
+        oldDate: editing?.date,
+        newDate: date,
+        reindexedCount: reindexedOldDateTransactions.length,
+      });
+
+      // Update local state for reindexed old date transactions
+      setLocalTransactions((prev) =>
+        prev.map((t) => {
+          const reindexed = reindexedOldDateTransactions.find((rt) => rt.id === t.id);
+          return reindexed || t;
+        })
+      );
+    }
+
+    // Now save the main transaction at position 0
     const success = await saveTransaction(tx);
     if (success) {
-      // If we inserted at first position, shift all other same-date transactions down
-      if (transactionsToShift.length > 0) {
-        const shiftedTransactions = transactionsToShift.map((t) => ({
-          ...t,
-          order_index: (t.order_index ?? 0) + 1,
-        }));
-
-        // Save all shifted transactions
-        await saveTransactions(shiftedTransactions);
-        logger.breadcrumb("Shifted same-date transactions", "transaction_create", {
-          date,
-          shiftedCount: shiftedTransactions.length,
-        });
-      }
 
       // Update savings balance if savings were used
       if (savingsAmountUsed > 0 && useSavingsCategory) {
@@ -302,16 +344,7 @@ export default function TransactionsScreen() {
         setLocalSavingsBalances((prev) => ({ ...prev, [useSavingsCategory]: balance }));
       }
       if (editing) {
-        setLocalTransactions((prev) =>
-          prev.map((t) => {
-            if (t.id === tx.id) return tx;
-            // Update shifted transactions in state
-            if (transactionsToShift.some((st) => st.id === t.id)) {
-              return { ...t, order_index: (t.order_index ?? 0) + 1 };
-            }
-            return t;
-          })
-        );
+        setLocalTransactions((prev) => prev.map((t) => (t.id === tx.id ? tx : t)));
 
         // If transaction was created from an expected item, sync changes back
         if (editing.source_type && editing.source_id) {
@@ -352,19 +385,7 @@ export default function TransactionsScreen() {
 
         showSnackbar("Transaction updated!");
       } else {
-        setLocalTransactions((prev) => {
-          const updated = [tx, ...prev];
-          // Update shifted transactions in state
-          if (transactionsToShift.length > 0) {
-            return updated.map((t) => {
-              if (transactionsToShift.some((st) => st.id === t.id)) {
-                return { ...t, order_index: (t.order_index ?? 0) + 1 };
-              }
-              return t;
-            });
-          }
-          return updated;
-        });
+        setLocalTransactions((prev) => [tx, ...prev]);
         showSnackbar("Transaction added!");
       }
       resetForm();
@@ -406,9 +427,50 @@ export default function TransactionsScreen() {
   const confirmDelete = async () => {
     if (!itemToDelete) return;
 
+    // Get the transaction being deleted to know its date and order_index
+    const transactionToDelete = localTransactions.find((t) => t.id === itemToDelete.id);
+    if (!transactionToDelete) {
+      showSnackbar("Transaction not found");
+      setItemToDelete(null);
+      return;
+    }
+
     const success = await deleteTransaction(itemToDelete.id);
     if (success) {
-      setLocalTransactions((prev) => prev.filter((t) => t.id !== itemToDelete.id));
+      // Find all transactions on the same date with higher order_index
+      const transactionsToReindex = localTransactions.filter(
+        (t) => t.date === transactionToDelete.date && (t.order_index ?? 0) > (transactionToDelete.order_index ?? 0)
+      );
+
+      // Reindex them by decrementing their order_index by 1
+      if (transactionsToReindex.length > 0) {
+        const reindexedTransactions = transactionsToReindex.map((t) => ({
+          ...t,
+          order_index: (t.order_index ?? 0) - 1,
+        }));
+
+        // Save the reindexed transactions
+        await saveTransactions(reindexedTransactions);
+        logger.breadcrumb("Reindexed transactions after delete", "transaction_delete", {
+          date: transactionToDelete.date,
+          deletedIndex: transactionToDelete.order_index,
+          reindexedCount: reindexedTransactions.length,
+        });
+
+        // Update local state with reindexed transactions
+        setLocalTransactions((prev) =>
+          prev
+            .filter((t) => t.id !== itemToDelete.id)
+            .map((t) => {
+              const reindexed = reindexedTransactions.find((rt) => rt.id === t.id);
+              return reindexed || t;
+            })
+        );
+      } else {
+        // No reindexing needed, just remove the transaction
+        setLocalTransactions((prev) => prev.filter((t) => t.id !== itemToDelete.id));
+      }
+
       showSnackbar("Transaction deleted");
     } else {
       showSnackbar("Failed to delete transaction");
@@ -423,7 +485,39 @@ export default function TransactionsScreen() {
 
     const success = await deleteTransaction(transaction.id);
     if (success) {
-      setLocalTransactions((prev) => prev.filter((t) => t.id !== transaction.id));
+      // Find all transactions on the same date with higher order_index
+      const transactionsToReindex = localTransactions.filter(
+        (t) => t.date === transaction.date && (t.order_index ?? 0) > (transaction.order_index ?? 0)
+      );
+
+      // Reindex them by decrementing their order_index by 1
+      if (transactionsToReindex.length > 0) {
+        const reindexedTransactions = transactionsToReindex.map((t) => ({
+          ...t,
+          order_index: (t.order_index ?? 0) - 1,
+        }));
+
+        // Save the reindexed transactions
+        await saveTransactions(reindexedTransactions);
+        logger.breadcrumb("Reindexed transactions after move to pending", "transaction_move_pending", {
+          date: transaction.date,
+          deletedIndex: transaction.order_index,
+          reindexedCount: reindexedTransactions.length,
+        });
+
+        // Update local state with reindexed transactions
+        setLocalTransactions((prev) =>
+          prev
+            .filter((t) => t.id !== transaction.id)
+            .map((t) => {
+              const reindexed = reindexedTransactions.find((rt) => rt.id === t.id);
+              return reindexed || t;
+            })
+        );
+      } else {
+        // No reindexing needed, just remove the transaction
+        setLocalTransactions((prev) => prev.filter((t) => t.id !== transaction.id));
+      }
 
       // Mark the source expected item as unpaid
       if (transaction.source_type === "income") {
