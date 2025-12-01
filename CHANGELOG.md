@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.6.1] - 2025-01-26
+
+### 🐛 Bug Fixes
+
+- **Transaction Ordering**: Fixed duplicate `order_index` values that occurred when editing a transaction's date
+
+  - Root cause: When changing a transaction's date, the old `order_index` was preserved instead of recalculating
+  - Fixed database by reassigning sequential `order_index` values to all affected transactions
+  - Updated logic to recalculate `order_index` when transaction date changes
+
+- **Transaction Insertion**: Changed new transaction insertion from last to first position
+  - New transactions now insert at position 0 (first) instead of appending to end
+  - Matches data entry workflow: adding oldest-to-newest means newest appears first
+  - Existing same-date transactions are automatically shifted down by 1
+
+- **Use Savings Dropdown**: Fixed z-index issue where dropdown was hidden under Amount field
+  - Root cause: Inline z-index styles were overridden by component's internal container style
+  - Solution: Wrapped both Category and Use Savings dropdowns in Views with explicit z-index layering
+  - Now properly displays above all subsequent fields (Category: 10000, Use Savings: 9000)
+
+### ✨ Improvements
+
+- **Dynamic Version Display**: Version number in About modal now reads from `package.json` instead of hardcoded string
+  - Added `resolveJsonModule: true` to TypeScript config
+  - Ensures version stays in sync across deployments
+
 ## [3.6.0] - 2025-01-25
 
 ### 🏗️ Architecture - Official Expo Router Structure
@@ -37,6 +63,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### 🔧 Configuration Updates
 
 - **TypeScript Configuration**
+
   - Added `@/src/*` path alias to tsconfig.json
   - Maintains backward compatibility with `@/*` for root access
   - Full TypeScript path resolution working correctly
@@ -159,35 +186,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### ✨ Refactoring Achievements
 
 - **Phase 2 Complete** - Enhanced test instructions and refined testing patterns
+
   - Improved test documentation for better developer experience
   - Established consistent testing patterns across features
   - Refined test coverage requirements and best practices
 
 - **Phase 3 Complete** - Database helpers and comprehensive tests
+
   - Created robust database helper utilities with 90%+ test coverage
   - Implemented consistent error handling patterns
   - Enhanced database operation reliability and maintainability
 
 - **Phase 4 Complete** - Transactions feature refactored
-  - Migrated [app/(tabs)/transactions.tsx](app/(tabs)/transactions.tsx) to feature-based architecture
+
+  - Migrated [app/(tabs)/transactions.tsx](<app/(tabs)/transactions.tsx>) to feature-based architecture
   - Extracted transaction-specific business logic into feature modules
   - Improved code organization and testability for transaction management
 
 - **Phase 5 Complete** - Budget (Index) and Transactions screens fully refactored
-  - Completed migration of [app/(tabs)/index.tsx](app/(tabs)/index.tsx) (Budget screen)
-  - Finalized [app/(tabs)/transactions.tsx](app/(tabs)/transactions.tsx) refactoring
+  - Completed migration of [app/(tabs)/index.tsx](<app/(tabs)/index.tsx>) (Budget screen)
+  - Finalized [app/(tabs)/transactions.tsx](<app/(tabs)/transactions.tsx>) refactoring
   - Screens now serve as thin presentation layers using shared services and hooks
   - Eliminated remaining code duplication (~600+ lines total reduced)
 
 #### 🐛 Bug Fixes
 
 - **Transaction Type Preservation**
+
   - Fixed issue where using "savings option" was not working correctly
   - Root cause: Wrong category value was being saved during transaction creation
   - Transactions now properly preserve their original category type (income/expense/saving)
   - Commit: c2bb703
 
 - **Transaction Category Type Limiting**
+
   - Limited transaction categories to match their original type when created
   - Added transaction type selector in add dialog for better UX
   - Prevents mixing of income/expense/saving transactions incorrectly
@@ -203,12 +235,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### 🔧 Technical Improvements
 
 - **Code Organization**
+
   - Established clear separation of concerns across all main screens
   - Screens → Hooks → Services → Database pattern fully implemented
   - Reduced screen complexity by moving business logic to feature modules
   - Improved maintainability with smaller, focused files
 
 - **Testing Infrastructure**
+
   - Comprehensive test coverage for database helpers
   - Consistent testing patterns across all features
   - Improved test documentation and examples
@@ -240,6 +274,7 @@ Phase 6+ will focus on refactoring remaining screens (Reports, Categories) and e
 #### ✨ New Features
 
 - **Feature-Based Architecture**
+
   - Created `features/` directory structure for modular code organization
   - Implemented `features/shared/` for cross-feature utilities
   - Established clear separation of concerns: Services → Hooks → Components → Screens
@@ -248,7 +283,7 @@ Phase 6+ will focus on refactoring remaining screens (Reports, Categories) and e
   - Added Jest testing framework with Expo integration
   - Configured TypeScript support with ts-jest
   - Set up @testing-library/react for hook testing
-  - Implemented co-located test files (*.test.ts) for better maintainability
+  - Implemented co-located test files (\*.test.ts) for better maintainability
   - Created test scripts: `test:shared`, `test:budget`, `test:watch`, `test:coverage`
 
 #### 📦 New Shared Services (features/shared/services/)
@@ -256,6 +291,7 @@ Phase 6+ will focus on refactoring remaining screens (Reports, Categories) and e
 All services include comprehensive test coverage (90-100%):
 
 - **calculations.ts** - Financial calculation utilities
+
   - `calculateMoneyToAssign()` - Budget allocation calculations
   - `calculateActualInBank()` - Current balance with date filtering
   - `calculateSpentByCategory()` - Category spending aggregation
@@ -263,12 +299,14 @@ All services include comprehensive test coverage (90-100%):
   - **Test Coverage**: 100% (calculations.test.ts)
 
 - **formatters.ts** - Data formatting utilities
+
   - Currency formatting with proper decimal handling
   - Date formatting utilities
   - Display value formatters
   - **Test Coverage**: 100% (formatters.test.ts)
 
 - **validators.ts** - Form validation logic
+
   - Budget amount validation
   - Transaction validation
   - Form field validation helpers
@@ -291,6 +329,7 @@ All services include comprehensive test coverage (90-100%):
 #### 📚 Documentation
 
 - **features/shared/README.md** - Comprehensive feature documentation
+
   - Detailed API documentation for all services and hooks
   - Usage examples and patterns
   - Test coverage statistics
@@ -313,6 +352,7 @@ All services include comprehensive test coverage (90-100%):
 #### 🔧 Technical Improvements
 
 - **Code Quality**
+
   - Eliminated code duplication across screens (400+ lines reduced)
   - Established consistent error handling patterns
   - Implemented pure functions for easier testing
@@ -386,7 +426,7 @@ Phase 2 will refactor the Budget feature (app/(tabs)/index.tsx) using the founda
   - Fixed "Unexpected text node: . A text node cannot be a child of a <View>" error
   - Error occurred when expanding Incomes and Expenses sections
   - **Root Cause #1**: Extra `<View style={styles.amountContainer}>` wrapper around the amount Text component caused React Native to misinterpret the decimal point from `.toFixed(1)` as a separate text node during re-renders
-  - **Root Cause #2**: Using `&&` operator for conditional rendering instead of explicit ternary `? : null` 
+  - **Root Cause #2**: Using `&&` operator for conditional rendering instead of explicit ternary `? : null`
   - **Solutions Applied**:
     1. Removed the unnecessary View wrapper, making the Text component a direct child of `transactionRight` View
     2. Changed conditional rendering from `condition && <Component />` to `condition ? <Component /> : null` for the savings badge
@@ -406,6 +446,7 @@ Phase 2 will refactor the Budget feature (app/(tabs)/index.tsx) using the founda
 ### 🎨 UI/UX Improvements
 
 - **Transaction Item Actions Menu**
+
   - Replaced inline Edit and Delete buttons with a 3-dot menu (⋮)
   - Menu displays actions with icons and descriptive text:
     - **Edit** - Modify transaction details
@@ -427,6 +468,7 @@ Phase 2 will refactor the Budget feature (app/(tabs)/index.tsx) using the founda
 ### ✨ New Features
 
 - **📊 DetailPopup Component**
+
   - New reusable popup component for viewing detailed breakdowns and calculations
   - Vertical math-style calculation view for financial calculations
   - Breakdown sections with alternating row colors (zig-zag) for better readability
@@ -435,6 +477,7 @@ Phase 2 will refactor the Budget feature (app/(tabs)/index.tsx) using the founda
   - Files: `components/ui/DetailPopup.tsx`
 
 - **🔍 Enhanced Cash Overview**
+
   - All Cash Overview sections now have info icons (ℹ️) and are clickable
   - **Income Detail**: Shows breakdown of all expected income items
   - **Expense Detail**: Shows breakdown of all expected expense items
@@ -454,6 +497,7 @@ Phase 2 will refactor the Budget feature (app/(tabs)/index.tsx) using the founda
 ### 🔧 Technical Improvements
 
 - **Database Schema Migration**
+
   - Migrated from category name-based foreign keys to category ID (UUID) foreign keys
   - Added `category_id` columns to all referencing tables (budgets, expected_incomes, expected_invoices, expected_savings, transactions)
   - Added proper foreign key constraints with `ON DELETE RESTRICT`
@@ -480,6 +524,7 @@ Phase 2 will refactor the Budget feature (app/(tabs)/index.tsx) using the founda
 ### ✨ Major Features
 
 - **Major version bump to 3.0.0**
+
   - Major architectural improvements and new features
   - Enhanced error monitoring and logging system
   - Performance optimizations and code quality improvements
@@ -513,12 +558,14 @@ Phase 2 will refactor the Budget feature (app/(tabs)/index.tsx) using the founda
 ### 🎨 UI/UX Improvements
 
 - **Transactions Tab Section Consistency**
+
   - Unified spacing and layout structure across all sections (Upcoming, Incomes, Expenses)
   - Consistent spacing between section headers and transaction items
   - Matching gap spacing between transaction cards across all sections
   - Improved visual hierarchy with proper white space
 
 - **Collapsible Sections in Transactions Tab**
+
   - Made Incomes and Expenses sections collapsible like Upcoming section
   - All sections now have chevron icons indicating expand/collapse state
   - Default states: Upcoming and Incomes collapsed, Expenses expanded
@@ -541,6 +588,7 @@ Phase 2 will refactor the Budget feature (app/(tabs)/index.tsx) using the founda
 ### ✨ Added
 
 - **Session Management for Passcode Gate**
+
   - 24-hour session persistence to avoid re-entering passcode on every app restart
   - Automatic session validation on app startup
   - Session creation after successful passcode verification
@@ -609,41 +657,48 @@ Phase 2 will refactor the Budget feature (app/(tabs)/index.tsx) using the founda
 ### 🐛 Fixed
 
 - **Decimal Input Rounding Issues (#7)**
+
   - Fixed decimal values not displaying correctly when editing
   - Amounts now always show 2 decimal places (e.g., "10.00" instead of "10")
   - Changed from `String()` to `toFixed(2)` for consistent decimal formatting
   - Files: `app/(tabs)/index.tsx`, `app/(tabs)/transactions.tsx`
 
 - **Euro Symbol Missing in Input (#8)**
+
   - Added persistent euro symbol (€) to amount input fields
   - Euro symbol now visible while typing, not just in placeholder
   - Used `TextInput.Affix` for better UX consistency
   - Files: `app/(tabs)/index.tsx`, `app/(tabs)/transactions.tsx`
 
 - **Navigation Tab Cut Off on Web (#9)**
+
   - Resolved Edge browser specific rendering issue
   - Confirmed no code issues - works correctly on all other browsers
   - Investigation showed this is browser-specific quirk outside our control
 
 - **Duplicate Category Display in Transactions (#11)**
+
   - Removed redundant category text from transaction metadata
   - Moved category badge to appear inline with date (e.g., "Oct 19 [Badge]")
   - Cleaner, more compact transaction item layout
   - Files: `app/(tabs)/transactions.tsx`
 
 - **Category Dropdown Missing Emoji (#12)**
+
   - Added emoji support to category dropdown selection
   - Emojis now display before category names in dropdown list and selected value
   - Updated SimpleDropdown component to accept and render emoji data
   - Files: `components/ui/SimpleDropdown.tsx`, `app/(tabs)/index.tsx`, `app/(tabs)/transactions.tsx`
 
 - **Dialog Field Order Inconsistency (#13)**
+
   - Standardized field order across all financial dialogs
   - Consistent flow: Category → Amount → Description/Name → Date → Notes
   - Improves user experience and muscle memory for data entry
   - Files: `app/(tabs)/index.tsx`, `app/(tabs)/transactions.tsx`
 
 - **Transaction Tab Income/Expense Separation (#14)**
+
   - Split transactions into separate "Income" and "Expenses" sections
   - Income section shows positive amounts with green trending-up icon
   - Expenses section shows negative amounts with red trending-down icon
@@ -652,6 +707,7 @@ Phase 2 will refactor the Budget feature (app/(tabs)/index.tsx) using the founda
   - Files: `app/(tabs)/transactions.tsx`
 
 - **Expected Transaction Deletion Sync (#17)**
+
   - Added bidirectional sync between transactions and expected items
   - Deleting transactions created from expected income/invoice marks them as unpaid
   - Added database columns: `source_type` and `source_id` to track relationships
@@ -679,6 +735,7 @@ Phase 2 will refactor the Budget feature (app/(tabs)/index.tsx) using the founda
 ### 🐛 Fixed
 
 - **Transaction Income/Expense Type Bug (#1)**
+
   - Fixed transaction editing always converting amounts to expenses
   - Added category type detection to properly handle income vs expense amounts
   - Income categories now correctly store positive amounts
@@ -686,6 +743,7 @@ Phase 2 will refactor the Budget feature (app/(tabs)/index.tsx) using the founda
   - Files: `app/(tabs)/transactions.tsx`
 
 - **Month Filtering in Transactions Tab (#2)**
+
   - Fixed month selector not filtering transactions properly
   - Added proper date range filtering using `startOfMonth` and `endOfMonth`
   - Implemented optimized data refresh on month changes
@@ -694,6 +752,7 @@ Phase 2 will refactor the Budget feature (app/(tabs)/index.tsx) using the founda
   - Files: `app/(tabs)/transactions.tsx`, `app/(tabs)/index.tsx`
 
 - **Category Updates Sync with Transactions (#4)**
+
   - Fixed category name updates not reflecting in existing transactions
   - Added foreign key constraints with ON UPDATE CASCADE in Supabase database
   - Database now automatically updates all related records when category changes
@@ -702,6 +761,7 @@ Phase 2 will refactor the Budget feature (app/(tabs)/index.tsx) using the founda
   - Database Migration: Added FK constraints to expected_incomes, expected_invoices, budgets, and transactions tables
 
 - **Category Dropdown Selection Issues (#5)**
+
   - Fixed dropdown values not being selectable due to z-index conflicts
   - Fixed bottom navigation showing through dropdown menu
   - Restored high z-index to SimpleDropdown container (9999)
@@ -711,7 +771,7 @@ Phase 2 will refactor the Budget feature (app/(tabs)/index.tsx) using the founda
 
 - **Form Validation Missing (#6)**
   - Added comprehensive form validation across all dialogs
-  - Required fields now marked with red asterisk (*)
+  - Required fields now marked with red asterisk (\*)
   - Save button validates required fields before proceeding
   - Visual feedback: labels and placeholder text turn red when validation fails
   - Errors auto-clear when user starts typing
@@ -722,11 +782,13 @@ Phase 2 will refactor the Budget feature (app/(tabs)/index.tsx) using the founda
 ### 🎨 Improved
 
 - **Dialog Component Enhancement**
+
   - Updated to support async onSave with boolean return value
   - Allows validation logic to prevent dialog closure
   - Better error handling and user feedback flow
 
 - **SimpleDropdown Component Enhancement**
+
   - Now accepts React.ReactNode labels for flexible styling
   - Added error prop for visual error states
   - Placeholder text can be styled based on error state
@@ -741,6 +803,7 @@ Phase 2 will refactor the Budget feature (app/(tabs)/index.tsx) using the founda
 ### 📊 Technical Improvements
 
 - **Database Schema**
+
   - Added foreign key constraints for data integrity
   - Implemented CASCADE updates for automatic data sync
   - Better relational data management
@@ -756,11 +819,13 @@ Phase 2 will refactor the Budget feature (app/(tabs)/index.tsx) using the founda
 ### 🐛 Fixed
 
 - **iOS Compatibility Issues**
+
   - Fixed `crypto.randomUUID()` not available on iOS by replacing with `expo-crypto`
   - Resolved ReferenceError when adding transactions on iOS devices
   - Updated all UUID generation across transactions, budgets, categories, and incomes
 
 - **Passcode Screen Theme**
+
   - Fixed black screen issue on iOS when using system dark mode
   - Applied app's light theme consistently to passcode gate screen
   - Proper background color and themed styling for better user experience
@@ -782,12 +847,14 @@ Phase 2 will refactor the Budget feature (app/(tabs)/index.tsx) using the founda
 ### 🚀 Deployment & Development Workflow
 
 - **Automated Deploy Scripts**
+
   - Added `npm run deploy:ios` for native iOS deployments
   - Added `npm run deploy:web` for web deployments with production flag
   - Automated pre/post deployment hooks using npm lifecycle scripts
   - Source map generation and upload to Sentry for both platforms
 
 - **Environment Management**
+
   - Integrated direnv for automatic environment variable loading
   - Secure passcode management via environment variables
   - Project-specific environment configuration with `.envrc`
@@ -802,6 +869,7 @@ Phase 2 will refactor the Budget feature (app/(tabs)/index.tsx) using the founda
 ### 🔐 Security & Authentication
 
 - **Enhanced Passcode System**
+
   - Moved from hardcoded passcode to environment variable configuration
   - Base64 obfuscation for additional security layer
   - Removed 4-character limit - now supports any length passcode
@@ -815,6 +883,7 @@ Phase 2 will refactor the Budget feature (app/(tabs)/index.tsx) using the founda
 ### 🛠️ Developer Experience
 
 - **Improved Build Process**
+
   - Streamlined export commands with platform-specific flags
   - Automated source map generation during builds
   - Production-ready web deployments with `--prod` flag
@@ -828,6 +897,7 @@ Phase 2 will refactor the Budget feature (app/(tabs)/index.tsx) using the founda
 ### 📱 Platform Support
 
 - **Web Deployment**
+
   - EAS Hosting integration for web deployments
   - Static site generation with proper source maps
   - Production-ready web builds with optimized assets
@@ -842,6 +912,7 @@ Phase 2 will refactor the Budget feature (app/(tabs)/index.tsx) using the founda
 ### 🔍 Error Monitoring & Logging
 
 - **Sentry Integration**
+
   - Comprehensive error tracking and performance monitoring
   - Real-time error reporting with full stack traces
   - User journey tracking with breadcrumb trails
@@ -849,6 +920,7 @@ Phase 2 will refactor the Budget feature (app/(tabs)/index.tsx) using the founda
   - Performance monitoring with automatic slow operation detection
 
 - **Comprehensive Logger Utility**
+
   - Centralized logging system with multiple log levels (error, info, warning, critical)
   - User action tracking for all interactions
   - Database operation monitoring (success/failure tracking)
@@ -866,11 +938,13 @@ Phase 2 will refactor the Budget feature (app/(tabs)/index.tsx) using the founda
 ### 🛠️ Technical Improvements
 
 - **Metro Configuration**
+
   - Added `metro.config.js` with Sentry integration
   - Source map generation for accurate error reporting
   - Debug ID injection for better error tracking
 
 - **App Configuration**
+
   - Sentry Expo plugin configuration in `app.config.ts`
   - Environment variable support for DSN configuration
   - Production-ready error monitoring setup
@@ -887,6 +961,7 @@ Phase 2 will refactor the Budget feature (app/(tabs)/index.tsx) using the founda
 ### ⚡ Performance & UX Improvements
 
 - **Blazing Fast Emoji Picker**
+
   - Switched from `@hiraku-ai/react-native-emoji-picker` to `rn-emoji-picker`
   - Dramatically improved performance with un-opinionated design
   - Eliminated 2-second delays on iOS and web platforms
@@ -902,11 +977,13 @@ Phase 2 will refactor the Budget feature (app/(tabs)/index.tsx) using the founda
 ### 🎨 UI/UX Enhancements
 
 - **Enhanced Categories**
+
   - Enabled all 9 emoji categories: recent, emotion, emojis, activities, flags, food, places, nature, objects
   - Better emoji variety and selection options
   - Improved category navigation and search
 
 - **iOS Clipping Fix**
+
   - Resolved emoji text clipping issues on iOS devices
   - Added proper line height and padding for emoji display
   - Fixed both Add dialog emoji preview and category list emojis
@@ -921,6 +998,7 @@ Phase 2 will refactor the Budget feature (app/(tabs)/index.tsx) using the founda
 ### 🔧 Technical Improvements
 
 - **Library Migration**
+
   - Replaced heavy emoji library with lightweight `rn-emoji-picker`
   - Removed complex filtering and styling that caused performance issues
   - Simplified component architecture for better maintainability
@@ -935,6 +1013,7 @@ Phase 2 will refactor the Budget feature (app/(tabs)/index.tsx) using the founda
 ### 🐛 Fixed
 
 - **iOS Color Picker Issues**
+
   - Fixed dialog conflict where add dialog would close when color picker opened
   - Implemented seamless dialog handoff system to maintain user context
   - Fixed color overflow issue by making color grid scrollable
